@@ -11,7 +11,7 @@ import java.util.List;
 
 public class Mappers {
     public static CategoryDto toDto(Category category) {
-        return new CategoryDto(category.getId(), category.getName(), category.getImageUrl());
+        return new CategoryDto(category.getId(), category.getName(), category.getImageResId());
     }
 
     public static GuideContentDto toDto(GuideContent content) {

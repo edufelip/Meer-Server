@@ -1,3 +1,3 @@
 package com.edufelip.meer.dto;
 
-public record CategoryDto(Integer id, String name, String imageUrl) {}
+public record CategoryDto(String id, String name, String imageResId) {}
