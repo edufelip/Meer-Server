@@ -22,6 +22,11 @@ class RequestGuardsFilter(
         response: HttpServletResponse,
         filterChain: FilterChain
     ) {
+        if (isPublicAuthPath(request)) {
+            filterChain.doFilter(request, response)
+            return
+        }
+
         try {
             appHeaderGuard.validate(request)
             appCheckGuard.validate(request)
@@ -32,5 +37,18 @@ class RequestGuardsFilter(
         }
 
         filterChain.doFilter(request, response)
+    }
+
+    private fun isPublicAuthPath(request: HttpServletRequest): Boolean {
+        val path = request.servletPath.lowercase()
+        return when (path) {
+            "/auth/login",
+            "/auth/signup",
+            "/auth/google",
+            "/auth/apple",
+            "/auth/refresh",
+            "/auth/forgot-password" -> true
+            else -> false
+        }
     }
 }

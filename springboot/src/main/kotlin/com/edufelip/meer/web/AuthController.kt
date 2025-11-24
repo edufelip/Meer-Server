@@ -7,12 +7,17 @@ import com.edufelip.meer.domain.auth.EmailAlreadyRegisteredException
 import com.edufelip.meer.domain.auth.GoogleLoginUseCase
 import com.edufelip.meer.domain.auth.InvalidGoogleTokenException
 import com.edufelip.meer.domain.auth.RefreshTokenUseCase
+import com.edufelip.meer.domain.auth.AppleLoginUseCase
+import com.edufelip.meer.domain.auth.InvalidAppleTokenException
+import com.edufelip.meer.domain.auth.ForgotPasswordUseCase
 import com.edufelip.meer.domain.AuthUserRepository
 import com.edufelip.meer.dto.AuthResponse
 import com.edufelip.meer.dto.LoginRequest
 import com.edufelip.meer.dto.SignupRequest
 import com.edufelip.meer.dto.GoogleLoginRequest
 import com.edufelip.meer.dto.RefreshRequest
+import com.edufelip.meer.dto.AppleLoginRequest
+import com.edufelip.meer.dto.ForgotPasswordRequest
 import com.edufelip.meer.mapper.toDto
 import com.edufelip.meer.security.token.InvalidTokenException
 import com.edufelip.meer.security.token.TokenProvider
@@ -33,7 +38,9 @@ class AuthController(
     private val loginUseCase: LoginUseCase,
     private val signupUseCase: SignupUseCase,
     private val googleLoginUseCase: GoogleLoginUseCase,
+    private val appleLoginUseCase: AppleLoginUseCase,
     private val refreshTokenUseCase: RefreshTokenUseCase,
+    private val forgotPasswordUseCase: ForgotPasswordUseCase,
     private val tokenProvider: TokenProvider,
     private val authUserRepository: AuthUserRepository
 ) {
@@ -62,10 +69,32 @@ class AuthController(
         )
     }
 
+    @PostMapping("/forgot-password")
+    fun forgotPassword(@RequestBody body: ForgotPasswordRequest): ResponseEntity<Map<String, String>> {
+        forgotPasswordUseCase.execute(body.email)
+        return ResponseEntity.ok(mapOf("message" to "Reset email sent"))
+    }
+
     @PostMapping("/google")
-    fun loginWithGoogle(@RequestBody body: GoogleLoginRequest): ResponseEntity<AuthResponse> {
-        if (body.provider.lowercase() != "google") throw InvalidGoogleTokenException()
-        val result = googleLoginUseCase.execute(body.idToken, body.client)
+    fun loginWithGoogle(
+        @RequestBody body: GoogleLoginRequest,
+        @RequestHeader(name = "Authorization", required = false) authHeader: String?
+    ): ResponseEntity<AuthResponse> {
+        val idToken = body.idToken ?: extractBearerOptional(authHeader) ?: throw InvalidGoogleTokenException()
+        val result = googleLoginUseCase.execute(idToken, body.client)
+        return ResponseEntity.ok(
+            AuthResponse(
+                token = result.token,
+                refreshToken = result.refreshToken,
+                user = result.user.toDto()
+            )
+        )
+    }
+
+    @PostMapping("/apple")
+    fun loginWithApple(@RequestBody body: AppleLoginRequest): ResponseEntity<AuthResponse> {
+        if (body.provider.lowercase() != "apple") throw InvalidAppleTokenException()
+        val result = appleLoginUseCase.execute(body.idToken, body.authorizationCode, body.client)
         return ResponseEntity.ok(
             AuthResponse(
                 token = result.token,
@@ -101,6 +130,11 @@ class AuthController(
         return header.removePrefix("Bearer ").trim()
     }
 
+    private fun extractBearerOptional(header: String?): String? {
+        if (header == null || !header.startsWith("Bearer ")) return null
+        return header.removePrefix("Bearer ").trim()
+    }
+
     @ExceptionHandler(InvalidCredentialsException::class)
     fun handleInvalidCredentials(ex: InvalidCredentialsException): ResponseEntity<Map<String, String>> {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("message" to ex.message!!))
@@ -123,6 +157,11 @@ class AuthController(
 
     @ExceptionHandler(InvalidRefreshTokenException::class)
     fun handleInvalidRefresh(ex: InvalidRefreshTokenException): ResponseEntity<Map<String, String>> {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("message" to ex.message!!))
+    }
+
+    @ExceptionHandler(InvalidAppleTokenException::class)
+    fun handleInvalidApple(ex: InvalidAppleTokenException): ResponseEntity<Map<String, String>> {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("message" to ex.message!!))
     }
 }

@@ -12,13 +12,23 @@ data class SignupRequest(
 )
 
 data class GoogleLoginRequest(
-    val provider: String,
-    val idToken: String,
-    val client: String
+    val client: String,
+    val idToken: String? = null
 )
 
 data class RefreshRequest(
     val refreshToken: String
+)
+
+data class AppleLoginRequest(
+    val provider: String,
+    val idToken: String,
+    val authorizationCode: String? = null,
+    val client: String
+)
+
+data class ForgotPasswordRequest(
+    val email: String
 )
 
 data class UserDto(

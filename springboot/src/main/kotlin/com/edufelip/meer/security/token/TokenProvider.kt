@@ -24,7 +24,7 @@ data class TokenPayload(
 
 class JwtTokenProvider(private val props: JwtProperties) : TokenProvider {
 
-    private val key = Keys.hmacShaKeyFor(props.secret.toByteArray(StandardCharsets.UTF_8))
+    private val key = buildKey(props.secret)
 
     override fun generateAccessToken(user: AuthUser): String {
         val now = Instant.now()
@@ -81,5 +81,13 @@ class JwtTokenProvider(private val props: JwtProperties) : TokenProvider {
     }
 }
 
+private fun buildKey(secret: String): java.security.Key {
+    val bytes = secret.toByteArray(StandardCharsets.UTF_8)
+    if (bytes.size * 8 < 256) {
+        throw IllegalArgumentException("SECURITY_JWT_SECRET must be at least 32 bytes (256 bits); current length is ${bytes.size} bytes")
+    }
+    return Keys.hmacShaKeyFor(bytes)
+}
+
 class InvalidTokenException : RuntimeException("Invalid or expired token")
-class InvalidRefreshTokenException : RuntimeException("Invalid refresh token")
+class InvalidRefreshTokenException : RuntimeException("Invalid or expired token")

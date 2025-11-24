@@ -31,6 +31,7 @@ dependencies {
 	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
 	implementation("com.google.api-client:google-api-client:2.6.0")
 	implementation("com.google.http-client:google-http-client-jackson2:1.43.3")
+	implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.1")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	runtimeOnly("org.postgresql:postgresql")
 	runtimeOnly("com.h2database:h2")

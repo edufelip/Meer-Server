@@ -10,6 +10,9 @@ import com.edufelip.meer.security.token.TokenProvider
 import com.edufelip.meer.domain.auth.SignupUseCase
 import com.edufelip.meer.domain.auth.GoogleLoginUseCase
 import com.edufelip.meer.domain.auth.RefreshTokenUseCase
+import com.edufelip.meer.domain.auth.AppleLoginUseCase
+import com.edufelip.meer.domain.auth.ForgotPasswordUseCase
+import com.edufelip.meer.domain.auth.LoginUseCase
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -77,10 +80,29 @@ class AppConfig {
     ): RefreshTokenUseCase = RefreshTokenUseCase(tokenProvider, authUserRepository)
 
     @Bean
+    fun appleLoginUseCase(
+        authUserRepository: AuthUserRepository,
+        tokenProvider: TokenProvider,
+        passwordEncoder: PasswordEncoder
+    ): AppleLoginUseCase = AppleLoginUseCase(authUserRepository, tokenProvider, passwordEncoder)
+
+    @Bean
+    fun forgotPasswordUseCase(
+        authUserRepository: AuthUserRepository
+    ): ForgotPasswordUseCase = ForgotPasswordUseCase(authUserRepository)
+
+    @Bean
     fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
 
     @Bean
     fun tokenProvider(jwtProperties: JwtProperties): TokenProvider = JwtTokenProvider(jwtProperties)
+
+    @Bean
+    fun loginUseCase(
+        authUserRepository: AuthUserRepository,
+        passwordEncoder: PasswordEncoder,
+        tokenProvider: TokenProvider
+    ): LoginUseCase = LoginUseCase(authUserRepository, passwordEncoder, tokenProvider)
 
     @Bean
     fun requestGuardsFilter(securityProperties: SecurityProperties): FilterRegistrationBean<RequestGuardsFilter> {
