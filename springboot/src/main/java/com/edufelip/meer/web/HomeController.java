@@ -1,10 +1,10 @@
 package com.edufelip.meer.web;
 
-import com.edufelip.meer.domain.GetGuideContentsByThriftStoreUseCase;
 import com.edufelip.meer.domain.GetGuideContentUseCase;
 import com.edufelip.meer.domain.GetThriftStoresUseCase;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
-import com.edufelip.meer.dto.PageResponse;
+import com.edufelip.meer.dto.GuideContentDto;
+import com.edufelip.meer.dto.HomeResponse;
 import com.edufelip.meer.dto.ThriftStoreDto;
 import com.edufelip.meer.mapper.Mappers;
 import com.edufelip.meer.service.StoreFeedbackService;
@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Set;
 import java.util.Comparator;
+import java.util.stream.Collectors;
 
 @RestController
 public class HomeController {
@@ -42,38 +43,36 @@ public class HomeController {
     }
 
     @GetMapping("/home")
-    public PageResponse<ThriftStoreDto> home(@RequestHeader("Authorization") String authHeader,
-                                             @RequestParam(name = "lat", required = false) Double lat,
-                                             @RequestParam(name = "lng", required = false) Double lng,
-                                             @RequestParam(name = "page", defaultValue = "1") int page,
-                                             @RequestParam(name = "pageSize", defaultValue = "10") int pageSize) {
+    public HomeResponse home(@RequestHeader("Authorization") String authHeader,
+                             @RequestParam(name = "lat", required = false) Double lat,
+                             @RequestParam(name = "lng", required = false) Double lng) {
         var user = currentUser(authHeader);
-        if (page < 1 || pageSize < 1 || pageSize > 100) {
-            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Invalid pagination params");
-        }
-        Set<Integer> favoriteIds = user.getFavorites().stream().map(f -> f.getId()).collect(java.util.stream.Collectors.toSet());
+        Set<Integer> favoriteIds = user.getFavorites().stream().map(f -> f.getId()).collect(Collectors.toSet());
 
         var stores = getThriftStoresUseCase.execute();
         var summaries = storeFeedbackService.getSummaries(stores.stream().map(s -> s.getId()).toList());
-        var sorted = sortByDistanceIfPossible(stores, lat, lng);
-        int from = (page - 1) * pageSize;
-        int to = Math.min(sorted.size(), from + pageSize);
-        boolean hasNext = to < sorted.size();
-        if (from > sorted.size()) {
-            return new PageResponse<>(List.of(), page, false);
-        }
-        var pageItems = sorted.subList(from, to).stream()
-                .map(s -> {
-                    var summary = summaries.get(s.getId());
-                    Double rating = summary != null ? summary.rating() : null;
-                    Integer reviewCount = summary != null && summary.reviewCount() != null ? summary.reviewCount().intValue() : null;
-                    Double distanceMeters = (lat != null && lng != null && s.getLatitude() != null && s.getLongitude() != null)
-                            ? distanceKm(lat, lng, s.getLatitude(), s.getLongitude()) * 1000
-                            : null;
-                    return Mappers.toDto(s, false, favoriteIds.contains(s.getId()), rating, reviewCount, distanceMeters);
-                })
+
+        var featuredStores = stores.stream()
+                .filter(s -> s.getBadgeLabel() != null)
+                .limit(10)
                 .toList();
-        return new PageResponse<>(pageItems, page, hasNext);
+        if (featuredStores.isEmpty()) {
+            featuredStores = stores.stream().limit(10).toList();
+        }
+
+        var nearbyStores = sortByDistanceIfPossible(stores, lat, lng).stream()
+                .limit(10)
+                .toList();
+
+        var featuredDtos = featuredStores.stream().map(s -> toStoreDto(s, favoriteIds, summaries, lat, lng)).toList();
+        var nearbyDtos = nearbyStores.stream().map(s -> toStoreDto(s, favoriteIds, summaries, lat, lng)).toList();
+
+        List<GuideContentDto> contentDtos = getGuideContentUseCase.executeAll().stream()
+                .limit(10)
+                .map(Mappers::toDto)
+                .toList();
+
+        return new HomeResponse(featuredDtos, nearbyDtos, contentDtos);
     }
 
     private List<com.edufelip.meer.core.store.ThriftStore> sortByDistanceIfPossible(List<com.edufelip.meer.core.store.ThriftStore> stores, Double lat, Double lng) {
@@ -106,5 +105,19 @@ public class HomeController {
             throw new InvalidTokenException();
         }
         return authUserRepository.findById(payload.getUserId()).orElseThrow(InvalidTokenException::new);
+    }
+
+    private ThriftStoreDto toStoreDto(com.edufelip.meer.core.store.ThriftStore s,
+                                      Set<Integer> favoriteIds,
+                                      java.util.Map<Integer, com.edufelip.meer.service.StoreFeedbackService.Summary> summaries,
+                                      Double lat,
+                                      Double lng) {
+        var summary = summaries.get(s.getId());
+        Double rating = summary != null ? summary.rating() : null;
+        Integer reviewCount = summary != null && summary.reviewCount() != null ? summary.reviewCount().intValue() : null;
+        Double distanceMeters = (lat != null && lng != null && s.getLatitude() != null && s.getLongitude() != null)
+                ? distanceKm(lat, lng, s.getLatitude(), s.getLongitude()) * 1000
+                : null;
+        return Mappers.toDto(s, false, favoriteIds.contains(s.getId()), rating, reviewCount, distanceMeters);
     }
 }

@@ -4,6 +4,7 @@ import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.security.JwtProperties;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.security.Keys;
 
 import java.nio.charset.StandardCharsets;
@@ -51,17 +52,25 @@ public class JwtTokenProvider implements TokenProvider {
 
     @Override
     public TokenPayload parseAccessToken(String token) {
-        var claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
-        Integer userId = Integer.valueOf(claims.getSubject());
-        return new TokenPayload(userId, (String) claims.get("email"), (String) claims.get("name"));
+        try {
+            var claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+            Integer userId = Integer.valueOf(claims.getSubject());
+            return new TokenPayload(userId, (String) claims.get("email"), (String) claims.get("name"));
+        } catch (JwtException | IllegalArgumentException ex) {
+            throw new InvalidTokenException();
+        }
     }
 
     @Override
     public TokenPayload parseRefreshToken(String token) {
-        var claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
-        if (!"refresh".equals(claims.get("type"))) throw new InvalidRefreshTokenException();
-        Integer userId = Integer.valueOf(claims.getSubject());
-        return new TokenPayload(userId, (String) claims.get("email"), (String) claims.get("name"));
+        try {
+            var claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+            if (!"refresh".equals(claims.get("type"))) throw new InvalidRefreshTokenException();
+            Integer userId = Integer.valueOf(claims.getSubject());
+            return new TokenPayload(userId, (String) claims.get("email"), (String) claims.get("name"));
+        } catch (JwtException | IllegalArgumentException ex) {
+            throw new InvalidRefreshTokenException();
+        }
     }
 
     private Key buildKey(String secret) {

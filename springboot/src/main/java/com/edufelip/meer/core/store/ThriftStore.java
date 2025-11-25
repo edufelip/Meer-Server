@@ -14,13 +14,14 @@ public class ThriftStore {
     @Column(nullable = false)
     private String name;
 
-    @Column
+    @Column(length = 2048)
     private String tagline;
 
-    @Column
+    @Column(length = 2048)
     private String coverImageUrl;
 
     @ElementCollection
+    @Column(length = 2048)
     private List<String> galleryUrls;
 
     @Column(nullable = false)
@@ -28,6 +29,7 @@ public class ThriftStore {
 
     private Double latitude;
     private Double longitude;
+    @Column(length = 2048)
     private String mapImageUrl;
     private String phone;
     private String email;
@@ -48,6 +50,7 @@ public class ThriftStore {
     private String neighborhood;
     private String badgeLabel;
     private Boolean isFavorite;
+    @Column(length = 1000)
     private String description;
 
     @OneToMany(mappedBy = "thriftStore", cascade = CascadeType.ALL, orphanRemoval = true)

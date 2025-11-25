@@ -4,9 +4,13 @@ import jakarta.persistence.Embeddable;
 
 @Embeddable
 public class Social {
+    @jakarta.persistence.Column(length = 2048)
     private String facebook;
+    @jakarta.persistence.Column(length = 2048)
     private String instagram;
+    @jakarta.persistence.Column(length = 2048)
     private String website;
+    @jakarta.persistence.Column(length = 2048)
     private String whatsapp;
 
     public Social() {}

@@ -23,6 +23,7 @@ public class AuthController {
     private final RefreshTokenUseCase refreshTokenUseCase;
     private final ForgotPasswordUseCase forgotPasswordUseCase;
     private final AuthUserRepository authUserRepository;
+    private final com.edufelip.meer.security.token.TokenProvider tokenProvider;
 
     public AuthController(LoginUseCase loginUseCase,
                           SignupUseCase signupUseCase,
@@ -30,7 +31,8 @@ public class AuthController {
                           AppleLoginUseCase appleLoginUseCase,
                           RefreshTokenUseCase refreshTokenUseCase,
                           ForgotPasswordUseCase forgotPasswordUseCase,
-                          AuthUserRepository authUserRepository) {
+                          AuthUserRepository authUserRepository,
+                          com.edufelip.meer.security.token.TokenProvider tokenProvider) {
         this.loginUseCase = loginUseCase;
         this.signupUseCase = signupUseCase;
         this.googleLoginUseCase = googleLoginUseCase;
@@ -38,6 +40,7 @@ public class AuthController {
         this.refreshTokenUseCase = refreshTokenUseCase;
         this.forgotPasswordUseCase = forgotPasswordUseCase;
         this.authUserRepository = authUserRepository;
+        this.tokenProvider = tokenProvider;
     }
 
     @PostMapping("/login")
@@ -85,10 +88,11 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<Map<String, Object>> me(@RequestHeader("Authorization") String authHeader,
-                                                  RefreshTokenUseCase refreshTokenUseCase) {
-        // me still parsed via token; use LoginUseCase’s tokenProvider in Java migration? For parity keep stubbed with invalid token
-        throw new InvalidTokenException();
+    public ResponseEntity<Map<String, Object>> me(@RequestHeader("Authorization") String authHeader) {
+        String token = extractBearer(authHeader);
+        var payload = tokenProvider.parseAccessToken(token);
+        var user = authUserRepository.findById(payload.getUserId()).orElseThrow(InvalidTokenException::new);
+        return ResponseEntity.ok(Map.of("user", AuthMappers.toDto(user)));
     }
 
     @ExceptionHandler(InvalidCredentialsException.class)
@@ -104,5 +108,10 @@ public class AuthController {
     @ExceptionHandler({InvalidGoogleTokenException.class, InvalidAppleTokenException.class, InvalidTokenException.class, InvalidRefreshTokenException.class})
     public ResponseEntity<Map<String, String>> handleInvalidToken(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", ex.getMessage()));
+    }
+
+    private String extractBearer(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) throw new InvalidTokenException();
+        return authHeader.substring("Bearer ".length()).trim();
     }
 }

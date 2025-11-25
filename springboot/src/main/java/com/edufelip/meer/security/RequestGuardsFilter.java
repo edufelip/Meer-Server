@@ -1,7 +1,6 @@
 package com.edufelip.meer.security;
 
 import com.edufelip.meer.security.guards.AppHeaderGuard;
-import com.edufelip.meer.security.guards.FirebaseAppCheckGuard;
 import com.edufelip.meer.security.guards.FirebaseAuthGuard;
 import com.edufelip.meer.security.guards.GuardException;
 import jakarta.servlet.FilterChain;
@@ -12,12 +11,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class RequestGuardsFilter extends OncePerRequestFilter {
 
     private final AppHeaderGuard appHeaderGuard;
-    private final FirebaseAppCheckGuard appCheckGuard;
     private final FirebaseAuthGuard authGuard;
 
     public RequestGuardsFilter(SecurityProperties securityProps) {
         this.appHeaderGuard = new AppHeaderGuard(securityProps);
-        this.appCheckGuard = new FirebaseAppCheckGuard(securityProps);
         this.authGuard = new FirebaseAuthGuard(securityProps);
     }
 
@@ -34,7 +31,6 @@ public class RequestGuardsFilter extends OncePerRequestFilter {
 
         try {
             appHeaderGuard.validate(request);
-            appCheckGuard.validate(request);
             authGuard.validate(request);
             filterChain.doFilter(request, response);
         } catch (GuardException ex) {

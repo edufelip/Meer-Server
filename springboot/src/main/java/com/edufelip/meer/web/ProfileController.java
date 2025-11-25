@@ -56,6 +56,12 @@ public class ProfileController {
         return Mappers.toProfileDto(user, true);
     }
 
+    // Alias for clients expecting /auth/me
+    @GetMapping("/auth/me")
+    public ProfileDto getProfileAlias(@RequestHeader("Authorization") String authHeader) {
+        return getProfile(authHeader);
+    }
+
     @PutMapping
     public ProfileDto updateProfile(@RequestHeader("Authorization") String authHeader,
                                     @RequestBody UpdateProfileRequest body) {
