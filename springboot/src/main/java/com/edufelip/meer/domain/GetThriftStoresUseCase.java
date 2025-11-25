@@ -3,6 +3,7 @@ package com.edufelip.meer.domain;
 import com.edufelip.meer.core.store.ThriftStore;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,6 +28,7 @@ public class GetThriftStoresUseCase {
         return thriftStoreRepository.findAll(PageRequest.of(page, pageSize));
     }
 
+    @Cacheable("featuredTop10")
     public List<ThriftStore> executeRecentTop10() {
         return thriftStoreRepository.findTop10ByOrderByCreatedAtDesc();
     }

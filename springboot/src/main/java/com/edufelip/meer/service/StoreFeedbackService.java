@@ -1,6 +1,7 @@
 package com.edufelip.meer.service;
 
 import com.edufelip.meer.domain.repo.StoreFeedbackRepository;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -18,6 +19,7 @@ public class StoreFeedbackService {
         this.repository = repository;
     }
 
+    @Cacheable(value = "storeRatings", key = "#storeIds", unless = "#storeIds == null || #storeIds.isEmpty() || #storeIds.size() > 50")
     public Map<Integer, Summary> getSummaries(List<Integer> storeIds) {
         if (storeIds == null || storeIds.isEmpty()) return Map.of();
         var aggregates = repository.aggregateByStoreIds(storeIds);
