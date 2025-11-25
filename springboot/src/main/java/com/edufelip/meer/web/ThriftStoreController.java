@@ -8,6 +8,7 @@ import com.edufelip.meer.domain.GetGuideContentsByThriftStoreUseCase;
 import com.edufelip.meer.domain.GetThriftStoreUseCase;
 import com.edufelip.meer.domain.GetThriftStoresUseCase;
 import com.edufelip.meer.domain.repo.CategoryRepository;
+import com.edufelip.meer.domain.repo.ThriftStorePhotoRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
 import com.edufelip.meer.dto.GuideContentDto;
 import com.edufelip.meer.dto.PageResponse;
@@ -19,17 +20,34 @@ import com.edufelip.meer.security.token.TokenPayload;
 import com.edufelip.meer.security.token.TokenProvider;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Comparator;
+import java.util.stream.Collectors;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.UUID;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.edufelip.meer.core.store.ThriftStorePhoto;
 
 @RestController
 @RequestMapping("/stores")
@@ -41,10 +59,12 @@ public class ThriftStoreController {
     private final GetGuideContentsByThriftStoreUseCase getGuideContentsByThriftStoreUseCase;
     private final CreateGuideContentUseCase createGuideContentUseCase;
     private final ThriftStoreRepository thriftStoreRepository;
+    private final ThriftStorePhotoRepository thriftStorePhotoRepository;
     private final CategoryRepository categoryRepository;
     private final com.edufelip.meer.domain.repo.AuthUserRepository authUserRepository;
     private final TokenProvider tokenProvider;
     private final StoreFeedbackService storeFeedbackService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public ThriftStoreController(GetThriftStoreUseCase getThriftStoreUseCase,
                                  GetThriftStoresUseCase getThriftStoresUseCase,
@@ -52,6 +72,7 @@ public class ThriftStoreController {
                                  GetGuideContentsByThriftStoreUseCase getGuideContentsByThriftStoreUseCase,
                                  CreateGuideContentUseCase createGuideContentUseCase,
                                  ThriftStoreRepository thriftStoreRepository,
+                                 ThriftStorePhotoRepository thriftStorePhotoRepository,
                                  CategoryRepository categoryRepository,
                                  com.edufelip.meer.domain.repo.AuthUserRepository authUserRepository,
                                  TokenProvider tokenProvider,
@@ -62,6 +83,7 @@ public class ThriftStoreController {
         this.getGuideContentsByThriftStoreUseCase = getGuideContentsByThriftStoreUseCase;
         this.createGuideContentUseCase = createGuideContentUseCase;
         this.thriftStoreRepository = thriftStoreRepository;
+        this.thriftStorePhotoRepository = thriftStorePhotoRepository;
         this.categoryRepository = categoryRepository;
         this.authUserRepository = authUserRepository;
         this.tokenProvider = tokenProvider;
@@ -174,6 +196,136 @@ public class ThriftStoreController {
         return Mappers.toDto(createGuideContentUseCase.execute(contentWithStore));
     }
 
+    @PostMapping(path = "", consumes = "multipart/form-data")
+    public ResponseEntity<ThriftStoreDto> createStore(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String description,
+            @RequestParam(required = false) String openingHours,
+            @RequestParam(required = false) String addressLine,
+            @RequestParam(required = false) String phone,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String social,
+            @RequestParam(required = false) String categories,
+            @RequestParam(required = false) String tagline,
+            @RequestParam(required = false) String neighborhood,
+            @RequestParam(required = false) Double latitude,
+            @RequestParam(required = false) Double longitude,
+            @RequestParam(required = false) String photoOrder,
+            @RequestParam(required = false) String deletePhotoIds,
+            @RequestPart(required = false) List<MultipartFile> newPhotos
+    ) {
+        var user = currentUser(authHeader);
+        if (name == null || name.isBlank()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "name is required");
+        if (addressLine == null || addressLine.isBlank()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "addressLine is required");
+        if (latitude == null || longitude == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "latitude/longitude required or geocoding failed");
+        }
+
+        ThriftStore store = new ThriftStore();
+        store.setName(name);
+        store.setDescription(description);
+        store.setOpeningHours(openingHours);
+        store.setAddressLine(addressLine);
+        store.setLatitude(latitude);
+        store.setLongitude(longitude);
+        if (phone != null) {
+            var socialObj = store.getSocial() != null ? store.getSocial() : new com.edufelip.meer.core.store.Social();
+            socialObj.setWhatsapp(phone);
+            store.setSocial(socialObj);
+            store.setPhone(phone);
+        }
+        store.setEmail(email);
+        store.setTagline(tagline);
+        store.setNeighborhood(neighborhood);
+        store.setCategories(parseStringArray(categories));
+        store.setSocial(parseSocial(social));
+
+        var saved = thriftStoreRepository.save(store);
+
+        handlePhotos(saved, deletePhotoIds, newPhotos, photoOrder);
+
+        user.setOwnedThriftStore(saved);
+        authUserRepository.save(user);
+
+        var refreshed = thriftStoreRepository.findById(saved.getId()).orElseThrow();
+        var dto = Mappers.toDto(refreshed, true, false, null, null, null);
+        return ResponseEntity.status(HttpStatus.CREATED).body(dto);
+    }
+
+    @PutMapping(path = "/{id}", consumes = "multipart/form-data")
+    public ThriftStoreDto updateStore(
+            @PathVariable Integer id,
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String description,
+            @RequestParam(required = false) String openingHours,
+            @RequestParam(required = false) String addressLine,
+            @RequestParam(required = false) String phone,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String social,
+            @RequestParam(required = false) String categories,
+            @RequestParam(required = false) String tagline,
+            @RequestParam(required = false) String neighborhood,
+            @RequestParam(required = false) Double latitude,
+            @RequestParam(required = false) Double longitude,
+            @RequestParam(required = false) String photoOrder,
+            @RequestParam(required = false) String deletePhotoIds,
+            @RequestPart(required = false) List<MultipartFile> newPhotos
+    ) {
+        var user = currentUser(authHeader);
+        var store = thriftStoreRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
+        if (user.getOwnedThriftStore() == null || !user.getOwnedThriftStore().getId().equals(store.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not owner");
+        }
+
+        if (name != null && name.isBlank()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "name cannot be blank");
+        if (addressLine != null && addressLine.isBlank()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "addressLine cannot be blank");
+
+        if (name != null) store.setName(name);
+        if (description != null) store.setDescription(description);
+        if (openingHours != null) store.setOpeningHours(openingHours);
+        if (addressLine != null) store.setAddressLine(addressLine);
+        if (phone != null) {
+            var socialObj = store.getSocial() != null ? store.getSocial() : new com.edufelip.meer.core.store.Social();
+            socialObj.setWhatsapp(phone);
+            store.setSocial(socialObj);
+            store.setPhone(phone);
+        }
+        if (email != null) store.setEmail(email);
+        if (tagline != null) store.setTagline(tagline);
+        if (neighborhood != null) store.setNeighborhood(neighborhood);
+        if (categories != null) store.setCategories(parseStringArray(categories));
+        if (social != null) store.setSocial(parseSocial(social));
+
+        if (latitude != null && longitude != null) {
+            store.setLatitude(latitude);
+            store.setLongitude(longitude);
+        } else if ((addressLine != null) && (store.getLatitude() == null || store.getLongitude() == null)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "latitude/longitude required or geocoding failed");
+        }
+
+        thriftStoreRepository.save(store);
+        handlePhotos(store, deletePhotoIds, newPhotos, photoOrder);
+
+        var refreshed = thriftStoreRepository.findById(id).orElseThrow();
+        boolean isFav = user.getFavorites().stream().anyMatch(f -> f.getId().equals(id));
+        var dto = Mappers.toDto(refreshed, true, isFav, null, null, null);
+        return dto;
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteStore(@PathVariable Integer id, @RequestHeader("Authorization") String authHeader) {
+        var user = currentUser(authHeader);
+        var store = thriftStoreRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
+        if (user.getOwnedThriftStore() == null || !user.getOwnedThriftStore().getId().equals(store.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not owner");
+        }
+        thriftStoreRepository.delete(store);
+        return ResponseEntity.noContent().build();
+    }
+
+
     private Integer extractUserId(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) throw new InvalidTokenException();
         String token = authHeader.substring("Bearer ".length()).trim();
@@ -207,5 +359,121 @@ public class ThriftStoreController {
                         Math.sin(dLon / 2) * Math.sin(dLon / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
+    }
+
+    private List<String> parseStringArray(String json) {
+        if (json == null || json.isBlank()) return null;
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid JSON array");
+        }
+    }
+
+    private List<Integer> parseIntArray(String json) {
+        if (json == null || json.isBlank()) return List.of();
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<Integer>>() {});
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid JSON array");
+        }
+    }
+
+    private com.edufelip.meer.core.store.Social parseSocial(String json) {
+        if (json == null || json.isBlank()) return null;
+        try {
+            Map<String, String> map = objectMapper.readValue(json, new TypeReference<Map<String, String>>() {});
+            return new com.edufelip.meer.core.store.Social(
+                    map.get("facebook"), map.get("instagram"), map.get("website"), map.get("whatsapp")
+            );
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid social JSON");
+        }
+    }
+
+    private void handlePhotos(ThriftStore store,
+                              String deletePhotoIdsJson,
+                              List<MultipartFile> newPhotos,
+                              String photoOrderJson) {
+        var photos = store.getPhotos();
+
+        // delete
+        var deleteIds = parseIntArray(deletePhotoIdsJson);
+        if (!deleteIds.isEmpty()) {
+            photos.removeIf(p -> deleteIds.contains(p.getId()));
+        }
+
+        // map new photo temp keys
+        Map<String, MultipartFile> newPhotoMap = new HashMap<>();
+        if (newPhotos != null) {
+            int idx = 0;
+            for (MultipartFile f : newPhotos) {
+                newPhotoMap.put("new" + idx, f);
+                idx++;
+            }
+        }
+
+        List<String> orderKeys = parseStringArray(photoOrderJson);
+        if (orderKeys == null) orderKeys = new ArrayList<>();
+
+        List<ThriftStorePhoto> additions = new ArrayList<>();
+        int order = 0;
+        for (String key : orderKeys) {
+            final int currentOrder = order;
+            // existing
+            try {
+                Integer existingId = Integer.valueOf(key);
+                photos.stream().filter(p -> p.getId().equals(existingId)).findFirst()
+                        .ifPresent(p -> p.setDisplayOrder(currentOrder));
+                order++;
+                continue;
+            } catch (NumberFormatException ignored) {}
+
+            // new
+            MultipartFile f = newPhotoMap.remove(key);
+            if (f != null) {
+                var url = savePhotoFile(store.getId(), f);
+                additions.add(new ThriftStorePhoto(store, url, currentOrder));
+                order++;
+            }
+        }
+
+        // append leftover new photos
+        for (MultipartFile f : newPhotoMap.values()) {
+            var url = savePhotoFile(store.getId(), f);
+            additions.add(new ThriftStorePhoto(store, url, order++));
+        }
+
+        photos.addAll(additions);
+        // ensure cover points to first photo in order
+        photos.sort(Comparator.comparing(p -> p.getDisplayOrder() == null ? Integer.MAX_VALUE : p.getDisplayOrder()));
+        if (!photos.isEmpty()) {
+            store.setCoverImageUrl(photos.get(0).getUrl());
+        }
+        thriftStoreRepository.save(store);
+    }
+
+    private String savePhotoFile(Integer storeId, MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Empty photo file");
+        }
+        var ctype = file.getContentType();
+        if (ctype == null || !(ctype.equalsIgnoreCase("image/jpeg") || ctype.equalsIgnoreCase("image/png"))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Photo must be jpeg or png");
+        }
+        if (file.getSize() > 10 * 1024 * 1024) {
+            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "Photo too large (max 10MB)");
+        }
+        try {
+            Path dir = Path.of("uploads", "stores", storeId.toString());
+            Files.createDirectories(dir);
+            String ext = ctype.equalsIgnoreCase("image/png") ? ".png" : ".jpg";
+            String filename = UUID.randomUUID() + ext;
+            Path target = dir.resolve(filename);
+            Files.write(target, file.getBytes());
+            return "/uploads/stores/" + storeId + "/" + filename;
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to save photo");
+        }
     }
 }

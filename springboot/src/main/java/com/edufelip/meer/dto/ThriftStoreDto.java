@@ -28,5 +28,6 @@ public record ThriftStoreDto(
         String badgeLabel,
         Boolean isFavorite,
         String description,
-        List<GuideContentDto> contents
+        List<GuideContentDto> contents,
+        List<StoreImageDto> images
 ) {}

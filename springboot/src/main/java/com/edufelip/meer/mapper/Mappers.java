@@ -7,6 +7,7 @@ import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.dto.CategoryDto;
 import com.edufelip.meer.dto.GuideContentDto;
 import com.edufelip.meer.dto.ProfileDto;
+import com.edufelip.meer.dto.StoreImageDto;
 import com.edufelip.meer.dto.ThriftStoreDto;
 
 import java.util.List;
@@ -40,11 +41,16 @@ public class Mappers {
         List<GuideContentDto> contentsDto = includeContents && store.getContents() != null
                 ? store.getContents().stream().map(Mappers::toDto).toList()
                 : null;
+        List<StoreImageDto> images = store.getPhotos() != null
+                ? store.getPhotos().stream()
+                .map(p -> new StoreImageDto(p.getId(), p.getUrl(), p.getDisplayOrder(), p.getDisplayOrder() != null && p.getDisplayOrder() == 0))
+                .toList()
+                : List.of();
         return new ThriftStoreDto(
                 store.getId(),
                 store.getName(),
                 store.getTagline(),
-                store.getCoverImageUrl(),
+                images.isEmpty() ? store.getCoverImageUrl() : images.get(0).url(),
                 store.getGalleryUrls(),
                 store.getAddressLine(),
                 store.getLatitude(),
@@ -66,7 +72,8 @@ public class Mappers {
                 store.getBadgeLabel(),
                 isFavoriteOverride,
                 store.getDescription(),
-                contentsDto
+                contentsDto,
+                images
         );
     }
 
