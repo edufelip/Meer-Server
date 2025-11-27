@@ -23,6 +23,7 @@ import com.edufelip.meer.security.RequestGuardsFilter;
 import com.edufelip.meer.security.SecurityProperties;
 import com.edufelip.meer.security.token.JwtTokenProvider;
 import com.edufelip.meer.security.token.TokenProvider;
+import com.edufelip.meer.logging.RequestResponseLoggingFilter;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -108,6 +109,13 @@ public class AppConfig {
     public FilterRegistrationBean<RequestGuardsFilter> requestGuardsFilter(SecurityProperties securityProps) {
         FilterRegistrationBean<RequestGuardsFilter> registration = new FilterRegistrationBean<>(new RequestGuardsFilter(securityProps));
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        return registration;
+    }
+
+    @Bean
+    public FilterRegistrationBean<RequestResponseLoggingFilter> requestResponseLoggingFilter() {
+        FilterRegistrationBean<RequestResponseLoggingFilter> registration = new FilterRegistrationBean<>(new RequestResponseLoggingFilter());
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 1); // run right after guards
         return registration;
     }
 }

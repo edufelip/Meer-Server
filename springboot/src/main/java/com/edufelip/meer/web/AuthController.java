@@ -3,7 +3,9 @@ package com.edufelip.meer.web;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.auth.*;
 import com.edufelip.meer.dto.AuthDtos;
+import com.edufelip.meer.dto.ProfileDto;
 import com.edufelip.meer.mapper.AuthMappers;
+import com.edufelip.meer.mapper.Mappers;
 import com.edufelip.meer.security.token.InvalidRefreshTokenException;
 import com.edufelip.meer.security.token.InvalidTokenException;
 import org.springframework.http.HttpStatus;
@@ -92,7 +94,8 @@ public class AuthController {
         String token = extractBearer(authHeader);
         var payload = tokenProvider.parseAccessToken(token);
         var user = authUserRepository.findById(payload.getUserId()).orElseThrow(InvalidTokenException::new);
-        return ResponseEntity.ok(Map.of("user", AuthMappers.toDto(user)));
+        ProfileDto profile = Mappers.toProfileDto(user, true);
+        return ResponseEntity.ok(Map.of("user", profile));
     }
 
     @ExceptionHandler(InvalidCredentialsException.class)

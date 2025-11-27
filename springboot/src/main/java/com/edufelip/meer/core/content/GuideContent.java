@@ -16,7 +16,7 @@ public class GuideContent {
     @Column(nullable = false)
     private String title;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 2048)
     private String description;
 
     @Column(nullable = false)
@@ -25,7 +25,7 @@ public class GuideContent {
     @Column(nullable = false)
     private String type;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 512)
     private String imageUrl;
 
     @ManyToOne(fetch = FetchType.LAZY)

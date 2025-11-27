@@ -6,6 +6,7 @@ import com.edufelip.meer.dto.CategoryDto;
 import com.edufelip.meer.dto.CategoryStoreItemDto;
 import com.edufelip.meer.dto.PageResponse;
 import com.edufelip.meer.mapper.Mappers;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,6 +31,7 @@ public class CategoryController {
     }
 
     @GetMapping
+    @Cacheable("categoriesAll")
     public List<CategoryDto> getAll() {
         return categoryRepository.findAll().stream().map(Mappers::toDto).toList();
     }

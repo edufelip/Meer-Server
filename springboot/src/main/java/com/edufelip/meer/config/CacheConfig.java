@@ -25,6 +25,7 @@ public class CacheConfig {
         var featuredTtl = parseDuration(props.getProperty("featuredTop10", "expireAfterWrite=10m"));
         var guideTtl = parseDuration(props.getProperty("guideTop10", "expireAfterWrite=10m"));
         var ratingsTtl = parseDuration(props.getProperty("storeRatings", "expireAfterWrite=5m"));
+        var categoriesTtl = parseDuration(props.getProperty("categoriesAll", "expireAfterWrite=60m"));
 
         var manager = new SimpleCacheManager();
         manager.setCaches(List.of(
@@ -39,6 +40,10 @@ public class CacheConfig {
                 new CaffeineCache("storeRatings", Caffeine.newBuilder()
                         .expireAfterWrite(ratingsTtl)
                         .maximumSize(200)
+                        .build()),
+                new CaffeineCache("categoriesAll", Caffeine.newBuilder()
+                        .expireAfterWrite(categoriesTtl)
+                        .maximumSize(5)
                         .build())
         ));
         return manager;
@@ -58,4 +63,3 @@ public class CacheConfig {
         return Duration.ofMinutes(10);
     }
 }
-

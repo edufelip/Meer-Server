@@ -54,8 +54,7 @@ spring:
       ddl-auto: create-drop
   sql:
     init:
-      mode: always
-      platform: postgres
+      mode: never
 
 ---
 # Production profile
