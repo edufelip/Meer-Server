@@ -225,7 +225,8 @@ public class ThriftStoreController {
         store.setAddressLine(addressLine);
         store.setLatitude(latitude);
         store.setLongitude(longitude);
-        var socialObj = store.getSocial() != null ? store.getSocial() : new com.edufelip.meer.core.store.Social();
+        store.setOwner(user);
+        var socialObj = store.getSocial() != null ? store.getSocial() : new Social();
         store.setSocial(socialObj);
         store.setPhone(phone);
         store.setEmail(email);
@@ -238,11 +239,11 @@ public class ThriftStoreController {
 
         handlePhotos(saved, null, newPhotos, photoOrder);
 
+        // keep user linkage for profile responses
         user.setOwnedThriftStore(saved);
         authUserRepository.save(user);
 
-        var refreshed = thriftStoreRepository.findById(saved.getId()).orElseThrow();
-        var dto = Mappers.toDto(refreshed, true, false, null, null, null);
+        var dto = Mappers.toDto(saved, true, false, null, null, null);
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
 

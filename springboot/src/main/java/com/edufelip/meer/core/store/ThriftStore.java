@@ -69,6 +69,10 @@ public class ThriftStore {
     @BatchSize(size = 25)
     private List<ThriftStorePhoto> photos = new ArrayList<>();
 
+    @ManyToOne
+    @JoinColumn(name = "owner_id")
+    private com.edufelip.meer.core.auth.AuthUser owner;
+
     public ThriftStore() {}
 
     public ThriftStore(Integer id, String name, String tagline, String coverImageUrl, List<String> galleryUrls,
