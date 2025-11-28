@@ -26,6 +26,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-cache")
     implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
     developmentOnly("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
+    implementation("net.coobird:thumbnailator:0.4.20")
     implementation("org.springframework.security:spring-security-crypto")
     implementation("io.jsonwebtoken:jjwt-api:0.11.5")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")

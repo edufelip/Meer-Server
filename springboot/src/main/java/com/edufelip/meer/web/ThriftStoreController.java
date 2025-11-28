@@ -35,13 +35,13 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
+import net.coobird.thumbnailator.Thumbnails;
 
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Comparator;
-import java.util.stream.Collectors;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -459,10 +459,16 @@ public class ThriftStoreController {
         try {
             Path dir = Path.of("uploads", "stores", storeId.toString());
             Files.createDirectories(dir);
-            String ext = ctype.equalsIgnoreCase("image/png") ? ".png" : ".jpg";
-            String filename = UUID.randomUUID() + ext;
+            String filename = UUID.randomUUID() + ".jpg";
             Path target = dir.resolve(filename);
-            Files.write(target, file.getBytes());
+            // Resize to max 1600px longest side and compress to ~75% quality as JPEG
+            try (var in = file.getInputStream()) {
+                Thumbnails.of(in)
+                        .size(1600, 1600)
+                        .outputFormat("jpg")
+                        .outputQuality(0.75)
+                        .toFile(target.toFile());
+            }
             return "/uploads/stores/" + storeId + "/" + filename;
         } catch (IOException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to save photo");
