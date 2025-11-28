@@ -3,6 +3,7 @@ HELP.md
 build/
 springboot/build/
 springboot/.env
+uploads/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
@@ -42,5 +43,4 @@ out/
 .kotlin
 
 GEMINI.md
-docs/*
 AGENTS.md
