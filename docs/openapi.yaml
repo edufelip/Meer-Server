@@ -1,0 +1,459 @@
+openapi: 3.0.3
+info:
+  title: Meer API
+  version: 0.1.0
+  description: REST API for the Meer app (mobile). Uses JWT bearer auth.
+servers:
+  - url: http://localhost:8080
+security:
+  - bearerAuth: []
+paths:
+  /auth/login:
+    post:
+      summary: Email/password login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Tokens and user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/signup:
+    post:
+      summary: Sign up with email/password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+      responses:
+        '201':
+          description: Created; returns tokens and user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '409':
+          description: Email already registered
+  /auth/refresh:
+    post:
+      summary: Refresh tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: New access/refresh tokens
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/google:
+    post:
+      summary: Google login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleLoginRequest'
+      responses:
+        '200':
+          description: Tokens and user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+  /auth/apple:
+    post:
+      summary: Apple login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppleLoginRequest'
+      responses:
+        '200':
+          description: Tokens and user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+  /auth/me:
+    get:
+      summary: Current user (profile shape)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/Profile'
+  /profile:
+    get:
+      summary: Get profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+  /home:
+    get:
+      summary: Home payload (featured + nearby + guide content)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: lat
+          schema: { type: number, format: double }
+          required: true
+        - in: query
+          name: lng
+          schema: { type: number, format: double }
+          required: true
+      responses:
+        '200':
+          description: Home payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomeResponse'
+  /featured:
+    get:
+      summary: Top featured stores (lightweight)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Featured stores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FeaturedStore'
+  /nearby:
+    get:
+      summary: Nearby stores (paginated, light fields)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: lat
+          required: true
+          schema: { type: number, format: double }
+        - in: query
+          name: lng
+          required: true
+          schema: { type: number, format: double }
+        - in: query
+          name: pageIndex
+          schema: { type: integer, default: 0 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Nearby stores page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NearbyPage'
+  /contents/top:
+    get:
+      summary: Recent guide content (top)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Guide content list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GuideTop'
+  /categories:
+    get:
+      summary: List categories
+      responses:
+        '200':
+          description: Categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+  /categories/{categoryId}/stores:
+    get:
+      summary: Stores by category (paged)
+      parameters:
+        - in: path
+          name: categoryId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Page of stores
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageResponseStoreCard'
+  /favorites:
+    get:
+      summary: List favorites (lightweight)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: lat
+          schema: { type: number, format: double }
+        - in: query
+          name: lng
+          schema: { type: number, format: double }
+      responses:
+        '200':
+          description: Favorite stores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FavoriteStore'
+  /favorites/{storeId}:
+    post:
+      summary: Add favorite
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Added
+    delete:
+      summary: Remove favorite
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Removed
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+    SignupRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name: { type: string }
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken: { type: string }
+    GoogleLoginRequest:
+      type: object
+      required: [idToken]
+      properties:
+        idToken: { type: string }
+        client: { type: string }
+    AppleLoginRequest:
+      type: object
+      required: [idToken, authorizationCode, provider, client]
+      properties:
+        idToken: { type: string }
+        authorizationCode: { type: string }
+        provider: { type: string, example: apple }
+        client: { type: string }
+    AuthResponse:
+      type: object
+      properties:
+        token: { type: string }
+        refreshToken: { type: string }
+        user:
+          $ref: '#/components/schemas/Profile'
+    Profile:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string, format: email }
+        avatarUrl: { type: string }
+        bio: { type: string }
+        notifyNewStores: { type: boolean }
+        notifyPromos: { type: boolean }
+        ownedThriftStore:
+          $ref: '#/components/schemas/ThriftStore'
+    ThriftStore:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        tagline: { type: string }
+        coverImageUrl: { type: string }
+        galleryUrls:
+          type: array
+          items: { type: string }
+        addressLine: { type: string }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        openingHours: { type: string }
+        openingHoursNotes: { type: string }
+        facebook: { type: string }
+        instagram: { type: string }
+        website: { type: string }
+        whatsapp: { type: string }
+        categories:
+          type: array
+          items: { type: string }
+        rating: { type: number, format: double }
+        reviewCount: { type: integer }
+        distanceMeters: { type: number, format: double }
+        walkTimeMinutes: { type: integer }
+        neighborhood: { type: string }
+        badgeLabel: { type: string }
+        isFavorite: { type: boolean }
+        description: { type: string }
+    FeaturedStore:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        coverImageUrl: { type: string }
+    NearbyStore:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string }
+        coverImageUrl: { type: string }
+        addressLine: { type: string }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        neighborhood: { type: string }
+        isFavorite: { type: boolean }
+        categories:
+          type: array
+          items: { type: string }
+        rating: { type: number, format: double }
+        reviewCount: { type: integer }
+        distanceMeters: { type: number, format: double }
+        walkTimeMinutes: { type: integer }
+    FavoriteStore:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string }
+        coverImageUrl: { type: string }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        isFavorite: { type: boolean }
+        distanceMeters: { type: number, format: double }
+    GuideTop:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        description: { type: string }
+        imageUrl: { type: string }
+    HomeResponse:
+      type: object
+      properties:
+        featured:
+          type: array
+          items: { $ref: '#/components/schemas/FeaturedStore' }
+        nearby:
+          type: array
+          items: { $ref: '#/components/schemas/NearbyStore' }
+        content:
+          type: array
+          items: { $ref: '#/components/schemas/GuideTop' }
+    Category:
+      type: object
+      properties:
+        id: { type: string }
+        nameStringId: { type: string }
+        imageResId: { type: string }
+    PageResponseStoreCard:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThriftStore'
+        page: { type: integer }
+        hasNext: { type: boolean }
+    NearbyPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NearbyStore'
+        page: { type: integer }
+        hasNext: { type: boolean }
