@@ -21,10 +21,10 @@ public class StoreFeedbackService {
     }
 
     @Cacheable(value = "storeRatings", key = "#storeIds", unless = "#storeIds == null || #storeIds.isEmpty() || #storeIds.size() > 50")
-    public Map<Integer, Summary> getSummaries(List<Integer> storeIds) {
+    public Map<java.util.UUID, Summary> getSummaries(List<java.util.UUID> storeIds) {
         if (storeIds == null || storeIds.isEmpty()) return Map.of();
         var aggregates = repository.aggregateByStoreIds(storeIds);
-        Map<Integer, Summary> map = new HashMap<>();
+        Map<java.util.UUID, Summary> map = new HashMap<>();
         for (StoreFeedbackRepository.AggregateView view : aggregates) {
             map.put(view.getStoreId(), new Summary(view.getAvgScore(), view.getCnt()));
         }
@@ -49,11 +49,11 @@ public class StoreFeedbackService {
     }
 
     @CacheEvict(cacheNames = "storeRatings", allEntries = true)
-    public java.util.Optional<com.edufelip.meer.core.store.StoreFeedback> find(Integer userId, Integer storeId) {
+    public java.util.Optional<com.edufelip.meer.core.store.StoreFeedback> find(java.util.UUID userId, java.util.UUID storeId) {
         return repository.findByUserIdAndThriftStoreId(userId, storeId);
     }
 
-    public void delete(Integer userId, Integer storeId) {
+    public void delete(java.util.UUID userId, java.util.UUID storeId) {
         repository.findByUserIdAndThriftStoreId(userId, storeId).ifPresent(repository::delete);
     }
 }

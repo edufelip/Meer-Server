@@ -12,11 +12,11 @@ public class StoreFeedback {
     private Integer id;
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "auth_user_id")
+    @JoinColumn(name = "auth_user_id", columnDefinition = "uuid")
     private AuthUser user;
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "thrift_store_id")
+    @JoinColumn(name = "thrift_store_id", columnDefinition = "uuid")
     private ThriftStore thriftStore;
 
     @Column(nullable = true)

@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -74,7 +75,7 @@ public class FavoritesController {
 
     @PostMapping("/{storeId}")
     public ResponseEntity<Void> addFavorite(@RequestHeader("Authorization") String authHeader,
-                                            @PathVariable Integer storeId) {
+                                            @PathVariable java.util.UUID storeId) {
         AuthUser user = currentUser(authHeader);
         var store = thriftStoreRepository.findById(storeId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
@@ -85,7 +86,7 @@ public class FavoritesController {
 
     @DeleteMapping("/{storeId}")
     public ResponseEntity<Void> removeFavorite(@RequestHeader("Authorization") String authHeader,
-                                               @PathVariable Integer storeId) {
+                                               @PathVariable java.util.UUID storeId) {
         AuthUser user = currentUser(authHeader);
         thriftStoreRepository.findById(storeId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));

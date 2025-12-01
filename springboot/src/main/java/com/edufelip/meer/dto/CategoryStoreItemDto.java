@@ -3,7 +3,7 @@ package com.edufelip.meer.dto;
 import java.util.List;
 
 public record CategoryStoreItemDto(
-        Integer id,
+        java.util.UUID id,
         String name,
         String coverImage,
         String addressLine,

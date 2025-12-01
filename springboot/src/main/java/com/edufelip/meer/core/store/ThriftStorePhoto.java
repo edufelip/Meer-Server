@@ -9,7 +9,7 @@ public class ThriftStorePhoto {
     private Integer id;
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "thrift_store_id")
+    @JoinColumn(name = "thrift_store_id", columnDefinition = "uuid")
     private ThriftStore thriftStore;
 
     @Column(nullable = false)

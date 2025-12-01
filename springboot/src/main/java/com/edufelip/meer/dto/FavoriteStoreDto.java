@@ -1,7 +1,7 @@
 package com.edufelip.meer.dto;
 
 public record FavoriteStoreDto(
-        Integer id,
+        java.util.UUID id,
         String name,
         String description,
         String coverImageUrl,

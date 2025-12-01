@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.time.Instant;
 import java.util.Date;
+import java.util.UUID;
 
 public class JwtTokenProvider implements TokenProvider {
     private final JwtProperties props;
@@ -54,7 +55,7 @@ public class JwtTokenProvider implements TokenProvider {
     public TokenPayload parseAccessToken(String token) {
         try {
             var claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
-            Integer userId = Integer.valueOf(claims.getSubject());
+            UUID userId = UUID.fromString(claims.getSubject());
             return new TokenPayload(userId, (String) claims.get("email"), (String) claims.get("name"));
         } catch (JwtException | IllegalArgumentException ex) {
             throw new InvalidTokenException();
@@ -66,7 +67,7 @@ public class JwtTokenProvider implements TokenProvider {
         try {
             var claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
             if (!"refresh".equals(claims.get("type"))) throw new InvalidRefreshTokenException();
-            Integer userId = Integer.valueOf(claims.getSubject());
+            UUID userId = UUID.fromString(claims.getSubject());
             return new TokenPayload(userId, (String) claims.get("email"), (String) claims.get("name"));
         } catch (JwtException | IllegalArgumentException ex) {
             throw new InvalidRefreshTokenException();

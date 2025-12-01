@@ -46,7 +46,7 @@ public class HomeController {
                              @RequestParam(name = "lat") double lat,
                              @RequestParam(name = "lng") double lng) {
         var user = currentUser(authHeader);
-        Set<Integer> favoriteIds = user.getFavorites().stream().map(f -> f.getId()).collect(Collectors.toSet());
+        Set<java.util.UUID> favoriteIds = user.getFavorites().stream().map(f -> f.getId()).collect(Collectors.toSet());
 
         var featuredStores = getThriftStoresUseCase.executeRecentTop10();
         var nearbyStores = getThriftStoresUseCase.executeNearby(lat, lng, 0, 10).getContent();

@@ -7,17 +7,18 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public interface StoreFeedbackRepository extends JpaRepository<StoreFeedback, Integer> {
-    Optional<StoreFeedback> findByUserIdAndThriftStoreId(Integer userId, Integer storeId);
-    void deleteByUserId(Integer userId);
+    Optional<StoreFeedback> findByUserIdAndThriftStoreId(UUID userId, UUID storeId);
+    void deleteByUserId(UUID userId);
 
     interface AggregateView {
-        Integer getStoreId();
+        java.util.UUID getStoreId();
         Double getAvgScore();
         Long getCnt();
     }
 
     @Query("select f.thriftStore.id as storeId, avg(f.score) as avgScore, count(f) as cnt from StoreFeedback f where f.thriftStore.id in :storeIds and f.score is not null group by f.thriftStore.id")
-    List<AggregateView> aggregateByStoreIds(@Param("storeIds") List<Integer> storeIds);
+    List<AggregateView> aggregateByStoreIds(@Param("storeIds") List<UUID> storeIds);
 }

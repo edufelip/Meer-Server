@@ -29,7 +29,7 @@ public class GuideContent {
     private String imageUrl;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "thrift_store_id")
+    @JoinColumn(name = "thrift_store_id", columnDefinition = "uuid")
     private ThriftStore thriftStore;
 
     @CreationTimestamp

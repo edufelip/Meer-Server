@@ -149,7 +149,7 @@ public class ThriftStoreController {
     }
 
     @GetMapping("/{id}")
-    public ThriftStoreDto getById(@PathVariable Integer id, @RequestHeader("Authorization") String authHeader) {
+    public ThriftStoreDto getById(@PathVariable java.util.UUID id, @RequestHeader("Authorization") String authHeader) {
         var user = currentUser(authHeader);
         var store = getThriftStoreUseCase.execute(id);
         if (store == null) return null;
@@ -166,13 +166,13 @@ public class ThriftStoreController {
     }
 
     @GetMapping("/{storeId}/contents")
-    public List<GuideContentDto> getContentsByThriftStoreId(@PathVariable Integer storeId) {
+    public List<GuideContentDto> getContentsByThriftStoreId(@PathVariable java.util.UUID storeId) {
         return getGuideContentsByThriftStoreUseCase.execute(storeId).stream().map(Mappers::toDto).toList();
     }
 
     @PostMapping("/{storeId}/contents")
     public GuideContentDto createGuideContent(
-            @PathVariable Integer storeId,
+            @PathVariable java.util.UUID storeId,
             @RequestBody GuideContent guideContent,
             @RequestHeader("Authorization") String authHeader
     ) {
@@ -249,7 +249,7 @@ public class ThriftStoreController {
 
     @PutMapping(path = "/{id}", consumes = "multipart/form-data")
     public ThriftStoreDto updateStore(
-            @PathVariable Integer id,
+            @PathVariable java.util.UUID id,
             @RequestHeader("Authorization") String authHeader,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String description,
@@ -264,7 +264,6 @@ public class ThriftStoreController {
             @RequestParam(required = false) Double latitude,
             @RequestParam(required = false) Double longitude,
             @RequestParam(required = false) String photoOrder,
-            @RequestParam(required = false) String deletePhotoIds,
             @RequestPart(required = false) List<MultipartFile> newPhotos
     ) {
         var user = currentUser(authHeader);
@@ -299,7 +298,7 @@ public class ThriftStoreController {
         }
 
         thriftStoreRepository.save(store);
-        handlePhotos(store, deletePhotoIds, newPhotos, photoOrder);
+        handlePhotos(store, null, newPhotos, photoOrder);
 
         var refreshed = thriftStoreRepository.findById(id).orElseThrow();
         boolean isFav = user.getFavorites().stream().anyMatch(f -> f.getId().equals(id));
@@ -308,7 +307,7 @@ public class ThriftStoreController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteStore(@PathVariable Integer id, @RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<Void> deleteStore(@PathVariable java.util.UUID id, @RequestHeader("Authorization") String authHeader) {
         var user = currentUser(authHeader);
         var store = thriftStoreRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
         if (user.getOwnedThriftStore() == null || !user.getOwnedThriftStore().getId().equals(store.getId())) {
@@ -319,7 +318,7 @@ public class ThriftStoreController {
     }
 
 
-    private Integer extractUserId(String authHeader) {
+    private java.util.UUID extractUserId(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) throw new InvalidTokenException();
         String token = authHeader.substring("Bearer ".length()).trim();
         try {
@@ -331,15 +330,8 @@ public class ThriftStoreController {
     }
 
     private com.edufelip.meer.core.auth.AuthUser currentUser(String authHeader) {
-        Integer userId = extractUserId(authHeader);
+        java.util.UUID userId = extractUserId(authHeader);
         return authUserRepository.findById(userId).orElseThrow(InvalidTokenException::new);
-    }
-
-    private List<ThriftStore> sortByDistanceIfPossible(List<ThriftStore> stores, Double lat, Double lng) {
-        if (lat == null || lng == null) return stores;
-        return stores.stream()
-                .sorted(java.util.Comparator.comparingDouble(s -> distanceKm(lat, lng, s.getLatitude(), s.getLongitude())))
-                .toList();
     }
 
     private double distanceKm(double lat1, double lon1, Double lat2, Double lon2) {
@@ -446,7 +438,7 @@ public class ThriftStoreController {
         thriftStoreRepository.save(store);
     }
 
-    private String savePhotoFile(Integer storeId, MultipartFile file) {
+    private String savePhotoFile(java.util.UUID storeId, MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Empty photo file");
         }

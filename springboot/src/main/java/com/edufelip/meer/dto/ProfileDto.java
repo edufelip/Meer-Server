@@ -1,7 +1,7 @@
 package com.edufelip.meer.dto;
 
 public record ProfileDto(
-        Integer id,
+        java.util.UUID id,
         String name,
         String email,
         String avatarUrl,

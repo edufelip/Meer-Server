@@ -7,8 +7,9 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.util.UUID;
 
-public interface ThriftStoreRepository extends JpaRepository<ThriftStore, Integer> {
+public interface ThriftStoreRepository extends JpaRepository<ThriftStore, UUID> {
 
     @Query("select t from ThriftStore t where :categoryId in elements(t.categories)")
     Page<ThriftStore> findByCategoryId(@Param("categoryId") String categoryId, Pageable pageable);

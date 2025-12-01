@@ -42,7 +42,7 @@ public class StoreFeedbackController {
 
     // Upsert (create/update) feedback for current user on a store
     @PostMapping
-    public FeedbackResponse upsert(@PathVariable Integer storeId,
+    public FeedbackResponse upsert(@PathVariable java.util.UUID storeId,
                                    @RequestBody FeedbackRequest body,
                                    @RequestHeader("Authorization") String authHeader) {
         var user = currentUser(authHeader);
@@ -54,7 +54,7 @@ public class StoreFeedbackController {
 
     // Get current user's feedback on a store
     @GetMapping
-    public ResponseEntity<FeedbackResponse> getMine(@PathVariable Integer storeId,
+    public ResponseEntity<FeedbackResponse> getMine(@PathVariable java.util.UUID storeId,
                                                     @RequestHeader("Authorization") String authHeader) {
         var user = currentUser(authHeader);
         return storeFeedbackService.find(user.getId(), storeId)
@@ -64,7 +64,7 @@ public class StoreFeedbackController {
 
     // Delete current user's feedback on a store (idempotent)
     @DeleteMapping
-    public ResponseEntity<Void> delete(@PathVariable Integer storeId,
+    public ResponseEntity<Void> delete(@PathVariable java.util.UUID storeId,
                                        @RequestHeader("Authorization") String authHeader) {
         var user = currentUser(authHeader);
         // ensure store exists for proper 404 semantics

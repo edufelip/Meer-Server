@@ -1,10 +1,12 @@
 package com.edufelip.meer.core.store;
 
 import com.edufelip.meer.core.content.GuideContent;
+import com.edufelip.meer.util.Uuid7;
 import jakarta.persistence.*;
 import java.util.List;
 import java.util.ArrayList;
 import java.time.Instant;
+import java.util.UUID;
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -12,8 +14,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 @Entity
 public class ThriftStore {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    @Column(columnDefinition = "uuid")
+    private UUID id;
 
     @Column(nullable = false)
     private String name;
@@ -70,12 +72,12 @@ public class ThriftStore {
     private List<ThriftStorePhoto> photos = new ArrayList<>();
 
     @ManyToOne
-    @JoinColumn(name = "owner_id")
+    @JoinColumn(name = "owner_id", columnDefinition = "uuid")
     private com.edufelip.meer.core.auth.AuthUser owner;
 
     public ThriftStore() {}
 
-    public ThriftStore(Integer id, String name, String tagline, String coverImageUrl, List<String> galleryUrls,
+    public ThriftStore(UUID id, String name, String tagline, String coverImageUrl, List<String> galleryUrls,
                        String addressLine, Double latitude, Double longitude, String openingHours,
                        String openingHoursNotes, Social social, List<String> categories,
                        String neighborhood, String badgeLabel, Boolean isFavorite,
@@ -99,7 +101,7 @@ public class ThriftStore {
         this.contents = contents;
     }
 
-    public Integer getId() { return id; }
+    public UUID getId() { return id; }
     public String getName() { return name; }
     public String getTagline() { return tagline; }
     public String getCoverImageUrl() { return coverImageUrl; }
@@ -122,7 +124,7 @@ public class ThriftStore {
     public List<GuideContent> getContents() { return contents; }
     public List<ThriftStorePhoto> getPhotos() { return photos; }
 
-    public void setId(Integer id) { this.id = id; }
+    public void setId(UUID id) { this.id = id; }
     public void setName(String name) { this.name = name; }
     public void setTagline(String tagline) { this.tagline = tagline; }
     public void setCoverImageUrl(String coverImageUrl) { this.coverImageUrl = coverImageUrl; }
@@ -144,4 +146,13 @@ public class ThriftStore {
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
     public void setContents(List<GuideContent> contents) { this.contents = contents; }
     public void setPhotos(List<ThriftStorePhoto> photos) { this.photos = photos; }
+    public com.edufelip.meer.core.auth.AuthUser getOwner() { return owner; }
+    public void setOwner(com.edufelip.meer.core.auth.AuthUser owner) { this.owner = owner; }
+
+    @PrePersist
+    public void ensureId() {
+        if (this.id == null) {
+            this.id = Uuid7.next();
+        }
+    }
 }

@@ -3,7 +3,7 @@ package com.edufelip.meer.dto;
 import java.util.List;
 
 public record ThriftStoreDto(
-        Integer id,
+        java.util.UUID id,
         String name,
         String tagline,
         String coverImageUrl,

@@ -53,7 +53,7 @@ public class StoreSeeder implements CommandLineRunner {
                         -23.5617, -46.6589,
                         "Seg a Sáb: 10:00 - 19:00",
                         "Fecha aos domingos",
-                        new Social(null, "@vintagevibes", null, null),
+                        new Social(null, "@vintagevibes", null),
                         List.of("feminino", "vintage", "acessorios"),
                         "Pinheiros", "Mais amado",
                         "Peças icônicas dos anos 70 e 80, curadoria semanal."
@@ -70,7 +70,7 @@ public class StoreSeeder implements CommandLineRunner {
                         -23.5614, -46.6558,
                         "Seg a Sex: 11:00 - 18:00",
                         null,
-                        new Social(null, "@secondhandchic", null, null),
+                        new Social(null, "@secondhandchic", null),
                         List.of("feminino", "luxo"),
                         "Vila Madalena", null,
                         "Grifes seminovas autenticadas e em ótimo estado."
@@ -87,7 +87,7 @@ public class StoreSeeder implements CommandLineRunner {
                         -23.546, -46.638,
                         "Ter a Dom: 10:00 - 20:00",
                         null,
-                        new Social(null, "@thrifthaven", null, null),
+                        new Social(null, "@thrifthaven", null),
                         List.of("vintage", "casual"),
                         "Centro", null,
                         "Racks sempre renovados com preços acessíveis."
@@ -104,7 +104,7 @@ public class StoreSeeder implements CommandLineRunner {
                         -23.6101, -46.6675,
                         "Seg a Sáb: 11:00 - 19:00",
                         null,
-                        new Social(null, "@ecotrends", null, null),
+                        new Social(null, "@ecotrends", null),
                         List.of("sustentavel", "unissex"),
                         "Augusta", null,
                         "Curadoria eco-friendly com marcas locais."
@@ -126,7 +126,7 @@ public class StoreSeeder implements CommandLineRunner {
                         null, null,
                         "Seg a Sáb: 10:00 - 19:30",
                         null,
-                        new Social(null, "@garimpourbano", null, null),
+                        new Social(null, "@garimpourbano", null),
                         List.of("street", "vintage"),
                         "Augusta", null,
                         null
@@ -143,7 +143,7 @@ public class StoreSeeder implements CommandLineRunner {
                         null, null,
                         "Seg a Sex: 11:00 - 18:30",
                         null,
-                        new Social(null, "@queridobrecho", null, null),
+                        new Social(null, "@queridobrecho", null),
                         List.of("feminino", "genderless"),
                         "Pinheiros", null,
                         null
@@ -160,7 +160,7 @@ public class StoreSeeder implements CommandLineRunner {
                         null, null,
                         "Qua a Dom: 12:00 - 20:00",
                         null,
-                        new Social(null, "@revivevintage", null, null),
+                        new Social(null, "@revivevintage", null),
                         List.of("vintage", "restauracao"),
                         "Centro", null,
                         "Peças clássicas restauradas."

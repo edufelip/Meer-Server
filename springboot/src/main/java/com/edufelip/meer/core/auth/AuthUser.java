@@ -1,16 +1,18 @@
 package com.edufelip.meer.core.auth;
 
 import com.edufelip.meer.core.store.ThriftStore;
+import com.edufelip.meer.util.Uuid7;
 import jakarta.persistence.*;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 @Entity
 public class AuthUser {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    @Column(columnDefinition = "uuid")
+    private UUID id;
 
     @Column(unique = true, nullable = false)
     private String email;
@@ -30,14 +32,14 @@ public class AuthUser {
     private boolean notifyPromos = true;
 
     @OneToOne
-    @JoinColumn(name = "owned_thrift_store_id")
+    @JoinColumn(name = "owned_thrift_store_id", columnDefinition = "uuid")
     private ThriftStore ownedThriftStore;
 
     @ManyToMany
     @JoinTable(
             name = "auth_user_favorites",
-            joinColumns = @JoinColumn(name = "auth_user_id"),
-            inverseJoinColumns = @JoinColumn(name = "thrift_store_id")
+            joinColumns = @JoinColumn(name = "auth_user_id", columnDefinition = "uuid"),
+            inverseJoinColumns = @JoinColumn(name = "thrift_store_id", columnDefinition = "uuid")
     )
     private Set<ThriftStore> favorites = new HashSet<>();
 
@@ -46,7 +48,7 @@ public class AuthUser {
 
     public AuthUser() {}
 
-    public AuthUser(Integer id, String email, String displayName, String photoUrl, String passwordHash) {
+    public AuthUser(UUID id, String email, String displayName, String photoUrl, String passwordHash) {
         this.id = id;
         this.email = email;
         this.displayName = displayName;
@@ -58,7 +60,14 @@ public class AuthUser {
         this(null, email, displayName, photoUrl, passwordHash);
     }
 
-    public Integer getId() { return id; }
+    @PrePersist
+    public void ensureId() {
+        if (this.id == null) {
+            this.id = Uuid7.next();
+        }
+    }
+
+    public UUID getId() { return id; }
     public String getEmail() { return email; }
     public String getDisplayName() { return displayName; }
     public String getPhotoUrl() { return photoUrl; }
@@ -69,7 +78,7 @@ public class AuthUser {
     public String getPasswordHash() { return passwordHash; }
     public Set<ThriftStore> getFavorites() { return favorites; }
 
-    public void setId(Integer id) { this.id = id; }
+    public void setId(UUID id) { this.id = id; }
     public void setEmail(String email) { this.email = email; }
     public void setDisplayName(String displayName) { this.displayName = displayName; }
     public void setPhotoUrl(String photoUrl) { this.photoUrl = photoUrl; }

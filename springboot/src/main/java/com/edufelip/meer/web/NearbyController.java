@@ -49,7 +49,7 @@ public class NearbyController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination params");
         }
         var user = currentUser(authHeader);
-        Set<Integer> favoriteIds = user.getFavorites().stream().map(f -> f.getId()).collect(Collectors.toSet());
+        Set<java.util.UUID> favoriteIds = user.getFavorites().stream().map(f -> f.getId()).collect(Collectors.toSet());
 
         var page = getThriftStoresUseCase.executeNearby(lat, lng, pageIndex, pageSize);
         List<ThriftStore> stores = page.getContent();
