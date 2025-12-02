@@ -1,5 +1,7 @@
 HELP.md
 .gradle
+.gradle-local
+.gradle-work
 build/
 springboot/build/
 springboot/.env

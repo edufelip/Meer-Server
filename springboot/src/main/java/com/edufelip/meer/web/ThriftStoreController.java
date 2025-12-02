@@ -37,15 +37,19 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
 import net.coobird.thumbnailator.Thumbnails;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Comparator;
 import java.io.IOException;
+import java.util.Set;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
+import javax.imageio.ImageIO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.edufelip.meer.core.store.ThriftStorePhoto;
@@ -66,6 +70,12 @@ public class ThriftStoreController {
     private final TokenProvider tokenProvider;
     private final StoreFeedbackService storeFeedbackService;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private static final int MAX_PHOTO_COUNT = 10;
+    private static final long MAX_PHOTO_BYTES = 2 * 1024 * 1024L; // 2MB cap to align with client compression requirement
+    private static final int MAX_PHOTO_DIMENSION = 1600;
+    private static final Set<String> SUPPORTED_CONTENT_TYPES = Set.of(
+            "image/jpeg", "image/jpg", "image/pjpeg", "image/webp", "image/x-webp"
+    );
 
     public ThriftStoreController(GetThriftStoreUseCase getThriftStoreUseCase,
                                  GetThriftStoresUseCase getThriftStoresUseCase,
@@ -235,6 +245,7 @@ public class ThriftStoreController {
         store.setCategories(parseStringArray(categories));
         store.setSocial(parseSocial(social));
 
+        validateNewPhotos(newPhotos, 0);
         var saved = thriftStoreRepository.save(store);
 
         handlePhotos(saved, null, newPhotos, photoOrder);
@@ -280,9 +291,9 @@ public class ThriftStoreController {
         if (openingHours != null) store.setOpeningHours(openingHours);
         if (addressLine != null) store.setAddressLine(addressLine);
         if (phone != null) {
-        var socialObj = store.getSocial() != null ? store.getSocial() : new Social();
-        store.setSocial(socialObj);
-        store.setPhone(phone);
+            var socialObj = store.getSocial() != null ? store.getSocial() : new Social();
+            store.setSocial(socialObj);
+            store.setPhone(phone);
         }
         if (email != null) store.setEmail(email);
         if (tagline != null) store.setTagline(tagline);
@@ -298,6 +309,7 @@ public class ThriftStoreController {
         }
 
         thriftStoreRepository.save(store);
+        validateNewPhotos(newPhotos, store.getPhotos() == null ? 0 : store.getPhotos().size());
         handlePhotos(store, null, newPhotos, photoOrder);
 
         var refreshed = thriftStoreRepository.findById(id).orElseThrow();
@@ -381,11 +393,19 @@ public class ThriftStoreController {
                               List<MultipartFile> newPhotos,
                               String photoOrderJson) {
         var photos = store.getPhotos();
+        if (photos == null) {
+            photos = new ArrayList<>();
+            store.setPhotos(photos);
+        }
 
         // delete
         var deleteIds = parseIntArray(deletePhotoIdsJson);
         if (!deleteIds.isEmpty()) {
             photos.removeIf(p -> deleteIds.contains(p.getId()));
+        }
+
+        if (newPhotos != null && photos.size() + newPhotos.size() > MAX_PHOTO_COUNT) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A store can have at most " + MAX_PHOTO_COUNT + " photos");
         }
 
         // map new photo temp keys
@@ -443,28 +463,84 @@ public class ThriftStoreController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Empty photo file");
         }
         var ctype = file.getContentType();
-        if (ctype == null || !(ctype.equalsIgnoreCase("image/jpeg") || ctype.equalsIgnoreCase("image/png"))) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Photo must be jpeg or png");
+        if (!isSupportedContentType(ctype)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Photo must be JPEG or WebP");
         }
-        if (file.getSize() > 10 * 1024 * 1024) {
-            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "Photo too large (max 10MB)");
+        if (file.getSize() > MAX_PHOTO_BYTES) {
+            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "Photo too large; compress under 2MB and retry the file");
         }
         try {
             Path dir = Path.of("uploads", "stores", storeId.toString());
             Files.createDirectories(dir);
             String filename = UUID.randomUUID() + ".jpg";
             Path target = dir.resolve(filename);
-            // Resize to max 1600px longest side and compress to ~75% quality as JPEG
-            try (var in = file.getInputStream()) {
-                Thumbnails.of(in)
-                        .size(1600, 1600)
-                        .outputFormat("jpg")
-                        .outputQuality(0.75)
-                        .toFile(target.toFile());
-            }
+            BufferedImage image = readImage(file);
+            BufferedImage resized = Thumbnails.of(image)
+                    .size(MAX_PHOTO_DIMENSION, MAX_PHOTO_DIMENSION)
+                    .asBufferedImage();
+            byte[] compressed = compressToTarget(resized);
+            Files.write(target, compressed);
             return "/uploads/stores/" + storeId + "/" + filename;
         } catch (IOException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to save photo");
         }
+    }
+
+    private boolean isSupportedContentType(String ctype) {
+        if (ctype == null) return false;
+        return SUPPORTED_CONTENT_TYPES.contains(ctype.toLowerCase());
+    }
+
+    private void validateNewPhotos(List<MultipartFile> newPhotos, int existingCount) {
+        if (newPhotos == null || newPhotos.isEmpty()) return;
+        if (newPhotos.size() > MAX_PHOTO_COUNT) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Too many photos; max " + MAX_PHOTO_COUNT + " files");
+        }
+        if (existingCount + newPhotos.size() > MAX_PHOTO_COUNT) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A store can have at most " + MAX_PHOTO_COUNT + " photos");
+        }
+        int idx = 1;
+        for (MultipartFile file : newPhotos) {
+            if (file == null || file.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Photo " + idx + " is empty");
+            }
+            if (!isSupportedContentType(file.getContentType())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Photo " + idx + " must be JPEG or WebP");
+            }
+            if (file.getSize() > MAX_PHOTO_BYTES) {
+                throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "Photo " + idx + " exceeds 2MB; compress and retry just that file");
+            }
+            idx++;
+        }
+    }
+
+    private BufferedImage readImage(MultipartFile file) {
+        try (var in = file.getInputStream()) {
+            BufferedImage image = ImageIO.read(in);
+            if (image == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid image file");
+            }
+            return image;
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid image file");
+        }
+    }
+
+    private byte[] compressToTarget(BufferedImage image) throws IOException {
+        float quality = 0.85f;
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        while (quality >= 0.4f) {
+            baos.reset();
+            Thumbnails.of(image)
+                    .size(image.getWidth(), image.getHeight())
+                    .outputFormat("jpg")
+                    .outputQuality(quality)
+                    .toOutputStream(baos);
+            if (baos.size() <= MAX_PHOTO_BYTES) {
+                return baos.toByteArray();
+            }
+            quality -= 0.1f;
+        }
+        throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "Photo could not be compressed under 2MB; try a smaller image");
     }
 }
