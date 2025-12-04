@@ -33,6 +33,7 @@ storage:
     bucket: ${GCS_BUCKET:meer-uploads}
     public-base-url: ${GCS_PUBLIC_BASE_URL:}
     signed-url-ttl-minutes: ${GCS_SIGNED_URL_TTL_MINUTES:120}
+    avatars-prefix: ${GCS_AVATARS_PREFIX:avatars}
 
 ---
 # Default profile: cloud/dev Postgres

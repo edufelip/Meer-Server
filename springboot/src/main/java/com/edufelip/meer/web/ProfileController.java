@@ -8,6 +8,7 @@ import com.edufelip.meer.domain.repo.ThriftStoreRepository;
 import com.edufelip.meer.dto.DeleteAccountRequest;
 import com.edufelip.meer.dto.ProfileDto;
 import com.edufelip.meer.dto.UpdateProfileRequest;
+import com.edufelip.meer.dto.AvatarUploadResponse;
 import com.edufelip.meer.mapper.Mappers;
 import com.edufelip.meer.service.GcsStorageService;
 import com.edufelip.meer.security.token.InvalidTokenException;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -65,6 +67,19 @@ public class ProfileController {
         return Mappers.toProfileDto(user, true);
     }
 
+    @PostMapping("/avatar/upload")
+    public AvatarUploadResponse requestAvatarUpload(@RequestHeader("Authorization") String authHeader,
+                                                    @RequestBody(required = false) java.util.Map<String, String> body) {
+        String token = extractBearer(authHeader);
+        var user = getProfileUseCase.execute(token);
+        String contentType = body != null ? body.get("contentType") : null;
+        if (contentType != null && !(contentType.equalsIgnoreCase("image/jpeg") || contentType.equalsIgnoreCase("image/png") || contentType.equalsIgnoreCase("image/webp"))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported content type");
+        }
+        var slot = gcsStorageService.createAvatarSlot(user.getId().toString(), contentType);
+        return new AvatarUploadResponse(slot.getUploadUrl(), slot.getFileKey(), slot.getContentType());
+    }
+
     // Alias for clients expecting /auth/me
     @GetMapping("/auth/me")
     public ProfileDto getProfileAlias(@RequestHeader("Authorization") String authHeader) {
@@ -76,6 +91,13 @@ public class ProfileController {
                                     @RequestBody UpdateProfileRequest body) {
         String token = extractBearer(authHeader);
         if (body == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body required");
+        if (body.avatarUrl() != null && !body.avatarUrl().isBlank()) {
+            // Accept only URLs pointing to our configured bucket/prefix
+            if (!body.avatarUrl().contains("/" + gcsStorageService.getBucket() + "/")
+                    && !body.avatarUrl().contains(gcsStorageService.publicBaseUrl())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid avatar URL");
+            }
+        }
         var user = updateProfileUseCase.execute(token, body);
         return Mappers.toProfileDto(user, true);
     }

@@ -26,17 +26,20 @@ public class GcsStorageService {
     private final String bucket;
     private final Duration signedUrlTtl;
     private final String publicBaseUrl;
+    private final String avatarsPrefix;
 
     public GcsStorageService(Storage storage,
                              @Value("${storage.gcs.bucket}") String bucket,
                              @Value("${storage.gcs.signed-url-ttl-minutes:120}") long signedUrlTtlMinutes,
-                             @Value("${storage.gcs.public-base-url:}") String publicBaseUrl) {
+                             @Value("${storage.gcs.public-base-url:}") String publicBaseUrl,
+                             @Value("${storage.gcs.avatars-prefix:avatars}") String avatarsPrefix) {
         this.storage = storage;
         this.bucket = bucket;
         this.signedUrlTtl = Duration.ofMinutes(signedUrlTtlMinutes);
         this.publicBaseUrl = (publicBaseUrl == null || publicBaseUrl.isBlank())
                 ? "https://storage.googleapis.com/" + bucket
                 : publicBaseUrl.endsWith("/") ? publicBaseUrl.substring(0, publicBaseUrl.length() - 1) : publicBaseUrl;
+        this.avatarsPrefix = avatarsPrefix;
     }
 
     public List<PhotoUploadSlot> createUploadSlots(UUID storeId, int count, List<String> contentTypes) {
@@ -61,6 +64,22 @@ public class GcsStorageService {
         return slots;
     }
 
+    public PhotoUploadSlot createAvatarSlot(String userId, String contentType) {
+        String ctype = contentType != null ? contentType : "image/jpeg";
+        String objectName = "%s/%s-%s".formatted(avatarsPrefix, userId, UUID.randomUUID());
+        BlobInfo blobInfo = BlobInfo.newBuilder(bucket, objectName)
+                .setContentType(ctype)
+                .build();
+        URL url = storage.signUrl(
+                blobInfo,
+                signedUrlTtl.toMinutes(),
+                TimeUnit.MINUTES,
+                SignUrlOption.httpMethod(HttpMethod.PUT),
+                SignUrlOption.withV4Signature(),
+                SignUrlOption.withContentType());
+        return new PhotoUploadSlot(url.toString(), objectName, ctype);
+    }
+
     public Blob fetchRequiredObject(String fileKey) {
         Blob blob = storage.get(BlobId.of(bucket, fileKey));
         if (blob == null || !blob.exists()) {
@@ -71,6 +90,14 @@ public class GcsStorageService {
 
     public String publicUrl(String fileKey) {
         return publicBaseUrl + "/" + fileKey;
+    }
+
+    public String publicBaseUrl() {
+        return publicBaseUrl;
+    }
+
+    public String getBucket() {
+        return bucket;
     }
 
     public void deleteByFileKey(String fileKey) {
