@@ -41,8 +41,6 @@ public class ThriftStore {
     @Column
     private String openingHours;
 
-    private String openingHoursNotes;
-
     @Embedded
     private Social social;
 
@@ -79,7 +77,7 @@ public class ThriftStore {
 
     public ThriftStore(UUID id, String name, String tagline, String coverImageUrl, List<String> galleryUrls,
                        String addressLine, Double latitude, Double longitude, String openingHours,
-                       String openingHoursNotes, Social social, List<String> categories,
+                       Social social, List<String> categories,
                        String neighborhood, String badgeLabel, Boolean isFavorite,
                        String description, List<GuideContent> contents) {
         this.id = id;
@@ -91,7 +89,6 @@ public class ThriftStore {
         this.latitude = latitude;
         this.longitude = longitude;
         this.openingHours = openingHours;
-        this.openingHoursNotes = openingHoursNotes;
         this.social = social;
         this.categories = categories;
         this.neighborhood = neighborhood;
@@ -112,7 +109,6 @@ public class ThriftStore {
     public String getPhone() { return phone; }
     public String getEmail() { return email; }
     public String getOpeningHours() { return openingHours; }
-    public String getOpeningHoursNotes() { return openingHoursNotes; }
     public Social getSocial() { return social; }
     public List<String> getCategories() { return categories; }
     public String getNeighborhood() { return neighborhood; }
@@ -135,7 +131,6 @@ public class ThriftStore {
     public void setPhone(String phone) { this.phone = phone; }
     public void setEmail(String email) { this.email = email; }
     public void setOpeningHours(String openingHours) { this.openingHours = openingHours; }
-    public void setOpeningHoursNotes(String openingHoursNotes) { this.openingHoursNotes = openingHoursNotes; }
     public void setSocial(Social social) { this.social = social; }
     public void setCategories(List<String> categories) { this.categories = categories; }
     public void setNeighborhood(String neighborhood) { this.neighborhood = neighborhood; }

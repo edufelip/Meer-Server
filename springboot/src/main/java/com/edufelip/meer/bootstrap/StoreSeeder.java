@@ -53,7 +53,6 @@ public class StoreSeeder implements CommandLineRunner {
                         "Rua Augusta, 123 - Pinheiros",
                         -23.5617, -46.6589,
                         "Seg a Sáb: 10:00 - 19:00",
-                        "Fecha aos domingos",
                         new Social(null, "@vintagevibes", null),
                         List.of("feminino", "vintage", "acessorios"),
                         "Pinheiros", "Mais amado",
@@ -70,7 +69,6 @@ public class StoreSeeder implements CommandLineRunner {
                         "Av. Paulista, 456 - Bela Vista",
                         -23.5614, -46.6558,
                         "Seg a Sex: 11:00 - 18:00",
-                        null,
                         new Social(null, "@secondhandchic", null),
                         List.of("feminino", "luxo"),
                         "Vila Madalena", null,
@@ -87,7 +85,6 @@ public class StoreSeeder implements CommandLineRunner {
                         "Rua 7 de Abril, 90 - Centro",
                         -23.546, -46.638,
                         "Ter a Dom: 10:00 - 20:00",
-                        null,
                         new Social(null, "@thrifthaven", null),
                         List.of("vintage", "casual"),
                         "Centro", null,
@@ -104,7 +101,6 @@ public class StoreSeeder implements CommandLineRunner {
                         "Alameda dos Maracatins, 300 - Moema",
                         -23.6101, -46.6675,
                         "Seg a Sáb: 11:00 - 19:00",
-                        null,
                         new Social(null, "@ecotrends", null),
                         List.of("sustentavel", "unissex"),
                         "Augusta", null,
@@ -126,7 +122,6 @@ public class StoreSeeder implements CommandLineRunner {
                         "Rua da Consolação, 210",
                         null, null,
                         "Seg a Sáb: 10:00 - 19:30",
-                        null,
                         new Social(null, "@garimpourbano", null),
                         List.of("street", "vintage"),
                         "Augusta", null,
@@ -143,7 +138,6 @@ public class StoreSeeder implements CommandLineRunner {
                         "Rua Sabará, 41",
                         null, null,
                         "Seg a Sex: 11:00 - 18:30",
-                        null,
                         new Social(null, "@queridobrecho", null),
                         List.of("feminino", "genderless"),
                         "Pinheiros", null,
@@ -160,7 +154,6 @@ public class StoreSeeder implements CommandLineRunner {
                         "Rua São Carlos do Pinhal, 15",
                         null, null,
                         "Qua a Dom: 12:00 - 20:00",
-                        null,
                         new Social(null, "@revivevintage", null),
                         List.of("vintage", "restauracao"),
                         "Centro", null,
@@ -177,7 +170,6 @@ public class StoreSeeder implements CommandLineRunner {
                               Double lat,
                               Double lng,
                               String openingHours,
-                              String openingHoursNotes,
                               Social social,
                               List<String> categories,
                               String neighborhood,
@@ -192,7 +184,6 @@ public class StoreSeeder implements CommandLineRunner {
         s.setLatitude(lat);
         s.setLongitude(lng);
         s.setOpeningHours(openingHours);
-        s.setOpeningHoursNotes(openingHoursNotes);
         s.setSocial(social);
         s.setCategories(categories);
         s.setNeighborhood(neighborhood);
