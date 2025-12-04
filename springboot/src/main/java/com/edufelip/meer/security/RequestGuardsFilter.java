@@ -19,7 +19,7 @@ public class RequestGuardsFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws jakarta.servlet.ServletException, java.io.IOException {
         if (isPublicAuthPath(request)) {
             try {
                 filterChain.doFilter(request, response);
@@ -35,9 +35,6 @@ public class RequestGuardsFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
         } catch (GuardException ex) {
             sendUnauthorized(response, ex.getMessage());
-        } catch (Exception e) {
-            // let non-guard exceptions propagate so proper status codes/logs are returned
-            throw new RuntimeException(e);
         }
     }
 
