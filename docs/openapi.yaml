@@ -190,17 +190,22 @@ paths:
         - bearerAuth: []
       parameters:
         - in: query
-          name: limit
+          name: page
+          schema: { type: integer, default: 0 }
+        - in: query
+          name: pageSize
           schema: { type: integer, default: 10 }
+        - in: query
+          name: storeId
+          required: false
+          schema: { type: string, format: uuid }
       responses:
         '200':
-          description: Guide content list
+          description: Paged guide content for a store
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/GuideTop'
+                $ref: '#/components/schemas/PageResponseGuideTop'
   /categories:
     get:
       summary: List categories
@@ -264,7 +269,7 @@ paths:
         - in: path
           name: storeId
           required: true
-          schema: { type: integer }
+          schema: { type: string, format: uuid }
       responses:
         '204':
           description: Added
@@ -276,7 +281,7 @@ paths:
         - in: path
           name: storeId
           required: true
-          schema: { type: integer }
+          schema: { type: string, format: uuid }
       responses:
         '204':
           description: Removed
@@ -348,24 +353,29 @@ components:
         notifyPromos: { type: boolean }
         ownedThriftStore:
           $ref: '#/components/schemas/ThriftStore'
-    ThriftStore:
+    StoreImage:
       type: object
       properties:
         id: { type: integer }
+        url: { type: string }
+        displayOrder: { type: integer }
+        isCover: { type: boolean }
+
+    ThriftStore:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
         name: { type: string }
         tagline: { type: string }
         coverImageUrl: { type: string }
-        galleryUrls:
-          type: array
-          items: { type: string }
         addressLine: { type: string }
         latitude: { type: number, format: double }
         longitude: { type: number, format: double }
         openingHours: { type: string }
-        openingHoursNotes: { type: string }
         facebook: { type: string }
         instagram: { type: string }
         website: { type: string }
+        phone: { type: string }
         whatsapp: { type: string }
         categories:
           type: array
@@ -378,16 +388,19 @@ components:
         badgeLabel: { type: string }
         isFavorite: { type: boolean }
         description: { type: string }
+        images:
+          type: array
+          items: { $ref: '#/components/schemas/StoreImage' }
     FeaturedStore:
       type: object
       properties:
-        id: { type: integer }
+        id: { type: string, format: uuid }
         name: { type: string }
         coverImageUrl: { type: string }
     NearbyStore:
       type: object
       properties:
-        id: { type: integer }
+        id: { type: string, format: uuid }
         name: { type: string }
         description: { type: string }
         coverImageUrl: { type: string }
@@ -406,7 +419,7 @@ components:
     FavoriteStore:
       type: object
       properties:
-        id: { type: integer }
+        id: { type: string, format: uuid }
         name: { type: string }
         description: { type: string }
         coverImageUrl: { type: string }
@@ -421,6 +434,9 @@ components:
         title: { type: string }
         description: { type: string }
         imageUrl: { type: string }
+        thriftStoreId: { type: string, format: uuid }
+        thriftStoreName: { type: string }
+        createdAt: { type: string, format: date-time }
     HomeResponse:
       type: object
       properties:
@@ -455,5 +471,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/NearbyStore'
+        page: { type: integer }
+        hasNext: { type: boolean }
+
+    PageResponseGuideTop:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuideTop'
         page: { type: integer }
         hasNext: { type: boolean }
