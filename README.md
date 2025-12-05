@@ -95,15 +95,31 @@ graph TD
 ## 🔌 Core Endpoints
 
 <details>
-<summary><b>🛍️ Stores & Content</b></summary>
+<summary><b>🛍️ Stores & Photos (GCS direct upload)</b></summary>
 
 | Method | Path | Description |
 | :--- | :--- | :--- |
-| `GET` | `/home` | Aggregated feed: Featured, Nearby, Top guides. |
-| `GET` | `/featured` | Top 10 featured stores (Cached 10m). |
-| `GET` | `/nearby` | Find stores near a location (Lat/Lng required). |
-| `POST` | `/stores` | Create a thrift store (Multipart, max 10 photos). |
-| `GET` | `/contents/top` | Recent guide content (Cached 10m). |
+| `POST` | `/stores` | Create store metadata (JSON only, no photos). |
+| `POST` | `/stores/{id}/photos/uploads` | Get presigned upload slots (GCS) for images. |
+| `POST` | `/stores/{id}/photos` | Confirm photos with `fileKey` + `position`; supports `deletePhotoIds` for removals. |
+| `PUT` | `/stores/{id}` | Update store metadata (phone, categories lowercased, etc.). |
+| `DELETE` | `/stores/{id}` | Deletes store and its GCS objects. |
+| `GET` | `/nearby` | Find stores near lat/lng; uses PostGIS when enabled. |
+| `GET` | `/featured` | Top 10 featured stores (cached). |
+| `GET` | `/home` | Aggregated feed (featured, nearby, top guides). |
+
+</details>
+
+<details>
+<summary><b>📰 Guide Content</b></summary>
+
+| Method | Path | Description |
+| :--- | :--- | :--- |
+| `POST` | `/contents` | Create content (title, description, storeId). |
+| `POST` | `/contents/{id}/image/upload` | Get a single presigned slot for the cover image. |
+| `PUT` | `/contents/{id}` | Update description/title/imageUrl. |
+| `GET` | `/contents/top` | Paged, store-scoped list; items include `thriftStoreId`, `thriftStoreName`, `createdAt`. |
+| `DELETE` | `/contents/{id}` | Delete content. |
 
 </details>
 
@@ -142,7 +158,7 @@ graph TD
 
 **Issue: `function geography(geometry) does not exist`**
 - **Cause:** PostGIS extension is missing in your Postgres instance.
-- **Fix:** Run `CREATE EXTENSION IF NOT EXISTS postgis;` in your database.
+- **Fix:** Install PostGIS packages, run `CREATE EXTENSION IF NOT EXISTS postgis;` and optionally `CREATE INDEX thrift_store_geog_idx ON thrift_store USING GIST (geography(ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)));` then start the app with `MEER_POSTGIS_ENABLED=true`.
 
 **Issue: 403 Forbidden on Localhost**
 - **Cause:** Missing Auth token or App Headers.
