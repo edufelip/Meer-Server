@@ -7,6 +7,7 @@ import com.edufelip.meer.domain.repo.ThriftStoreRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.List;
 import java.time.Instant;
@@ -20,13 +21,17 @@ import java.util.ArrayList;
 public class StoreSeeder implements CommandLineRunner {
 
     private final ThriftStoreRepository storeRepo;
+    private final boolean enabled;
 
-    public StoreSeeder(ThriftStoreRepository storeRepo) {
+    public StoreSeeder(ThriftStoreRepository storeRepo,
+                       @Value("${meer.seed.stores:true}") boolean enabled) {
         this.storeRepo = storeRepo;
+        this.enabled = enabled;
     }
 
     @Override
     public void run(String... args) {
+        if (!enabled) return;
         if (storeRepo.count() > 0) return; // keep idempotent for dev restarts
 
         var feature = featureStores();
@@ -44,11 +49,11 @@ public class StoreSeeder implements CommandLineRunner {
         return List.of(
                 store("Vintage Vibes",
                         "Garimpos curados com pegada retrô",
-                        "https://storage.googleapis.com/meerbucket/stores/seed/vintage/cover.jpg",
+                        "https://images.unsplash.com/photo-1469334031218-e382a71b716b?auto=format&fit=crop&w=1600&q=80",
                         List.of(
-                                "https://storage.googleapis.com/meerbucket/stores/seed/vintage/1.jpg",
-                                "https://storage.googleapis.com/meerbucket/stores/seed/vintage/2.jpg",
-                                "https://storage.googleapis.com/meerbucket/stores/seed/vintage/3.jpg"
+                                "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=800&q=80",
+                                "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=800&q=80",
+                                "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=800&q=80"
                         ),
                         "Rua Augusta, 123 - Pinheiros",
                         -23.5617, -46.6589,
@@ -60,11 +65,11 @@ public class StoreSeeder implements CommandLineRunner {
                 ),
                 store("Secondhand Chic",
                         "Peças de grife em segunda mão",
-                        "https://storage.googleapis.com/meerbucket/stores/seed/secondhand/cover.jpg",
+                        "https://images.unsplash.com/photo-1503341455253-b2e723bb3dbb?auto=format&fit=crop&w=1600&q=80",
                         List.of(
-                                "https://storage.googleapis.com/meerbucket/stores/seed/secondhand/1.jpg",
-                                "https://storage.googleapis.com/meerbucket/stores/seed/secondhand/2.jpg",
-                                "https://storage.googleapis.com/meerbucket/stores/seed/secondhand/3.jpg"
+                                "https://images.unsplash.com/photo-1496747611180-206a5c8c1a09?auto=format&fit=crop&w=800&q=80",
+                                "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=800&q=80",
+                                "https://images.unsplash.com/photo-1496747611180-206a5c8c1a09?auto=format&fit=crop&w=800&q=80"
                         ),
                         "Av. Paulista, 456 - Bela Vista",
                         -23.5614, -46.6558,
@@ -76,11 +81,11 @@ public class StoreSeeder implements CommandLineRunner {
                 ),
                 store("Thrift Haven",
                         "Achadinhos baratos e estilosos",
-                        "https://storage.googleapis.com/meerbucket/stores/seed/thrift/cover.jpg",
+                        "https://images.unsplash.com/photo-1469334031218-e382a71b716b?auto=format&fit=crop&w=1600&q=80",
                         List.of(
-                                "https://storage.googleapis.com/meerbucket/stores/seed/thrift/1.jpg",
-                                "https://storage.googleapis.com/meerbucket/stores/seed/thrift/2.jpg",
-                                "https://storage.googleapis.com/meerbucket/stores/seed/thrift/3.jpg"
+                                "https://images.unsplash.com/photo-1524606894343-1e1a4c71d692?auto=format&fit=crop&w=800&q=80",
+                                "https://images.unsplash.com/photo-1496747611180-206a5c8c1a09?auto=format&fit=crop&w=800&q=80",
+                                "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=800&q=80"
                         ),
                         "Rua 7 de Abril, 90 - Centro",
                         -23.546, -46.638,
@@ -92,11 +97,11 @@ public class StoreSeeder implements CommandLineRunner {
                 ),
                 store("Eco Trends",
                         "Slow fashion e peças eco-friendly",
-                        "https://storage.googleapis.com/meerbucket/stores/seed/eco/cover.jpg",
+                        "https://images.unsplash.com/photo-1503341455253-b2e723bb3dbb?auto=format&fit=crop&w=1600&q=80",
                         List.of(
-                                "https://storage.googleapis.com/meerbucket/stores/seed/eco/1.jpg",
-                                "https://storage.googleapis.com/meerbucket/stores/seed/eco/2.jpg",
-                                "https://storage.googleapis.com/meerbucket/stores/seed/eco/3.jpg"
+                                "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=800&q=80",
+                                "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=800&q=80",
+                                "https://images.unsplash.com/photo-1496747611180-206a5c8c1a09?auto=format&fit=crop&w=800&q=80"
                         ),
                         "Alameda dos Maracatins, 300 - Moema",
                         -23.6101, -46.6675,
@@ -113,11 +118,11 @@ public class StoreSeeder implements CommandLineRunner {
         return List.of(
                 store("Garimpo Urbano",
                         "Street + vintage na Consolação",
-                        "https://storage.googleapis.com/meerbucket/stores/seed/garimpo/cover.jpg",
+                        "https://images.unsplash.com/photo-1503341455253-b2e723bb3dbb?auto=format&fit=crop&w=1600&q=80",
                         List.of(
-                                "https://storage.googleapis.com/meerbucket/stores/seed/garimpo/1.jpg",
-                                "https://storage.googleapis.com/meerbucket/stores/seed/garimpo/2.jpg",
-                                "https://storage.googleapis.com/meerbucket/stores/seed/garimpo/3.jpg"
+                                "https://images.unsplash.com/photo-1469334031218-e382a71b716b?auto=format&fit=crop&w=800&q=80",
+                                "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=800&q=80",
+                                "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=800&q=80"
                         ),
                         "Rua da Consolação, 210",
                         null, null,
@@ -129,11 +134,11 @@ public class StoreSeeder implements CommandLineRunner {
                 ),
                 store("Querido Brechó",
                         "Curadoria feminina e genderless",
-                        "https://storage.googleapis.com/meerbucket/stores/seed/querido/cover.jpg",
+                        "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1600&q=80",
                         List.of(
-                                "https://storage.googleapis.com/meerbucket/stores/seed/querido/1.jpg",
-                                "https://storage.googleapis.com/meerbucket/stores/seed/querido/2.jpg",
-                                "https://storage.googleapis.com/meerbucket/stores/seed/querido/3.jpg"
+                                "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=800&q=80",
+                                "https://images.unsplash.com/photo-1496747611180-206a5c8c1a09?auto=format&fit=crop&w=800&q=80",
+                                "https://images.unsplash.com/photo-1524606894343-1e1a4c71d692?auto=format&fit=crop&w=800&q=80"
                         ),
                         "Rua Sabará, 41",
                         null, null,
@@ -145,11 +150,11 @@ public class StoreSeeder implements CommandLineRunner {
                 ),
                 store("Revive Vintage",
                         "Peças clássicas restauradas",
-                        "https://storage.googleapis.com/meerbucket/stores/seed/revive/cover.jpg",
+                        "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=1600&q=80",
                         List.of(
-                                "https://storage.googleapis.com/meerbucket/stores/seed/revive/1.jpg",
-                                "https://storage.googleapis.com/meerbucket/stores/seed/revive/2.jpg",
-                                "https://storage.googleapis.com/meerbucket/stores/seed/revive/3.jpg"
+                                "https://images.unsplash.com/photo-1503341455253-b2e723bb3dbb?auto=format&fit=crop&w=800&q=80",
+                                "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=800&q=80",
+                                "https://images.unsplash.com/photo-1496747611180-206a5c8c1a09?auto=format&fit=crop&w=800&q=80"
                         ),
                         "Rua São Carlos do Pinhal, 15",
                         null, null,

@@ -13,11 +13,14 @@ import java.util.List;
 public class GetThriftStoresUseCase {
     private final ThriftStoreRepository thriftStoreRepository;
     private final boolean preferPostgres;
+    private final boolean postgisEnabled;
 
     public GetThriftStoresUseCase(ThriftStoreRepository thriftStoreRepository,
-                                  @Value("${spring.datasource.url:}") String datasourceUrl) {
+                                  @Value("${spring.datasource.url:}") String datasourceUrl,
+                                  @Value("${meer.postgis.enabled:false}") boolean postgisEnabled) {
         this.thriftStoreRepository = thriftStoreRepository;
         this.preferPostgres = datasourceUrl != null && datasourceUrl.contains("postgresql");
+        this.postgisEnabled = postgisEnabled;
     }
 
     public List<ThriftStore> execute() {
@@ -34,7 +37,7 @@ public class GetThriftStoresUseCase {
     }
 
     public Page<ThriftStore> executeNearby(double lat, double lng, int page, int pageSize) {
-        if (preferPostgres) {
+        if (preferPostgres && postgisEnabled) {
             try {
                 // Prefer PostGIS geography KNN if extension + index are present
                 return thriftStoreRepository.findNearbyGeography(lat, lng, PageRequest.of(page, pageSize));

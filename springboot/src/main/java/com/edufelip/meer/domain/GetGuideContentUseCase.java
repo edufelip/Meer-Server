@@ -25,4 +25,9 @@ public class GetGuideContentUseCase {
     public List<GuideContent> executeRecentTop10() {
         return guideContentRepository.findTop10ByOrderByCreatedAtDesc();
     }
+
+    public org.springframework.data.domain.Page<GuideContent> executeByStorePaged(java.util.UUID storeId, int page, int size) {
+        var pageable = org.springframework.data.domain.PageRequest.of(Math.max(0, page), Math.min(size, 50));
+        return guideContentRepository.findByThriftStoreIdOrderByCreatedAtDesc(storeId, pageable);
+    }
 }

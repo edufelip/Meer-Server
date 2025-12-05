@@ -508,7 +508,7 @@ public class ThriftStoreController {
                 .filter(s -> !s.isBlank())
                 .map(String::toLowerCase)
                 .distinct()
-                .toList();
+                .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
     }
 
     private void validateBlob(com.google.cloud.storage.Blob blob, String fileKey) {

@@ -22,10 +22,10 @@ public class Mappers {
                 content.getId(),
                 content.getTitle(),
                 content.getDescription(),
-                content.getCategoryLabel(),
-                content.getType(),
                 content.getImageUrl(),
-                content.getThriftStore() != null ? content.getThriftStore().getId() : null
+                content.getThriftStore() != null ? content.getThriftStore().getId() : null,
+                content.getThriftStore() != null ? content.getThriftStore().getName() : null,
+                content.getCreatedAt()
         );
     }
 

@@ -92,8 +92,14 @@ public class HomeController {
         }).toList();
 
         List<GuideContentDto> contentDtos = getGuideContentUseCase.executeRecentTop10().stream()
-                .map(gc -> new GuideContentDto(gc.getId(), gc.getTitle(), gc.getDescription(), gc.getCategoryLabel(), gc.getType(), gc.getImageUrl(),
-                        gc.getThriftStore() != null ? gc.getThriftStore().getId() : null))
+                .map(gc -> new GuideContentDto(
+                        gc.getId(),
+                        gc.getTitle(),
+                        gc.getDescription(),
+                        gc.getImageUrl(),
+                        gc.getThriftStore() != null ? gc.getThriftStore().getId() : null,
+                        gc.getThriftStore() != null ? gc.getThriftStore().getName() : null,
+                        gc.getCreatedAt()))
                 .toList();
 
         return new HomeResponse(featuredDtos, nearbyDtos, contentDtos);

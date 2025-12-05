@@ -28,6 +28,11 @@ security:
     iosClientId: ${GOOGLE_IOS_CLIENT_ID:}
     webClientId: ${GOOGLE_WEB_CLIENT_ID:}
 
+meer:
+  seed:
+    stores: ${MEER_SEED_STORES:true}
+    categories: ${MEER_SEED_CATEGORIES:true}
+
 storage:
   gcs:
     bucket: ${GCS_BUCKET:meer-uploads}
@@ -63,7 +68,7 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: none
   sql:
     init:
       mode: never

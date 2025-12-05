@@ -43,8 +43,9 @@ public class AppConfig {
 
     @Bean
     public GetThriftStoresUseCase getThriftStoresUseCase(ThriftStoreRepository repo,
-                                                         @org.springframework.beans.factory.annotation.Value("${spring.datasource.url:}") String datasourceUrl) {
-        return new GetThriftStoresUseCase(repo, datasourceUrl);
+                                                         @org.springframework.beans.factory.annotation.Value("${spring.datasource.url:}") String datasourceUrl,
+                                                         @org.springframework.beans.factory.annotation.Value("${meer.postgis.enabled:false}") boolean postgisEnabled) {
+        return new GetThriftStoresUseCase(repo, datasourceUrl, postgisEnabled);
     }
 
     @Bean
