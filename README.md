@@ -69,6 +69,8 @@ The application relies on environment variables defined in `springboot/.env`.
 | `SECURITY_REQUIRE_APP_CHECK` | If `true`, enforces Firebase App Check token validation. |
 | `SECURITY_JWT_SECRET` | Secret key for signing JWTs (Min 32 bytes). |
 | `GOOGLE_*_CLIENT_ID` | OAuth client IDs for Google Sign-In. |
+| `MEER_CORS_ALLOWED_ORIGINS` | Comma-separated list of allowed origins for CORS (set your Vercel domains). |
+| `MEER_POSTGIS_ENABLED` | Enable PostGIS geography KNN queries for /nearby. |
 
 *See `.env.example` for the full list.*
 
@@ -103,7 +105,7 @@ graph TD
 | `POST` | `/stores/{id}/photos/uploads` | Get presigned upload slots (GCS) for images. |
 | `POST` | `/stores/{id}/photos` | Confirm photos with `fileKey` + `position`; supports `deletePhotoIds` for removals. |
 | `PUT` | `/stores/{id}` | Update store metadata (phone, categories lowercased, etc.). |
-| `DELETE` | `/stores/{id}` | Deletes store and its GCS objects. |
+| `DELETE` | `/stores/{id}` | Deletes store and its GCS objects (allowed for owner or ADMIN). |
 | `GET` | `/nearby` | Find stores near lat/lng; uses PostGIS when enabled. |
 | `GET` | `/featured` | Top 10 featured stores (cached). |
 | `GET` | `/home` | Aggregated feed (featured, nearby, top guides). |
@@ -120,6 +122,24 @@ graph TD
 | `PUT` | `/contents/{id}` | Update description/title/imageUrl. |
 | `GET` | `/contents/top` | Paged, store-scoped list; items include `thriftStoreId`, `thriftStoreName`, `createdAt`. |
 | `DELETE` | `/contents/{id}` | Delete content. |
+
+</details>
+
+<details>
+<summary><b>🛡 Admin Dashboard (role = ADMIN)</b></summary>
+
+| Method | Path | Description |
+| :--- | :--- | :--- |
+| `GET` | `/dashboard/stores` | Paged stores list (search `q`, sort `newest|oldest`). |
+| `GET` | `/dashboard/contents` | Paged contents list (search `q`, sort `newest|oldest`). |
+| `GET` | `/dashboard/users` | Paged users list (search `q`, sort `newest|oldest`). |
+| `GET` | `/dashboard/support/contacts` | Paged support contact messages. |
+| `GET` | `/dashboard/support/contacts/{id}` | Support contact detail. |
+| `DELETE` | `/dashboard/support/contacts/{id}` | Delete support contact. |
+| `DELETE` | `/dashboard/contents/{id}` | Delete guide content. |
+| `DELETE` | `/dashboard/users/{id}` | Delete user. |
+
+All require bearer JWT with `role=ADMIN` (claim and DB value).
 
 </details>
 
