@@ -105,12 +105,13 @@ jobs:
       - name: Smoke test (health)
         if: ${{ success() }}
         run: |
-          for i in {1..5}; do
-            status=$(curl -fsSL -o /tmp/health.json -w "%{http_code}" ${{ env.QA_HEALTH_URL }}) || true
+          for i in {1..40}; do
+            status=$(curl -sSL -o /tmp/health.json -w "%{http_code}" ${{ env.QA_HEALTH_URL }}) || true
             if [ "$status" = "200" ] && grep -q '"status"[[:space:]]*:[[:space:]]*"UP"' /tmp/health.json; then
+              cat /tmp/health.json
               exit 0
             fi
-            sleep 3
+            sleep 5
           done
           echo "Health check failed (status=$status)" >&2
           cat /tmp/health.json || true

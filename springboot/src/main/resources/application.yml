@@ -42,6 +42,17 @@ storage:
     signed-url-ttl-minutes: ${GCS_SIGNED_URL_TTL_MINUTES:120}
     avatars-prefix: ${GCS_AVATARS_PREFIX:avatars}
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+
 ---
 # Default profile: cloud/dev Postgres
 spring:
