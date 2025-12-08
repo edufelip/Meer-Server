@@ -1,6 +1,7 @@
 plugins {
     id("org.springframework.boot") version "4.0.0"
     id("io.spring.dependency-management") version "1.1.7"
+    id("org.flywaydb.flyway") version "9.22.3"
     java
 }
 
@@ -16,6 +17,11 @@ java {
 
 repositories {
     mavenCentral()
+}
+
+configurations {
+    // Ensure Flyway configuration exists for JDBC drivers when using the Gradle plugin
+    maybeCreate("flyway")
 }
 
 dependencies {
@@ -36,6 +42,9 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
     implementation("com.google.api-client:google-api-client:2.6.0")
     implementation("com.google.http-client:google-http-client-jackson2:1.43.3")
+    implementation("org.flywaydb:flyway-core:9.22.3")
+    implementation("org.postgresql:postgresql")
+    add("flyway", "org.postgresql:postgresql:42.7.4")
     // Override vulnerable transitive protobuf to fixed version (CVE-2024-7254)
     implementation("com.google.protobuf:protobuf-java:4.28.2")
     // Override vulnerable transitive grpc-netty-shaded to fixed version (CVE-2025-55163)
@@ -50,3 +59,28 @@ dependencies {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+flyway {
+    val env = System.getenv()
+    val dbHost = env["DB_HOST"]
+    val dbPort = env["DB_PORT"]
+    val dbName = env["DB_NAME"]
+    url = env["SPRING_DATASOURCE_URL"] ?: "jdbc:postgresql://${dbHost}:${dbPort}/${dbName}"
+    user = env["DB_USER"]
+    password = env["DB_PASSWORD"]
+
+    val includeDev = (env["SPRING_PROFILES_ACTIVE"]?.split(',')?.contains("local-db") == true) ||
+            (env["FLYWAY_INCLUDE_DEV"] == "true")
+    val prodPath = "filesystem:src/main/resources/db/migration"
+    val devPath = "filesystem:src/main/resources/db/dev"
+    locations = if (includeDev) arrayOf(prodPath, devPath) else arrayOf(prodPath)
+
+    // Ensure Flyway sees the database plugin and driver
+    configurations = arrayOf("compileClasspath", "runtimeClasspath", "flyway")
+
+    baselineOnMigrate = true
+    baselineVersion = "0"
+    cleanDisabled = true
+}
+
+// For Flyway 9, adding driver to 'flyway' configuration is sufficient.

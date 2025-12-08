@@ -56,6 +56,11 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none
+  flyway:
+    enabled: true
+    locations: classpath:db/migration,classpath:db/migration/dev
+    baseline-on-migrate: true
+    clean-disabled: true
 
 ---
 # Local Postgres (explicit local-db profile)
@@ -74,6 +79,11 @@ spring:
   sql:
     init:
       mode: never
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    clean-disabled: true
 
 ---
 # Production profile
@@ -86,6 +96,11 @@ spring:
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    clean-disabled: true
 
 ---
 # Local in-memory H2 sandbox

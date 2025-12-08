@@ -1,0 +1,118 @@
+name: Deploy Prod (meer_prod)
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  migrate-and-deploy:
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      PROD_DB_HOST: ${{ secrets.PROD_DB_HOST }}
+      PROD_DB_PORT: ${{ secrets.PROD_DB_PORT }}
+      PROD_DB_NAME: ${{ secrets.PROD_DB_NAME }}
+      PROD_DB_USER: ${{ secrets.PROD_DB_USER }}
+      PROD_DB_PASSWORD: ${{ secrets.PROD_DB_PASSWORD }}
+      PROD_FLYWAY_INCLUDE_DEV: "false"
+      PROD_SPRING_PROFILES: prod
+      PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+      PROD_SSH_USER: ${{ secrets.PROD_SSH_USER }}
+      PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+      PROD_SERVICE: meer-prod
+      PROD_REMOTE_JAR: /opt/meer-prod/meer.jar
+      PROD_HEALTH_URL: https://meer.eduwaldo.com/actuator/health
+    steps:
+      - name: Fail if required secrets are missing
+        run: |
+          required=(PROD_DB_HOST PROD_DB_PORT PROD_DB_NAME PROD_DB_USER PROD_DB_PASSWORD PROD_SSH_HOST PROD_SSH_USER PROD_SSH_KEY)
+          missing=()
+          for k in "${required[@]}"; do
+            v=$(printenv "$k")
+            [ -n "$v" ] || missing+=("$k")
+          done
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "Missing required secrets: ${missing[*]}" >&2
+            exit 1
+          fi
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set build version
+        run: echo "SHA_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - name: Run Flyway migrations on prod DB
+        run: ./gradlew :springboot:flywayMigrate
+        env:
+          DB_HOST: ${{ env.PROD_DB_HOST }}
+          DB_PORT: ${{ env.PROD_DB_PORT }}
+          DB_NAME: ${{ env.PROD_DB_NAME }}
+          DB_USER: ${{ env.PROD_DB_USER }}
+          DB_PASSWORD: ${{ env.PROD_DB_PASSWORD }}
+          SPRING_PROFILES_ACTIVE: ${{ env.PROD_SPRING_PROFILES }}
+          FLYWAY_INCLUDE_DEV: ${{ env.PROD_FLYWAY_INCLUDE_DEV }}
+
+      - name: Flyway info (out-of-order check)
+        run: ./gradlew :springboot:flywayInfo
+        env:
+          DB_HOST: ${{ env.PROD_DB_HOST }}
+          DB_PORT: ${{ env.PROD_DB_PORT }}
+          DB_NAME: ${{ env.PROD_DB_NAME }}
+          DB_USER: ${{ env.PROD_DB_USER }}
+          DB_PASSWORD: ${{ env.PROD_DB_PASSWORD }}
+          SPRING_PROFILES_ACTIVE: ${{ env.PROD_SPRING_PROFILES }}
+          FLYWAY_INCLUDE_DEV: ${{ env.PROD_FLYWAY_INCLUDE_DEV }}
+
+      - name: Build jar
+        run: ./gradlew :springboot:bootJar
+
+      - name: Rename jar with version
+        run: mv springboot/build/libs/meer-*.jar springboot/build/libs/meer-${{ env.SHA_SHORT }}.jar
+
+      - name: Copy jar to prod host
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ env.PROD_SSH_HOST }}
+          username: ${{ env.PROD_SSH_USER }}
+          key: ${{ env.PROD_SSH_KEY }}
+          source: "springboot/build/libs/meer-${{ env.SHA_SHORT }}.jar"
+          target: "/tmp/meer-prod-${{ env.SHA_SHORT }}.jar"
+          strip_components: 3
+
+      - name: Restart service on prod
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ env.PROD_SSH_HOST }}
+          username: ${{ env.PROD_SSH_USER }}
+          key: ${{ env.PROD_SSH_KEY }}
+          script: |
+            if [ -f ${{ env.PROD_REMOTE_JAR }} ]; then
+              sudo cp ${{ env.PROD_REMOTE_JAR }} ${{ env.PROD_REMOTE_JAR }}.bak
+            fi
+            sudo mv /tmp/meer-prod-${{ env.SHA_SHORT }}.jar ${{ env.PROD_REMOTE_JAR }}
+            sudo chown meerprod:meerprod ${{ env.PROD_REMOTE_JAR }}
+            sudo systemctl restart ${{ env.PROD_SERVICE }}
+
+      - name: Smoke test (health)
+        if: ${{ success() }}
+        run: |
+          for i in {1..5}; do
+            status=$(curl -fsSL -o /tmp/health.json -w "%{http_code}" ${{ env.PROD_HEALTH_URL }}) || true
+            if [ "$status" = "200" ] && grep -q '"status"[[:space:]]*:[[:space:]]*"UP"' /tmp/health.json; then
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Health check failed (status=$status)" >&2
+          cat /tmp/health.json || true
+          exit 1

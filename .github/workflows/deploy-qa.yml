@@ -1,0 +1,117 @@
+name: Deploy QA (meer_dev)
+
+on:
+  push:
+    branches: [ develop ]
+
+jobs:
+  migrate-and-smoke:
+    concurrency:
+      group: deploy-qa
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    env:
+      QA_DB_HOST: ${{ secrets.QA_DB_HOST }}
+      QA_DB_PORT: ${{ secrets.QA_DB_PORT }}
+      QA_DB_NAME: ${{ secrets.QA_DB_NAME }}
+      QA_DB_USER: ${{ secrets.QA_DB_USER }}
+      QA_DB_PASSWORD: ${{ secrets.QA_DB_PASSWORD }}
+      QA_FLYWAY_INCLUDE_DEV: "false"
+      QA_SPRING_PROFILES: prod
+      QA_SSH_HOST: ${{ secrets.QA_SSH_HOST }}
+      QA_SSH_USER: ${{ secrets.QA_SSH_USER }}
+      QA_SSH_KEY: ${{ secrets.QA_SSH_KEY }}
+      QA_SERVICE: meer-dev
+      QA_REMOTE_JAR: /opt/meer-dev/meer.jar
+      QA_HEALTH_URL: https://meer.dev.eduwaldo.com/actuator/health
+    steps:
+      - name: Fail if required secrets are missing
+        run: |
+          required=(QA_DB_HOST QA_DB_PORT QA_DB_NAME QA_DB_USER QA_DB_PASSWORD QA_SSH_HOST QA_SSH_USER QA_SSH_KEY)
+          missing=()
+          for k in "${required[@]}"; do
+            v=$(printenv "$k")
+            [ -n "$v" ] || missing+=("$k")
+          done
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "Missing required secrets: ${missing[*]}" >&2
+            exit 1
+          fi
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set build version
+        run: echo "SHA_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - name: Run Flyway migrations on QA DB
+        run: ./gradlew :springboot:flywayMigrate
+        env:
+          DB_HOST: ${{ env.QA_DB_HOST }}
+          DB_PORT: ${{ env.QA_DB_PORT }}
+          DB_NAME: ${{ env.QA_DB_NAME }}
+          DB_USER: ${{ env.QA_DB_USER }}
+          DB_PASSWORD: ${{ env.QA_DB_PASSWORD }}
+          SPRING_PROFILES_ACTIVE: ${{ env.QA_SPRING_PROFILES }}
+          FLYWAY_INCLUDE_DEV: ${{ env.QA_FLYWAY_INCLUDE_DEV }}
+
+      - name: Flyway info (out-of-order check)
+        run: ./gradlew :springboot:flywayInfo
+        env:
+          DB_HOST: ${{ env.QA_DB_HOST }}
+          DB_PORT: ${{ env.QA_DB_PORT }}
+          DB_NAME: ${{ env.QA_DB_NAME }}
+          DB_USER: ${{ env.QA_DB_USER }}
+          DB_PASSWORD: ${{ env.QA_DB_PASSWORD }}
+          SPRING_PROFILES_ACTIVE: ${{ env.QA_SPRING_PROFILES }}
+          FLYWAY_INCLUDE_DEV: ${{ env.QA_FLYWAY_INCLUDE_DEV }}
+
+      - name: Build jar
+        run: ./gradlew :springboot:bootJar
+
+      - name: Rename jar with version
+        run: mv springboot/build/libs/meer-*.jar springboot/build/libs/meer-${{ env.SHA_SHORT }}.jar
+
+      - name: Copy jar to QA host
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ env.QA_SSH_HOST }}
+          username: ${{ env.QA_SSH_USER }}
+          key: ${{ env.QA_SSH_KEY }}
+          source: "springboot/build/libs/meer-${{ env.SHA_SHORT }}.jar"
+          target: "/tmp/meer-qa-${{ env.SHA_SHORT }}.jar"
+          strip_components: 3
+
+      - name: Restart service on QA
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ env.QA_SSH_HOST }}
+          username: ${{ env.QA_SSH_USER }}
+          key: ${{ env.QA_SSH_KEY }}
+          script: |
+            if [ -f ${{ env.QA_REMOTE_JAR }} ]; then
+              sudo cp ${{ env.QA_REMOTE_JAR }} ${{ env.QA_REMOTE_JAR }}.bak
+            fi
+            sudo mv /tmp/meer-qa-${{ env.SHA_SHORT }}.jar ${{ env.QA_REMOTE_JAR }}
+            sudo chown meerdev:meerdev ${{ env.QA_REMOTE_JAR }}
+            sudo systemctl restart ${{ env.QA_SERVICE }}
+
+      - name: Smoke test (health)
+        if: ${{ success() }}
+        run: |
+          for i in {1..5}; do
+            status=$(curl -fsSL -o /tmp/health.json -w "%{http_code}" ${{ env.QA_HEALTH_URL }}) || true
+            if [ "$status" = "200" ] && grep -q '"status"[[:space:]]*:[[:space:]]*"UP"' /tmp/health.json; then
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Health check failed (status=$status)" >&2
+          cat /tmp/health.json || true
+          exit 1

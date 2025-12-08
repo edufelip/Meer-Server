@@ -1,0 +1,32 @@
+name: Certbot Renew Dry-Run
+
+on:
+  schedule:
+    - cron: '0 6 * * MON'
+  workflow_dispatch:
+
+jobs:
+  renew-check:
+    runs-on: ubuntu-latest
+    env:
+      SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+      SSH_USER: ${{ secrets.PROD_SSH_USER }}
+      SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+    steps:
+      - name: Fail if secrets are missing
+        run: |
+          for k in SSH_HOST SSH_USER SSH_KEY; do
+            [ -n "$(printenv $k)" ] || { echo "Missing $k" >&2; exit 1; }
+          done
+
+      - name: Certbot renew dry-run on host
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ env.SSH_HOST }}
+          username: ${{ env.SSH_USER }}
+          key: ${{ env.SSH_KEY }}
+          script: |
+            sudo certbot renew --dry-run
+
+      - name: Report
+        run: echo "Certbot dry-run passed"

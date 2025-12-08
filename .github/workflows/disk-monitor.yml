@@ -1,0 +1,38 @@
+name: Disk Monitor
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-disk:
+    runs-on: ubuntu-latest
+    env:
+      SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+      SSH_USER: ${{ secrets.PROD_SSH_USER }}
+      SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+      THRESHOLD: 80
+    steps:
+      - name: Fail if secrets are missing
+        run: |
+          for k in SSH_HOST SSH_USER SSH_KEY; do
+            [ -n "$(printenv $k)" ] || { echo "Missing $k" >&2; exit 1; }
+          done
+
+      - name: Check disk usage on host
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ env.SSH_HOST }}
+          username: ${{ env.SSH_USER }}
+          key: ${{ env.SSH_KEY }}
+          script: |
+            usage=$(df -h / | awk 'NR==2 {gsub("%", "", $5); print $5}')
+            echo "Root usage: ${usage}%"
+            if [ "$usage" -ge "$THRESHOLD" ]; then
+              echo "ALERT: root filesystem usage ${usage}% >= ${THRESHOLD}%" >&2
+              exit 1
+            fi
+
+      - name: Report
+        run: echo "Disk check passed"
