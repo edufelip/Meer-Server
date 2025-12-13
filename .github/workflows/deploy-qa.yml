@@ -1,16 +1,16 @@
-name: Deploy Prod (meer_prod)
+name: Deploy Dev
 
 on:
   push:
-    branches: [ main ]
+    branches: [ develop ]
 
 jobs:
   migrate-and-deploy:
     concurrency:
-      group: deploy-prod
+      group: deploy-dev
       cancel-in-progress: true
     runs-on: ubuntu-latest
-    environment: production
+    environment: development
 
     steps:
       - name: Checkout
@@ -26,8 +26,8 @@ jobs:
             exit 1
           fi
 
-          echo "${{ secrets.DEV_ENV_FILE_B64 }}" | base64 --decode > runtime-prod.env
-          chmod 600 runtime-prod.env
+          echo "${{ secrets.DEV_ENV_FILE_B64 }}" | base64 --decode > .env
+          chmod 600 .env
 
           # Export everything into job env for subsequent steps
           # - ignores blank lines and comments
@@ -54,7 +54,7 @@ jobs:
                 exit 1
                 ;;
             esac
-          done < runtime-prod.env
+          done < .env
 
       - name: Fail if required vars are missing
         shell: bash
@@ -136,8 +136,8 @@ jobs:
           host: ${{ env.SSH_HOST }}
           username: ${{ env.SSH_USER }}
           key: ${{ env.SSH_KEY }}
-          source: runtime-prod.env
-          target: /tmp/runtime-prod.env
+          source: .env
+          target: /tmp/.env
 
       - name: Restart service on prod
         uses: appleboy/ssh-action@v1.0.0
@@ -148,8 +148,8 @@ jobs:
           script: |
             set -e
 
-            if [ -f /tmp/runtime-prod.env ]; then
-              sudo mv /tmp/runtime-prod.env /opt/meer-prod/.env
+            if [ -f /tmp/.env ]; then
+              sudo mv /tmp/.env /opt/meer-prod/.env
               sudo chown meerprod:meerprod /opt/meer-prod/.env
               sudo chmod 600 /opt/meer-prod/.env
             fi
