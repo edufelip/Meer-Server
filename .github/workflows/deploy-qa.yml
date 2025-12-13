@@ -10,6 +10,7 @@ jobs:
       group: deploy-qa
       cancel-in-progress: true
     runs-on: ubuntu-latest
+    environment: qa
     env:
       QA_DB_HOST: ${{ secrets.QA_DB_HOST }}
       QA_DB_PORT: ${{ secrets.QA_DB_PORT }}
@@ -85,8 +86,19 @@ jobs:
           username: ${{ env.QA_SSH_USER }}
           key: ${{ env.QA_SSH_KEY }}
           script: |
-            sudo rm -rf /opt/meer-dev/meer.jar.bak.* /tmp/meer-qa-* || true
-            sudo journalctl --vacuum-time=7d || true
+            set -e
+            # Remove stale backups and tmp deploy artifacts
+            sudo rm -rf /opt/meer-dev/meer.jar.bak.* /tmp/meer-dev-* /tmp/meer-qa-* || true
+            # Free package cache
+            sudo apt-get clean || true
+            # Trim journald to keep recent logs only and cap size
+            sudo journalctl --vacuum-time=7d --vacuum-size=100M || true
+            # Force logrotate (helps compress large rotated syslog)
+            sudo logrotate -f /etc/logrotate.conf || true
+            # Ensure previous big syslog file is compressed if present
+            sudo gzip -f /var/log/syslog.1 2>/dev/null || true
+            # Show space so the next SCP step can rely on it
+            df -h / /tmp /var || true
 
       - name: Copy jar to QA host
         uses: appleboy/scp-action@v0.1.7
@@ -95,7 +107,7 @@ jobs:
           username: ${{ env.QA_SSH_USER }}
           key: ${{ env.QA_SSH_KEY }}
           source: "springboot/build/libs/meer-${{ env.SHA_SHORT }}.jar"
-          target: "/tmp/meer-qa-${{ env.SHA_SHORT }}.jar"
+          target: "/tmp/meer-dev-${{ env.SHA_SHORT }}.jar"
           strip_components: 3
 
       - name: Restart service on QA
@@ -108,7 +120,7 @@ jobs:
             if [ -f ${{ env.QA_REMOTE_JAR }} ]; then
               sudo cp ${{ env.QA_REMOTE_JAR }} ${{ env.QA_REMOTE_JAR }}.bak
             fi
-            sudo mv /tmp/meer-qa-${{ env.SHA_SHORT }}.jar ${{ env.QA_REMOTE_JAR }}
+            sudo mv /tmp/meer-dev-${{ env.SHA_SHORT }}.jar ${{ env.QA_REMOTE_JAR }}
             sudo chown meerdev:meerdev ${{ env.QA_REMOTE_JAR }}
             sudo systemctl restart ${{ env.QA_SERVICE }}
 
