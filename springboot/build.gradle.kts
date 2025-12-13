@@ -67,12 +67,16 @@ tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
 
 flyway {
     val env = System.getenv()
-    val dbHost = env["DB_HOST"]
-    val dbPort = env["DB_PORT"]
-    val dbName = env["DB_NAME"]
-    url = env["SPRING_DATASOURCE_URL"] ?: "jdbc:postgresql://${dbHost}:${dbPort}/${dbName}"
-    user = env["DB_USER"]
-    password = env["DB_PASSWORD"]
+    fun requireEnv(key: String, alternate: String? = null): String =
+        env[key] ?: alternate ?: error("Missing required environment variable: $key (needed for Flyway)")
+
+    val dbHost = requireEnv("DB_HOST")
+    val dbPort = requireEnv("DB_PORT")
+    val dbName = requireEnv("DB_NAME")
+
+    url = "jdbc:postgresql://${dbHost}:${dbPort}/${dbName}"
+    user = requireEnv("DB_USER")
+    password = requireEnv("DB_PASSWORD")
 
     val includeDev = (env["SPRING_PROFILES_ACTIVE"]?.split(',')?.contains("local-db") == true)
     val prodPath = "filesystem:src/main/resources/db/migration"
