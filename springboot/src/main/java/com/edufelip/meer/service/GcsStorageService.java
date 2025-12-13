@@ -7,6 +7,8 @@ import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.HttpMethod;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.Storage.SignUrlOption;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,8 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 public class GcsStorageService {
+
+    private static final Logger log = LoggerFactory.getLogger(GcsStorageService.class);
 
     private final Storage storage;
     private final String bucket;
@@ -113,12 +117,21 @@ public class GcsStorageService {
 
     public void deleteByFileKey(String fileKey) {
         if (fileKey == null || fileKey.isBlank()) return;
-        storage.delete(BlobId.of(bucket, fileKey));
+        boolean deleted = storage.delete(BlobId.of(bucket, fileKey));
+        if (deleted) {
+            log.info("GCS delete succeeded bucket={} key={}", bucket, fileKey);
+        } else {
+            log.warn("GCS delete reported not found/failed bucket={} key={}", bucket, fileKey);
+        }
     }
 
     public void deleteByUrl(String url) {
         if (url == null || url.isBlank()) return;
         String key = deriveKey(url);
+        if (key == null) {
+            log.warn("GCS delete skipped (URL not in configured bucket): {}", url);
+            return;
+        }
         deleteByFileKey(key);
     }
 
