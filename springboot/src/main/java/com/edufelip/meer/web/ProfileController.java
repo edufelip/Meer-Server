@@ -12,6 +12,8 @@ import com.edufelip.meer.dto.AvatarUploadResponse;
 import com.edufelip.meer.mapper.Mappers;
 import com.edufelip.meer.service.GcsStorageService;
 import com.edufelip.meer.security.token.InvalidTokenException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.MediaType;
@@ -23,11 +25,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -39,6 +39,8 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/profile")
 public class ProfileController {
+
+    private static final Logger log = LoggerFactory.getLogger(ProfileController.class);
 
     private final GetProfileUseCase getProfileUseCase;
     private final UpdateProfileUseCase updateProfileUseCase;
@@ -106,34 +108,32 @@ public class ProfileController {
         return Mappers.toProfileDto(user, true);
     }
 
-    @PatchMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PatchMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ProfileDto patchProfile(@RequestHeader("Authorization") String authHeader,
-                                   @RequestPart(name = "name", required = false) String name,
-                                   @RequestPart(name = "bio", required = false) String bio,
-                                   @RequestPart(name = "notifyNewStores", required = false) String notifyNewStores,
-                                   @RequestPart(name = "notifyPromotions", required = false) String notifyPromotions,
-                                   @RequestPart(name = "avatarUrl", required = false) String avatarUrl,
-                                   @RequestPart(name = "avatar", required = false) MultipartFile avatar) {
+                                   @RequestBody(required = false) UpdateProfileRequest body) {
         String token = extractBearer(authHeader);
 
-        if (bio != null && bio.length() > 200) {
+        if (body == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body required");
+        }
+        if (body.bio() != null && body.bio().length() > 200) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "bio exceeds 200 characters");
         }
 
         var currentUser = getProfileUseCase.execute(token);
-        if (avatar != null && !avatar.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Upload avatar via /profile/avatar/upload and send avatarUrl in this request");
-        }
-        String normalizedAvatar = normalizeAvatarUrl(avatarUrl, currentUser.getId());
+        String previousAvatar = currentUser.getPhotoUrl();
+        String normalizedAvatar = normalizeAvatarUrl(body.avatarUrl(), currentUser.getId());
 
         var req = new UpdateProfileRequest(
-                name,
+                body.name(),
                 normalizedAvatar,
-                bio,
-                notifyNewStores != null ? Boolean.valueOf(notifyNewStores) : null,
-                notifyPromotions != null ? Boolean.valueOf(notifyPromotions) : null
+                body.bio(),
+                body.notifyNewStores(),
+                body.notifyPromos()
         );
+
         var user = updateProfileUseCase.execute(token, req);
+        deleteOldAvatarIfReplaced(previousAvatar, user.getPhotoUrl());
         return Mappers.toProfileDto(user, true);
     }
 
@@ -180,6 +180,23 @@ public class ProfileController {
     @ExceptionHandler(InvalidTokenException.class)
     public ResponseEntity<?> handleInvalid(InvalidTokenException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new com.edufelip.meer.dto.ErrorDto(ex.getMessage()));
+    }
+
+    private void deleteOldAvatarIfReplaced(String oldUrl, String newUrl) {
+        if (oldUrl == null || newUrl == null) return;
+        if (oldUrl.equals(newUrl)) return;
+        // Only delete avatars stored under our avatars prefix for safety
+        String oldKey = gcsStorageService.extractFileKey(oldUrl);
+        if (oldKey == null) return;
+        if (!oldKey.startsWith(gcsStorageService.getAvatarsPrefix() + "/")) return;
+        log.info("Deleting previous avatar key={} oldUrl={}", oldKey, oldUrl);
+        if (!deleteLocalIfUploads(oldUrl)) {
+            try {
+                gcsStorageService.deleteByUrl(oldUrl);
+            } catch (Exception ex) {
+                log.warn("Failed to delete previous avatar key={} url={} error={}", oldKey, oldUrl, ex.getMessage());
+            }
+        }
     }
 
     private boolean deleteLocalIfUploads(String url) {
