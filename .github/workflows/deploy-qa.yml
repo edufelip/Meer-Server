@@ -146,12 +146,6 @@ jobs:
           script: |
             set -e
 
-            if [ -f /tmp/.env ]; then
-              sudo mv /tmp/.env /opt/meer-dev/.env
-              sudo chown meerdev:meerdev /opt/meer-dev/.env
-              sudo chmod 600 /opt/meer-dev/.env
-            fi
-
             if [ -f "${{ env.REMOTE_JAR }}" ]; then
               sudo cp "${{ env.REMOTE_JAR }}" "${{ env.REMOTE_JAR }}.bak"
             fi
@@ -179,6 +173,12 @@ jobs:
             sudo chown meerdev:meerdev "$cred_path"
             sudo chmod 600 "$cred_path"
             sudo test -s "$cred_path" || { echo "Failed to write credentials to $cred_path" >&2; exit 1; }
+            
+            if [ -f /tmp/.env ]; then
+              sudo mv /tmp/.env /opt/meer-dev/.env
+              sudo chown meerdev:meerdev /opt/meer-dev/.env
+              sudo chmod 600 /opt/meer-dev/.env
+            fi
 
             sudo systemctl restart "${{ env.SERVICE }}"
 
