@@ -168,6 +168,9 @@ jobs:
             fi
 
             cred_path="${GOOGLE_APPLICATION_CREDENTIALS:-}"
+            if [ "${cred_path#/}" = "$cred_path" ]; then
+              cred_path="/opt/meer-dev/$cred_path"
+            fi
             if [ -z "$cred_path" ]; then
               echo "GOOGLE_APPLICATION_CREDENTIALS not set (checked /opt/meer-dev/.env and env var)" >&2
               exit 1
