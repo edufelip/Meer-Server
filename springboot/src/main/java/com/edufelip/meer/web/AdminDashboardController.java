@@ -4,10 +4,12 @@ import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.core.auth.Role;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
+import com.edufelip.meer.domain.repo.StoreFeedbackRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
 import com.edufelip.meer.dto.*;
 import com.edufelip.meer.mapper.Mappers;
 import com.edufelip.meer.security.token.TokenProvider;
+import com.edufelip.meer.service.GcsStorageService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -17,7 +19,14 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/dashboard")
@@ -27,15 +36,21 @@ public class AdminDashboardController {
     private final AuthUserRepository authUserRepository;
     private final ThriftStoreRepository thriftStoreRepository;
     private final GuideContentRepository guideContentRepository;
+    private final StoreFeedbackRepository storeFeedbackRepository;
+    private final GcsStorageService gcsStorageService;
 
     public AdminDashboardController(TokenProvider tokenProvider,
                                     AuthUserRepository authUserRepository,
                                     ThriftStoreRepository thriftStoreRepository,
-                                    GuideContentRepository guideContentRepository) {
+                                    GuideContentRepository guideContentRepository,
+                                    StoreFeedbackRepository storeFeedbackRepository,
+                                    GcsStorageService gcsStorageService) {
         this.tokenProvider = tokenProvider;
         this.authUserRepository = authUserRepository;
         this.thriftStoreRepository = thriftStoreRepository;
         this.guideContentRepository = guideContentRepository;
+        this.storeFeedbackRepository = storeFeedbackRepository;
+        this.gcsStorageService = gcsStorageService;
     }
 
     @GetMapping("/stores")
@@ -122,6 +137,37 @@ public class AdminDashboardController {
         return Mappers.toProfileDto(user, true);
     }
 
+    @DeleteMapping("/users/{id}")
+    public org.springframework.http.ResponseEntity<Void> deleteUser(@RequestHeader("Authorization") String authHeader,
+                                                                    @PathVariable UUID id) {
+        AuthUser admin = requireAdmin(authHeader);
+        var target = authUserRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        // Clear owned thrift store links before deleting stores to satisfy FK constraints
+        if (target.getOwnedThriftStore() != null) {
+            target.setOwnedThriftStore(null);
+            authUserRepository.save(target);
+        }
+
+        deleteOwnedStores(target);
+
+        // Drop favorites join entries
+        target.getFavorites().clear();
+        authUserRepository.save(target);
+
+        // Delete avatar assets, if any
+        if (target.getPhotoUrl() != null) {
+            if (!deleteLocalIfUploads(target.getPhotoUrl())) {
+                gcsStorageService.deleteByUrl(target.getPhotoUrl());
+            }
+        }
+
+        storeFeedbackRepository.deleteByUserId(target.getId());
+        authUserRepository.delete(target);
+        return org.springframework.http.ResponseEntity.noContent().build();
+    }
+
     private AuthUser requireAdmin(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing bearer token");
@@ -146,5 +192,45 @@ public class AdminDashboardController {
         } catch (IllegalStateException ignored) {
         }
         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing admin context");
+    }
+
+    private void deleteOwnedStores(AuthUser user) {
+        Set<UUID> processed = new HashSet<>();
+
+        Optional.ofNullable(user.getOwnedThriftStore())
+                .flatMap(store -> thriftStoreRepository.findById(store.getId()))
+                .ifPresent(store -> deleteStoreWithAssets(store, processed));
+
+        thriftStoreRepository.findByOwnerId(user.getId())
+                .forEach(store -> deleteStoreWithAssets(store, processed));
+    }
+
+    private void deleteStoreWithAssets(com.edufelip.meer.core.store.ThriftStore store, Set<UUID> processed) {
+        if (!processed.add(store.getId())) return; // avoid duplicate deletes
+        if (store.getPhotos() != null) {
+            store.getPhotos().forEach(p -> deletePhotoAsset(p.getUrl()));
+        }
+        thriftStoreRepository.delete(store);
+    }
+
+    private void deletePhotoAsset(String url) {
+        if (url == null) return;
+        if (!deleteLocalIfUploads(url)) {
+            try {
+                gcsStorageService.deleteByUrl(url);
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private boolean deleteLocalIfUploads(String url) {
+        if (url == null || !url.startsWith("/uploads/")) return false;
+        try {
+            Path path = Paths.get("springboot", url.substring(1));
+            Files.deleteIfExists(path);
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 }
