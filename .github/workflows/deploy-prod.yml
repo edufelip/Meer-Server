@@ -159,13 +159,21 @@ jobs:
             sudo mv "/tmp/meer-${{ env.SHA_SHORT }}.jar" "${{ env.REMOTE_JAR }}"
             sudo chown meerprod:meerprod "${{ env.REMOTE_JAR }}"
             
-            # Optionally source the env file as root, but export into this shell
+            # Source env locally for this script (needed for GOOGLE_APPLICATION_CREDENTIALS, etc.)
             if sudo test -f /opt/meer-prod/.env; then
               set -a
               # shellcheck disable=SC1091
               source <(sudo cat /opt/meer-prod/.env)
               set +a
             fi
+
+            # Ensure systemd loads env vars from /opt/meer-prod/.env on restart
+            sudo mkdir -p /etc/systemd/system/"${{ env.SERVICE }}".service.d
+            sudo tee /etc/systemd/system/"${{ env.SERVICE }}".service.d/env.conf >/dev/null <<'EOF'
+            [Service]
+            EnvironmentFile=/opt/meer-prod/.env
+            EOF
+            sudo systemctl daemon-reload
             
             cred_path="${GOOGLE_APPLICATION_CREDENTIALS:-}"
             if [ -z "$cred_path" ]; then
