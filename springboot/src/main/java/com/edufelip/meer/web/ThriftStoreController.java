@@ -166,7 +166,11 @@ public class ThriftStoreController {
         Double rating = summary != null ? summary.rating() : null;
         Integer reviewCount = summary != null && summary.reviewCount() != null ? summary.reviewCount().intValue() : null;
         boolean isFav = user.getFavorites().stream().anyMatch(f -> f.getId().equals(store.getId()));
-        return Mappers.toDto(store, true, isFav, rating, reviewCount, null);
+        Integer myRating = storeFeedbackRepository
+                .findByUserIdAndThriftStoreId(user.getId(), store.getId())
+                .map(fb -> fb.getScore())
+                .orElse(null);
+        return Mappers.toDto(store, true, isFav, rating, reviewCount, null, myRating);
     }
 
     @PostMapping

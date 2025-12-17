@@ -20,6 +20,7 @@ public record ThriftStoreDto(
         List<String> categories,
         Double rating,
         Integer reviewCount,
+        Integer myRating,
         Double distanceMeters,
         Integer walkTimeMinutes,
         String neighborhood,
