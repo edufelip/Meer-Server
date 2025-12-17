@@ -8,7 +8,7 @@ import com.edufelip.meer.domain.repo.ThriftStoreRepository;
 import com.edufelip.meer.dto.ContentCreateRequest;
 import com.edufelip.meer.dto.ContentUploadSlotResponse;
 import com.edufelip.meer.dto.GuideContentDto;
-import com.edufelip.meer.dto.GuideTopDto;
+import com.edufelip.meer.dto.PageResponse;
 import com.edufelip.meer.dto.PhotoUploadSlot;
 import com.edufelip.meer.mapper.Mappers;
 import com.edufelip.meer.service.GcsStorageService;
@@ -16,6 +16,9 @@ import com.edufelip.meer.security.token.InvalidTokenException;
 import com.edufelip.meer.security.token.TokenPayload;
 import com.edufelip.meer.security.token.TokenProvider;
 import com.edufelip.meer.util.UrlValidatorUtil;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,7 +33,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import jakarta.validation.Valid;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -58,23 +60,26 @@ public class GuideContentController {
         this.thriftStoreRepository = thriftStoreRepository;
     }
 
-    @GetMapping("/top")
-    public com.edufelip.meer.dto.PageResponse<GuideTopDto> top() {
-        var items = getGuideContentUseCase.executeRecentTop10().stream()
-                .map(gc -> new GuideTopDto(
-                        gc.getId(),
-                        gc.getTitle(),
-                        gc.getDescription(),
-                        gc.getImageUrl(),
-                        gc.getThriftStore() != null ? gc.getThriftStore().getId() : null,
-                        gc.getThriftStore() != null ? gc.getThriftStore().getName() : null,
-                        gc.getCreatedAt()))
-                .toList();
-        // fixed top-10 list; no further pages
-        return new com.edufelip.meer.dto.PageResponse<>(items, 0, false);
+    @GetMapping
+    public PageResponse<GuideContentDto> list(@RequestParam(defaultValue = "0") int page,
+                                              @RequestParam(defaultValue = "20") int pageSize,
+                                              @RequestParam(required = false) String q,
+                                              @RequestParam(defaultValue = "newest") String sort) {
+        if (page < 0 || pageSize < 1 || pageSize > 100) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination params");
+        }
+        Sort s = "oldest".equalsIgnoreCase(sort)
+                ? Sort.by(Sort.Direction.ASC, "createdAt")
+                : Sort.by(Sort.Direction.DESC, "createdAt");
+        Pageable pageable = PageRequest.of(page, pageSize, s);
+        var pageRes = (q != null && !q.isBlank())
+                ? guideContentRepository.findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCase(q, q, pageable)
+                : guideContentRepository.findAll(pageable);
+        var items = pageRes.getContent().stream().map(Mappers::toDto).toList();
+        return new PageResponse<>(items, page, pageRes.hasNext());
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{id:\\d+}")
     public GuideContentDto getById(@PathVariable Integer id) {
         var content = getGuideContentUseCase.execute(id);
         if (content == null) {
@@ -115,7 +120,7 @@ public class GuideContentController {
         return Mappers.toDto(guideContentRepository.save(content));
     }
 
-    @PostMapping("/{contentId}/image/upload")
+    @PostMapping("/{contentId:\\d+}/image/upload")
     public ContentUploadSlotResponse requestImageSlot(@PathVariable Integer contentId,
                                                       @RequestHeader("Authorization") String authHeader,
                                                       @RequestBody(required = false) java.util.Map<String, String> body) {
@@ -134,7 +139,7 @@ public class GuideContentController {
         return new ContentUploadSlotResponse(slot.getUploadUrl(), slot.getFileKey(), slot.getContentType());
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/{id:\\d+}")
     public GuideContentDto update(@PathVariable Integer id,
                                   @RequestBody GuideContent body,
                                   @RequestHeader("Authorization") String authHeader) {
@@ -157,7 +162,7 @@ public class GuideContentController {
         return Mappers.toDto(content);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{id:\\d+}")
     public void delete(@PathVariable Integer id, @RequestHeader("Authorization") String authHeader) {
         var user = currentUser(authHeader);
         var content = guideContentRepository.findById(id)
