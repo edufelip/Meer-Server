@@ -25,7 +25,7 @@ public class StoreFeedback {
     @Column(columnDefinition = "text")
     private String body;
 
-    @Column(nullable = false, updatable = false)
+    @Column(nullable = false)
     private Instant createdAt = Instant.now();
 
     @Column(nullable = false)

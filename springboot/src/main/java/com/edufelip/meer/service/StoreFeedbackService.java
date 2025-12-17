@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.time.Instant;
 
 @Service
 public class StoreFeedbackService {
@@ -41,10 +42,13 @@ public class StoreFeedbackService {
         }
         var existing = repository.findByUserIdAndThriftStoreId(user.getId(), store.getId());
         com.edufelip.meer.core.store.StoreFeedback fb = existing.orElseGet(() -> new com.edufelip.meer.core.store.StoreFeedback(user, store, null, null));
+        Instant now = Instant.now();
         fb.setScore(score);
         fb.setBody(body);
         fb.setUser(user);
         fb.setThriftStore(store);
+        fb.setCreatedAt(now);
+        fb.setUpdatedAt(now);
         return repository.save(fb);
     }
 
