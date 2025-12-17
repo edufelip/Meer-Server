@@ -26,7 +26,7 @@ public class RequestGuardsFilter extends OncePerRequestFilter {
             return;
         }
 
-        if (isPublicAuthPath(request)) {
+        if (isPublicPath(request)) {
             try {
                 filterChain.doFilter(request, response);
             } catch (Exception e) {
@@ -44,8 +44,18 @@ public class RequestGuardsFilter extends OncePerRequestFilter {
         }
     }
 
-    private boolean isPublicAuthPath(HttpServletRequest request) {
+    private boolean isPublicPath(HttpServletRequest request) {
         String path = request.getServletPath().toLowerCase();
+        String method = request.getMethod().toUpperCase();
+
+        // Public read-only endpoints
+        if ("GET".equals(method)) {
+            if (path.equals("/contents") || path.startsWith("/contents/")) {
+                return true;
+            }
+        }
+
+        // Legacy explicit allowlist
         return switch (path) {
             case "/actuator/health", "/actuator/health/liveness", "/actuator/health/readiness", "/actuator/info" -> true;
             case "/auth/login", "/auth/signup", "/auth/google", "/auth/apple", "/auth/refresh", "/auth/forgot-password", "/dashboard/login" -> true;

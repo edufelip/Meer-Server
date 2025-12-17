@@ -98,6 +98,15 @@ public class AdminDashboardController {
         return new PageResponse<>(items, page, pageRes.hasNext());
     }
 
+    @GetMapping("/contents/{id}")
+    public GuideContentDto getContent(@RequestHeader("Authorization") String authHeader,
+                                      @PathVariable Integer id) {
+        requireAdmin(authHeader);
+        return guideContentRepository.findById(id)
+                .map(Mappers::toDto)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found"));
+    }
+
     @GetMapping("/users")
     public PageResponse<AdminUserDto> listUsers(@RequestHeader("Authorization") String authHeader,
                                                 @RequestParam(defaultValue = "0") int page,

@@ -59,21 +59,8 @@ public class GuideContentController {
     }
 
     @GetMapping("/top")
-    public com.edufelip.meer.dto.PageResponse<GuideTopDto> top(@RequestHeader("Authorization") String authHeader,
-                                                               @RequestParam(name = "page", defaultValue = "0") int page,
-                                                               @RequestParam(name = "pageSize", defaultValue = "10") int pageSize,
-                                                               @RequestParam(name = "storeId", required = false) java.util.UUID storeId) {
-        var user = currentUser(authHeader); // enforce auth
-        if (page < 0 || pageSize < 1 || pageSize > 100) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination params");
-        }
-        java.util.UUID targetStoreId = storeId != null ? storeId
-                : (user.getOwnedThriftStore() != null ? user.getOwnedThriftStore().getId() : null);
-        if (targetStoreId == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "storeId is required (or own a store)");
-        }
-        var pageRes = getGuideContentUseCase.executeByStorePaged(targetStoreId, page, pageSize);
-        var items = pageRes.getContent().stream()
+    public com.edufelip.meer.dto.PageResponse<GuideTopDto> top() {
+        var items = getGuideContentUseCase.executeRecentTop10().stream()
                 .map(gc -> new GuideTopDto(
                         gc.getId(),
                         gc.getTitle(),
@@ -83,14 +70,17 @@ public class GuideContentController {
                         gc.getThriftStore() != null ? gc.getThriftStore().getName() : null,
                         gc.getCreatedAt()))
                 .toList();
-        return new com.edufelip.meer.dto.PageResponse<>(items, page, pageRes.hasNext());
+        // fixed top-10 list; no further pages
+        return new com.edufelip.meer.dto.PageResponse<>(items, 0, false);
     }
 
     @GetMapping("/{id}")
-    public GuideContentDto getById(@PathVariable Integer id, @RequestHeader("Authorization") String authHeader) {
-        currentUser(authHeader); // just to enforce auth
+    public GuideContentDto getById(@PathVariable Integer id) {
         var content = getGuideContentUseCase.execute(id);
-        return content != null ? Mappers.toDto(content) : null;
+        if (content == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found");
+        }
+        return Mappers.toDto(content);
     }
 
     @PostMapping
@@ -108,7 +98,7 @@ public class GuideContentController {
         }
         var thriftStore = thriftStoreRepository.findById(body.storeId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
-        if (user.getOwnedThriftStore() == null || !user.getOwnedThriftStore().getId().equals(thriftStore.getId())) {
+        if (!isOwnerOrAdmin(user, thriftStore.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You must own this store to add content");
         }
         String defaultCategory = "general";
@@ -132,8 +122,7 @@ public class GuideContentController {
         var user = currentUser(authHeader);
         var content = guideContentRepository.findById(contentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found"));
-        if (content.getThriftStore() == null || user.getOwnedThriftStore() == null ||
-                !content.getThriftStore().getId().equals(user.getOwnedThriftStore().getId())) {
+        if (content.getThriftStore() == null || !isOwnerOrAdmin(user, content.getThriftStore().getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You must own this store to upload content images");
         }
         String ctype = body != null ? body.get("contentType") : null;
@@ -152,7 +141,7 @@ public class GuideContentController {
         var user = currentUser(authHeader);
         var content = guideContentRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found"));
-        if (user.getOwnedThriftStore() == null || !user.getOwnedThriftStore().getId().equals(content.getThriftStore().getId())) {
+        if (!isOwnerOrAdmin(user, content.getThriftStore().getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You must own this store to update content");
         }
         if (body.getTitle() != null) content.setTitle(body.getTitle());
@@ -173,10 +162,16 @@ public class GuideContentController {
         var user = currentUser(authHeader);
         var content = guideContentRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found"));
-        if (user.getOwnedThriftStore() == null || !user.getOwnedThriftStore().getId().equals(content.getThriftStore().getId())) {
+        if (!isOwnerOrAdmin(user, content.getThriftStore().getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You must own this store to delete content");
         }
         guideContentRepository.delete(content);
+    }
+
+    private boolean isOwnerOrAdmin(com.edufelip.meer.core.auth.AuthUser user, UUID storeId) {
+        if (user == null || storeId == null) return false;
+        if (user.getRole() == com.edufelip.meer.core.auth.Role.ADMIN) return true;
+        return user.getOwnedThriftStore() != null && storeId.equals(user.getOwnedThriftStore().getId());
     }
 
     private com.edufelip.meer.core.auth.AuthUser currentUser(String authHeader) {
