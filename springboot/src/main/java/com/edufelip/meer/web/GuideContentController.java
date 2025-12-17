@@ -64,7 +64,8 @@ public class GuideContentController {
     public PageResponse<GuideContentDto> list(@RequestParam(defaultValue = "0") int page,
                                               @RequestParam(defaultValue = "20") int pageSize,
                                               @RequestParam(required = false) String q,
-                                              @RequestParam(defaultValue = "newest") String sort) {
+                                              @RequestParam(defaultValue = "newest") String sort,
+                                              @RequestParam(required = false) UUID storeId) {
         if (page < 0 || pageSize < 1 || pageSize > 100) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination params");
         }
@@ -72,8 +73,12 @@ public class GuideContentController {
         Sort s = Sort.by(direction, "createdAt").and(Sort.by(direction, "id"));
         Pageable pageable = PageRequest.of(page, pageSize, s);
         var slice = (q != null && !q.isBlank())
-                ? guideContentRepository.searchSummaries(q, pageable)
-                : guideContentRepository.findAllSummaries(pageable);
+                ? (storeId != null
+                    ? guideContentRepository.searchSummariesByStoreId(storeId, q, pageable)
+                    : guideContentRepository.searchSummaries(q, pageable))
+                : (storeId != null
+                    ? guideContentRepository.findAllSummariesByStoreId(storeId, pageable)
+                    : guideContentRepository.findAllSummaries(pageable));
         return new PageResponse<>(slice.getContent(), page, slice.hasNext());
     }
 

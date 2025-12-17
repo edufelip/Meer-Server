@@ -44,8 +44,48 @@ public interface GuideContentRepository extends JpaRepository<GuideContent, Inte
             )
             from GuideContent c
             left join c.thriftStore s
+            where s.id = :storeId
+            """)
+    Slice<GuideContentDto> findAllSummariesByStoreId(@org.springframework.data.repository.query.Param("storeId") UUID storeId, Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Query("""
+            select new com.edufelip.meer.dto.GuideContentDto(
+                c.id,
+                c.title,
+                c.description,
+                c.imageUrl,
+                s.id,
+                s.name,
+                s.coverImageUrl,
+                c.createdAt
+            )
+            from GuideContent c
+            left join c.thriftStore s
             where lower(c.title) like lower(concat('%', :q, '%'))
                or lower(c.description) like lower(concat('%', :q, '%'))
             """)
     Slice<GuideContentDto> searchSummaries(@org.springframework.data.repository.query.Param("q") String q, Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Query("""
+            select new com.edufelip.meer.dto.GuideContentDto(
+                c.id,
+                c.title,
+                c.description,
+                c.imageUrl,
+                s.id,
+                s.name,
+                s.coverImageUrl,
+                c.createdAt
+            )
+            from GuideContent c
+            left join c.thriftStore s
+            where s.id = :storeId
+              and (
+                lower(c.title) like lower(concat('%', :q, '%'))
+                or lower(c.description) like lower(concat('%', :q, '%'))
+              )
+            """)
+    Slice<GuideContentDto> searchSummariesByStoreId(@org.springframework.data.repository.query.Param("storeId") UUID storeId,
+                                                    @org.springframework.data.repository.query.Param("q") String q,
+                                                    Pageable pageable);
 }
