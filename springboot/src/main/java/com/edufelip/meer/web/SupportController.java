@@ -29,7 +29,7 @@ public class SupportController {
     }
 
     @PostMapping("/contact")
-    public ResponseEntity<?> contact(@RequestBody(required = false) @Valid SupportContactRequest body) {
+    public ResponseEntity<?> contact(@RequestBody(required = false) SupportContactRequest body) {
         String validationError = validate(body);
         if (validationError != null) {
             return ResponseEntity.badRequest().body(Map.of("message", validationError));

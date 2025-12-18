@@ -107,6 +107,7 @@ public class ThriftStoreController {
             @RequestParam(name = "page", defaultValue = "1") int page,
             @RequestParam(name = "pageSize", defaultValue = "10") int pageSize,
             @RequestHeader("Authorization") String authHeader,
+            @RequestParam(name = "q", required = false) String q,
             @RequestParam(name = "lat", required = false) Double lat,
             @RequestParam(name = "lng", required = false) Double lng
     ) {
@@ -124,6 +125,10 @@ public class ThriftStoreController {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "lat and lng are required for nearby search");
             }
             var result = getThriftStoresUseCase.executeNearby(lat, lng, page - 1, pageSize);
+            storesPage = result.getContent();
+            hasNext = result.hasNext();
+        } else if (q != null && !q.isBlank()) {
+            var result = thriftStoreRepository.searchRanked(q.trim(), pageable);
             storesPage = result.getContent();
             hasNext = result.hasNext();
         } else if (categoryId != null) {

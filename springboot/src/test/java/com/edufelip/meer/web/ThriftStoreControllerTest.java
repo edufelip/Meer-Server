@@ -17,13 +17,12 @@ import com.edufelip.meer.security.token.TokenProvider;
 import com.edufelip.meer.service.GcsStorageService;
 import com.edufelip.meer.service.StoreFeedbackService;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
 import java.util.Optional;
@@ -43,17 +42,17 @@ class ThriftStoreControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean private GetThriftStoreUseCase getThriftStoreUseCase;
-    @MockBean private GetThriftStoresUseCase getThriftStoresUseCase;
-    @MockBean private GetGuideContentsByThriftStoreUseCase getGuideContentsByThriftStoreUseCase;
-    @MockBean private CreateGuideContentUseCase createGuideContentUseCase;
-    @MockBean private ThriftStoreRepository thriftStoreRepository;
-    @MockBean private CategoryRepository categoryRepository;
-    @MockBean private AuthUserRepository authUserRepository;
-    @MockBean private TokenProvider tokenProvider;
-    @MockBean private StoreFeedbackService storeFeedbackService;
-    @MockBean private GcsStorageService gcsStorageService;
-    @MockBean private StoreFeedbackRepository storeFeedbackRepository;
+    @MockitoBean private GetThriftStoreUseCase getThriftStoreUseCase;
+    @MockitoBean private GetThriftStoresUseCase getThriftStoresUseCase;
+    @MockitoBean private GetGuideContentsByThriftStoreUseCase getGuideContentsByThriftStoreUseCase;
+    @MockitoBean private CreateGuideContentUseCase createGuideContentUseCase;
+    @MockitoBean private ThriftStoreRepository thriftStoreRepository;
+    @MockitoBean private CategoryRepository categoryRepository;
+    @MockitoBean private AuthUserRepository authUserRepository;
+    @MockitoBean private TokenProvider tokenProvider;
+    @MockitoBean private StoreFeedbackService storeFeedbackService;
+    @MockitoBean private GcsStorageService gcsStorageService;
+    @MockitoBean private StoreFeedbackRepository storeFeedbackRepository;
 
     @Test
     void adminDeleteStoreCleansRelationsAndAssets() throws Exception {

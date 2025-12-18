@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.server.ResponseStatusException;
@@ -50,6 +51,21 @@ public class RestExceptionHandler {
     public ResponseEntity<Map<String, String>> handleUnreadable(HttpMessageNotReadableException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("message", "Malformed JSON request body"));
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, String>> handleArgumentNotValid(MethodArgumentNotValidException ex) {
+        String message = "Validation failed";
+        var fieldError = ex.getBindingResult().getFieldError();
+        if (fieldError != null) {
+            String defaultMessage = fieldError.getDefaultMessage();
+            if (defaultMessage != null && !defaultMessage.isBlank()) {
+                message = defaultMessage;
+            } else if (fieldError.getField() != null && !fieldError.getField().isBlank()) {
+                message = fieldError.getField() + " is invalid";
+            }
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", message));
     }
 
     @ExceptionHandler(Exception.class)

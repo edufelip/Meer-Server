@@ -13,11 +13,11 @@ import com.edufelip.meer.service.GcsStorageService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.HashSet;
 import java.util.List;
@@ -40,12 +40,12 @@ class AdminDashboardControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean private TokenProvider tokenProvider;
-    @MockBean private AuthUserRepository authUserRepository;
-    @MockBean private ThriftStoreRepository thriftStoreRepository;
-    @MockBean private GuideContentRepository guideContentRepository;
-    @MockBean private StoreFeedbackRepository storeFeedbackRepository;
-    @MockBean private GcsStorageService gcsStorageService;
+    @MockitoBean private TokenProvider tokenProvider;
+    @MockitoBean private AuthUserRepository authUserRepository;
+    @MockitoBean private ThriftStoreRepository thriftStoreRepository;
+    @MockitoBean private GuideContentRepository guideContentRepository;
+    @MockitoBean private StoreFeedbackRepository storeFeedbackRepository;
+    @MockitoBean private GcsStorageService gcsStorageService;
 
     @Test
     void deleteUserRemovesStoresAssetsFavoritesAndFeedback() throws Exception {
