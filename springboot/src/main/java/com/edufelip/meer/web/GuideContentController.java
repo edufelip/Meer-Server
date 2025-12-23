@@ -33,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import jakarta.validation.Valid;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -138,7 +139,7 @@ public class GuideContentController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported content type");
         }
         UUID storeId = content.getThriftStore().getId();
-        PhotoUploadSlot slot = gcsStorageService.createUploadSlots(storeId, 1, java.util.List.of(ctype)).get(0);
+        PhotoUploadSlot slot = gcsStorageService.createUploadSlots(storeId, 1, List.of(ctype)).get(0);
         return new ContentUploadSlotResponse(slot.getUploadUrl(), slot.getFileKey(), slot.getContentType());
     }
 

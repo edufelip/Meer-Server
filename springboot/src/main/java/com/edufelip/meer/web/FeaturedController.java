@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
 
 @RestController
 public class FeaturedController {
@@ -23,7 +24,7 @@ public class FeaturedController {
     }
 
     @GetMapping("/featured")
-    public java.util.List<FeaturedStoreDto> featured(@RequestHeader("Authorization") String authHeader,
+    public List<FeaturedStoreDto> featured(@RequestHeader("Authorization") String authHeader,
                                                      @RequestParam(name = "lat", required = false) Double lat,
                                                      @RequestParam(name = "lng", required = false) Double lng) {
         currentUser(authHeader); // just validate token
