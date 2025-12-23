@@ -65,6 +65,21 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
+tasks.named<Test>("test") {
+    useJUnitPlatform {
+        excludeTags("perf")
+    }
+}
+
+tasks.register<Test>("perfTest") {
+    group = "verification"
+    description = "Runs performance guardrail tests."
+    useJUnitPlatform {
+        includeTags("perf")
+    }
+    shouldRunAfter(tasks.named("test"))
+}
+
 tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveBaseName.set("meer")
 }
