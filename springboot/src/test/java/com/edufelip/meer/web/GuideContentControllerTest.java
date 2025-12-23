@@ -4,6 +4,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.edufelip.meer.config.TestClockConfig;
 import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.core.auth.Role;
 import com.edufelip.meer.core.content.GuideContent;
@@ -28,7 +29,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(GuideContentController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(RestExceptionHandler.class)
+@Import({RestExceptionHandler.class, TestClockConfig.class})
 class GuideContentControllerTest {
 
   @Autowired private MockMvc mockMvc;

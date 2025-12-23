@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.edufelip.meer.config.TestClockConfig;
 import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.core.auth.Role;
 import com.edufelip.meer.core.store.StoreFeedback;
@@ -32,7 +33,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(StoreFeedbackController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(RestExceptionHandler.class)
+@Import({RestExceptionHandler.class, TestClockConfig.class})
 class StoreFeedbackControllerTest {
 
   @Autowired private MockMvc mockMvc;

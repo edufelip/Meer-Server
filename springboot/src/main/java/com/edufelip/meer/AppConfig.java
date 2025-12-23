@@ -26,6 +26,7 @@ import com.edufelip.meer.security.RequestGuardsFilter;
 import com.edufelip.meer.security.SecurityProperties;
 import com.edufelip.meer.security.token.JwtTokenProvider;
 import com.edufelip.meer.security.token.TokenProvider;
+import java.time.Clock;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.cache.annotation.EnableCaching;
@@ -142,8 +143,13 @@ public class AppConfig {
   }
 
   @Bean
-  public TokenProvider tokenProvider(JwtProperties props) {
-    return new JwtTokenProvider(props);
+  public Clock clock() {
+    return Clock.systemUTC();
+  }
+
+  @Bean
+  public TokenProvider tokenProvider(JwtProperties props, Clock clock) {
+    return new JwtTokenProvider(props, clock);
   }
 
   @Bean

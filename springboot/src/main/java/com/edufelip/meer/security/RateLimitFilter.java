@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
@@ -38,9 +39,14 @@ public class RateLimitFilter extends OncePerRequestFilter {
   }
 
   private final Map<String, Counter> counters = new ConcurrentHashMap<>();
+  private final Clock clock;
+
+  public RateLimitFilter(Clock clock) {
+    this.clock = clock;
+  }
 
   private boolean isAllowed(String key) {
-    long now = Instant.now().getEpochSecond();
+    long now = Instant.now(clock).getEpochSecond();
     Counter c =
         counters.computeIfAbsent(
             key,

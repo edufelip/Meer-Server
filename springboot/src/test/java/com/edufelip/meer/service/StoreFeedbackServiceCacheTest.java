@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import com.edufelip.meer.config.CacheConfig;
+import com.edufelip.meer.config.TestClockConfig;
 import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.core.store.StoreFeedback;
 import com.edufelip.meer.core.store.ThriftStore;
@@ -22,7 +23,11 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SpringBootTest(
-    classes = {StoreFeedbackService.class, StoreFeedbackServiceCacheTest.CacheTestConfig.class})
+    classes = {
+      StoreFeedbackService.class,
+      StoreFeedbackServiceCacheTest.CacheTestConfig.class,
+      TestClockConfig.class
+    })
 class StoreFeedbackServiceCacheTest {
 
   @TestConfiguration

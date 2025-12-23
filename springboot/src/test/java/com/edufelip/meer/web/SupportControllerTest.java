@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.edufelip.meer.config.TestClockConfig;
 import com.edufelip.meer.core.support.SupportContact;
 import com.edufelip.meer.domain.repo.SupportContactRepository;
 import com.edufelip.meer.dto.SupportContactRequest;
@@ -22,7 +23,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(SupportController.class)
-@Import(SanitizingJacksonModuleConfig.class)
+@Import({SanitizingJacksonModuleConfig.class, TestClockConfig.class})
 class SupportControllerTest {
 
   @Autowired private MockMvc mockMvc;

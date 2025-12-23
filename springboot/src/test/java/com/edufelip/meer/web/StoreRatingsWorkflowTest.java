@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.security.token.TokenProvider;
+import com.edufelip.meer.support.TestFixtures;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
@@ -33,11 +34,7 @@ class StoreRatingsWorkflowTest {
 
   @Test
   void signupCreateStoreFeedbackListAndDeleteFlow() throws Exception {
-    AuthUser user = new AuthUser();
-    user.setEmail("flow@example.com");
-    user.setDisplayName("Flow User");
-    user.setPasswordHash("hash");
-    user = authUserRepository.save(user);
+    AuthUser user = authUserRepository.save(TestFixtures.user("flow@example.com", "Flow User"));
 
     String token = tokenProvider.generateAccessToken(user);
 

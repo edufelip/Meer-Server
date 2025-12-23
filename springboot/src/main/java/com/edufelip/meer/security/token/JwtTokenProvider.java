@@ -9,6 +9,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
@@ -16,15 +17,19 @@ import java.util.UUID;
 public class JwtTokenProvider implements TokenProvider {
   private final JwtProperties props;
   private final Key key;
+  private final Clock clock;
+  private final io.jsonwebtoken.Clock jjwtClock;
 
-  public JwtTokenProvider(JwtProperties props) {
+  public JwtTokenProvider(JwtProperties props, Clock clock) {
     this.props = props;
+    this.clock = clock;
     this.key = buildKey(props.getSecret());
+    this.jjwtClock = () -> Date.from(Instant.now(clock));
   }
 
   @Override
   public String generateAccessToken(AuthUser user) {
-    Instant now = Instant.now();
+    Instant now = Instant.now(clock);
     Instant exp = now.plusSeconds(props.getAccessTtlMinutes() * 60);
     return Jwts.builder()
         .setSubject(user.getId().toString())
@@ -39,7 +44,7 @@ public class JwtTokenProvider implements TokenProvider {
 
   @Override
   public String generateRefreshToken(AuthUser user) {
-    Instant now = Instant.now();
+    Instant now = Instant.now(clock);
     Instant exp = now.plusSeconds(props.getRefreshTtlDays() * 24 * 60 * 60);
     return Jwts.builder()
         .setSubject(user.getId().toString())
@@ -56,7 +61,13 @@ public class JwtTokenProvider implements TokenProvider {
   @Override
   public TokenPayload parseAccessToken(String token) {
     try {
-      var claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+      var claims =
+          Jwts.parserBuilder()
+              .setSigningKey(key)
+              .setClock(jjwtClock)
+              .build()
+              .parseClaimsJws(token)
+              .getBody();
       UUID userId = UUID.fromString(claims.getSubject());
       Role role = Role.USER;
       Object roleClaim = claims.get("role");
@@ -76,7 +87,13 @@ public class JwtTokenProvider implements TokenProvider {
   @Override
   public TokenPayload parseRefreshToken(String token) {
     try {
-      var claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+      var claims =
+          Jwts.parserBuilder()
+              .setSigningKey(key)
+              .setClock(jjwtClock)
+              .build()
+              .parseClaimsJws(token)
+              .getBody();
       if (!"refresh".equals(claims.get("type"))) throw new InvalidRefreshTokenException();
       UUID userId = UUID.fromString(claims.getSubject());
       Role role = Role.USER;

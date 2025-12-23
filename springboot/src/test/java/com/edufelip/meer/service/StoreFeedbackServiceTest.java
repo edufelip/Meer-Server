@@ -1,6 +1,6 @@
 package com.edufelip.meer.service;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -8,6 +8,8 @@ import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.core.store.StoreFeedback;
 import com.edufelip.meer.core.store.ThriftStore;
 import com.edufelip.meer.domain.repo.StoreFeedbackRepository;
+import com.edufelip.meer.support.TestFixtures;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -19,7 +21,8 @@ class StoreFeedbackServiceTest {
   @Test
   void upsertRefreshesCreatedAtForExistingFeedback() {
     StoreFeedbackRepository repository = Mockito.mock(StoreFeedbackRepository.class);
-    StoreFeedbackService service = new StoreFeedbackService(repository);
+    Clock clock = Clock.fixed(TestFixtures.fixedInstant(), java.time.ZoneOffset.UTC);
+    StoreFeedbackService service = new StoreFeedbackService(repository, clock);
 
     UUID userId = UUID.randomUUID();
     UUID storeId = UUID.randomUUID();
@@ -40,13 +43,10 @@ class StoreFeedbackServiceTest {
     Mockito.when(repository.save(Mockito.any(StoreFeedback.class)))
         .thenAnswer(inv -> inv.getArgument(0, StoreFeedback.class));
 
-    Instant before = Instant.now();
     StoreFeedback saved = service.upsert(user, store, 5, "new");
-    Instant after = Instant.now();
 
     assertNotNull(saved.getCreatedAt());
     assertNotEquals(originalCreatedAt, saved.getCreatedAt());
-    assertFalse(saved.getCreatedAt().isBefore(before));
-    assertFalse(saved.getCreatedAt().isAfter(after));
+    assertEquals(TestFixtures.fixedInstant(), saved.getCreatedAt());
   }
 }

@@ -1,6 +1,7 @@
 package com.edufelip.meer.service;
 
 import com.edufelip.meer.domain.repo.StoreFeedbackRepository;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -15,9 +16,11 @@ public class StoreFeedbackService {
   public record Summary(Double rating, Long reviewCount) {}
 
   private final StoreFeedbackRepository repository;
+  private final Clock clock;
 
-  public StoreFeedbackService(StoreFeedbackRepository repository) {
+  public StoreFeedbackService(StoreFeedbackRepository repository, Clock clock) {
     this.repository = repository;
+    this.clock = clock;
   }
 
   @Cacheable(
@@ -47,7 +50,7 @@ public class StoreFeedbackService {
     com.edufelip.meer.core.store.StoreFeedback fb =
         existing.orElseGet(
             () -> new com.edufelip.meer.core.store.StoreFeedback(user, store, null, null));
-    Instant now = Instant.now();
+    Instant now = Instant.now(clock);
     fb.setScore(score);
     fb.setBody(body);
     fb.setUser(user);
