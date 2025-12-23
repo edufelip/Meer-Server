@@ -15,6 +15,7 @@ import com.edufelip.meer.core.store.StoreFeedback;
 import com.edufelip.meer.core.store.ThriftStore;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
+import com.edufelip.meer.security.token.InvalidTokenException;
 import com.edufelip.meer.security.token.TokenPayload;
 import com.edufelip.meer.security.token.TokenProvider;
 import com.edufelip.meer.service.StoreFeedbackService;
@@ -171,5 +172,34 @@ class StoreFeedbackControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"score\":5,\"body\":\"" + sb + "\"}"))
         .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void deleteReturnsUnauthorizedWhenTokenExpired() throws Exception {
+    UUID storeId = UUID.randomUUID();
+
+    when(tokenProvider.parseAccessToken("expired-token")).thenThrow(new InvalidTokenException());
+
+    mockMvc
+        .perform(
+            delete("/stores/{storeId}/feedback", storeId)
+                .header("Authorization", "Bearer expired-token"))
+        .andExpect(status().isUnauthorized());
+
+    verifyNoInteractions(authUserRepository, thriftStoreRepository);
+    verifyNoInteractions(storeFeedbackService);
+  }
+
+  @Test
+  void deleteReturnsUnauthorizedForMalformedBearer() throws Exception {
+    UUID storeId = UUID.randomUUID();
+
+    mockMvc
+        .perform(
+            delete("/stores/{storeId}/feedback", storeId).header("Authorization", "Token abc123"))
+        .andExpect(status().isUnauthorized());
+
+    verifyNoInteractions(tokenProvider, authUserRepository, thriftStoreRepository);
+    verifyNoInteractions(storeFeedbackService);
   }
 }

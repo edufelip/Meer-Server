@@ -15,6 +15,7 @@ import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.StoreFeedbackRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
 import com.edufelip.meer.dto.StoreRatingDto;
+import com.edufelip.meer.security.token.InvalidTokenException;
 import com.edufelip.meer.security.token.TokenPayload;
 import com.edufelip.meer.security.token.TokenProvider;
 import java.time.Instant;
@@ -215,5 +216,36 @@ class StoreRatingsControllerTest {
         .andExpect(status().isBadRequest());
 
     verifyNoInteractions(thriftStoreRepository, storeFeedbackRepository);
+  }
+
+  @Test
+  void listReturnsUnauthorizedWhenTokenExpired() throws Exception {
+    UUID storeId = UUID.randomUUID();
+
+    when(tokenProvider.parseAccessToken("expired-token")).thenThrow(new InvalidTokenException());
+
+    mockMvc
+        .perform(
+            get("/stores/{storeId}/ratings", storeId)
+                .header("Authorization", "Bearer expired-token")
+                .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isUnauthorized());
+
+    verifyNoInteractions(authUserRepository, thriftStoreRepository, storeFeedbackRepository);
+  }
+
+  @Test
+  void listReturnsUnauthorizedForMalformedBearer() throws Exception {
+    UUID storeId = UUID.randomUUID();
+
+    mockMvc
+        .perform(
+            get("/stores/{storeId}/ratings", storeId)
+                .header("Authorization", "Token abc123")
+                .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isUnauthorized());
+
+    verifyNoInteractions(tokenProvider, authUserRepository, thriftStoreRepository);
+    verifyNoInteractions(storeFeedbackRepository);
   }
 }
