@@ -88,6 +88,22 @@ jobs:
           java-version: 17
           cache: gradle
 
+      - name: Pre-cleanup disk on dev host (before Flyway)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            sudo apt-get clean || true
+            sudo rm -rf /root/.gradle/caches /root/.gradle/wrapper || true
+            sudo find /tmp -mindepth 1 -mtime +1 -exec rm -rf {} + || true
+            sudo journalctl --vacuum-time=7d --vacuum-size=100M || true
+            sudo logrotate -f /etc/logrotate.conf || true
+            sudo gzip -f /var/log/syslog.1 2>/dev/null || true
+            df -h / /tmp /var || true
+
       - name: Run Flyway migrations on dev DB
         run: ./gradlew :springboot:flywayMigrate
 
