@@ -12,16 +12,20 @@ import com.edufelip.meer.domain.auth.ForgotPasswordUseCase;
 import com.edufelip.meer.domain.auth.GetProfileUseCase;
 import com.edufelip.meer.domain.auth.GoogleLoginUseCase;
 import com.edufelip.meer.domain.auth.LoginUseCase;
+import com.edufelip.meer.domain.auth.PasswordResetNotifier;
 import com.edufelip.meer.domain.auth.RefreshTokenUseCase;
+import com.edufelip.meer.domain.auth.ResetPasswordUseCase;
 import com.edufelip.meer.domain.auth.SignupUseCase;
 import com.edufelip.meer.domain.auth.UpdateProfileUseCase;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
+import com.edufelip.meer.domain.repo.PasswordResetTokenRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
 import com.edufelip.meer.logging.RequestResponseLoggingFilter;
 import com.edufelip.meer.security.DashboardAdminGuardFilter;
 import com.edufelip.meer.security.GoogleClientProperties;
 import com.edufelip.meer.security.JwtProperties;
+import com.edufelip.meer.security.PasswordResetProperties;
 import com.edufelip.meer.security.RequestGuardsFilter;
 import com.edufelip.meer.security.SecurityProperties;
 import com.edufelip.meer.security.token.JwtTokenProvider;
@@ -41,7 +45,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @EnableConfigurationProperties({
   SecurityProperties.class,
   JwtProperties.class,
-  GoogleClientProperties.class
+  GoogleClientProperties.class,
+  PasswordResetProperties.class
 })
 public class AppConfig {
 
@@ -122,8 +127,24 @@ public class AppConfig {
   }
 
   @Bean
-  public ForgotPasswordUseCase forgotPasswordUseCase(AuthUserRepository repo) {
-    return new ForgotPasswordUseCase(repo);
+  public ForgotPasswordUseCase forgotPasswordUseCase(
+      AuthUserRepository repo,
+      PasswordResetTokenRepository passwordResetTokenRepository,
+      PasswordResetNotifier passwordResetNotifier,
+      PasswordResetProperties passwordResetProperties,
+      Clock clock) {
+    return new ForgotPasswordUseCase(
+        repo, passwordResetTokenRepository, passwordResetNotifier, passwordResetProperties, clock);
+  }
+
+  @Bean
+  public ResetPasswordUseCase resetPasswordUseCase(
+      PasswordResetTokenRepository passwordResetTokenRepository,
+      AuthUserRepository authUserRepository,
+      PasswordEncoder passwordEncoder,
+      Clock clock) {
+    return new ResetPasswordUseCase(
+        passwordResetTokenRepository, authUserRepository, passwordEncoder, clock);
   }
 
   @Bean

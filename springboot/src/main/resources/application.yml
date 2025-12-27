@@ -27,6 +27,11 @@ security:
     androidClientId: ${GOOGLE_ANDROID_CLIENT_ID:}
     iosClientId: ${GOOGLE_IOS_CLIENT_ID:}
     webClientId: ${GOOGLE_WEB_CLIENT_ID:}
+  password-reset:
+    base-url: ${SECURITY_PASSWORD_RESET_BASE_URL:https://guiabrecho.com.br/reset-password}
+    ttl-minutes: ${SECURITY_PASSWORD_RESET_TTL_MINUTES:30}
+    from: ${SECURITY_PASSWORD_RESET_FROM:contato@guiabrecho.com.br}
+    subject: ${SECURITY_PASSWORD_RESET_SUBJECT:Reset your password}
 
 meer:
   cors:
