@@ -13,7 +13,7 @@ public class GetGuideContentUseCase {
   }
 
   public GuideContent execute(Integer id) {
-    return guideContentRepository.findById(id).orElse(null);
+    return guideContentRepository.findByIdAndDeletedAtIsNull(id).orElse(null);
   }
 
   public List<GuideContent> executeAll() {
@@ -22,13 +22,14 @@ public class GetGuideContentUseCase {
 
   @Cacheable("guideTop10")
   public List<GuideContent> executeRecentTop10() {
-    return guideContentRepository.findTop10ByOrderByCreatedAtDesc();
+    return guideContentRepository.findTop10ByDeletedAtIsNullOrderByCreatedAtDesc();
   }
 
   public org.springframework.data.domain.Page<GuideContent> executeByStorePaged(
       java.util.UUID storeId, int page, int size) {
     var pageable =
         org.springframework.data.domain.PageRequest.of(Math.max(0, page), Math.min(size, 50));
-    return guideContentRepository.findByThriftStoreIdOrderByCreatedAtDesc(storeId, pageable);
+    return guideContentRepository.findByThriftStoreIdAndDeletedAtIsNullOrderByCreatedAtDesc(
+        storeId, pageable);
   }
 }

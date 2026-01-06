@@ -25,6 +25,7 @@ import com.edufelip.meer.security.token.InvalidTokenException;
 import com.edufelip.meer.security.token.TokenPayload;
 import com.edufelip.meer.security.token.TokenProvider;
 import com.edufelip.meer.service.GcsStorageService;
+import com.edufelip.meer.service.GuideContentEngagementService;
 import com.edufelip.meer.service.StoreFeedbackService;
 import com.edufelip.meer.util.UrlValidatorUtil;
 import jakarta.transaction.Transactional;
@@ -70,6 +71,7 @@ public class ThriftStoreController {
   private final StoreFeedbackService storeFeedbackService;
   private final GcsStorageService gcsStorageService;
   private final StoreFeedbackRepository storeFeedbackRepository;
+  private final GuideContentEngagementService guideContentEngagementService;
   private static final Logger log = LoggerFactory.getLogger(ThriftStoreController.class);
   private static final int MAX_PHOTO_COUNT = 10;
   private static final long MAX_PHOTO_BYTES =
@@ -88,7 +90,8 @@ public class ThriftStoreController {
       TokenProvider tokenProvider,
       StoreFeedbackService storeFeedbackService,
       GcsStorageService gcsStorageService,
-      StoreFeedbackRepository storeFeedbackRepository) {
+      StoreFeedbackRepository storeFeedbackRepository,
+      GuideContentEngagementService guideContentEngagementService) {
     this.getThriftStoreUseCase = getThriftStoreUseCase;
     this.getThriftStoresUseCase = getThriftStoresUseCase;
     this.getGuideContentsByThriftStoreUseCase = getGuideContentsByThriftStoreUseCase;
@@ -100,6 +103,7 @@ public class ThriftStoreController {
     this.storeFeedbackService = storeFeedbackService;
     this.gcsStorageService = gcsStorageService;
     this.storeFeedbackRepository = storeFeedbackRepository;
+    this.guideContentEngagementService = guideContentEngagementService;
   }
 
   @GetMapping
@@ -108,15 +112,15 @@ public class ThriftStoreController {
       @RequestParam(name = "categoryId", required = false) String categoryId,
       @RequestParam(name = "page", defaultValue = "1") int page,
       @RequestParam(name = "pageSize", defaultValue = "10") int pageSize,
-      @RequestHeader("Authorization") String authHeader,
+      @RequestHeader(name = "Authorization", required = false) String authHeader,
       @RequestParam(name = "q", required = false) String q,
       @RequestParam(name = "lat", required = false) Double lat,
       @RequestParam(name = "lng", required = false) Double lng) {
     if (page < 1 || pageSize < 1 || pageSize > 100) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination params");
     }
-    var user = currentUser(authHeader);
-    var favorites = user.getFavorites();
+    var user = currentUserOrNull(authHeader);
+    Set<ThriftStore> favorites = user != null ? user.getFavorites() : Set.of();
     var pageable = PageRequest.of(page - 1, pageSize);
     List<ThriftStore> storesPage;
     boolean hasNext;
@@ -159,7 +163,9 @@ public class ThriftStoreController {
                       summary != null && summary.reviewCount() != null
                           ? summary.reviewCount().intValue()
                           : null;
-                  boolean isFav = favorites.stream().anyMatch(f -> f.getId().equals(store.getId()));
+                  boolean isFav =
+                      user != null
+                          && favorites.stream().anyMatch(f -> f.getId().equals(store.getId()));
                   Double distanceMeters =
                       (lat != null
                               && lng != null
@@ -175,21 +181,46 @@ public class ThriftStoreController {
 
   @GetMapping("/{id}")
   public ThriftStoreDto getById(
-      @PathVariable java.util.UUID id, @RequestHeader("Authorization") String authHeader) {
-    var user = currentUser(authHeader);
+      @PathVariable java.util.UUID id,
+      @RequestHeader(name = "Authorization", required = false) String authHeader) {
+    var user = currentUserOrNull(authHeader);
     var store = getThriftStoreUseCase.execute(id);
     if (store == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found");
     var summary = storeFeedbackService.getSummaries(List.of(store.getId())).get(store.getId());
     Double rating = summary != null ? summary.rating() : null;
     Integer reviewCount =
         summary != null && summary.reviewCount() != null ? summary.reviewCount().intValue() : null;
-    boolean isFav = user.getFavorites().stream().anyMatch(f -> f.getId().equals(store.getId()));
+    boolean isFav =
+        user != null && user.getFavorites().stream().anyMatch(f -> f.getId().equals(store.getId()));
     Integer myRating =
-        storeFeedbackRepository
-            .findByUserIdAndThriftStoreId(user.getId(), store.getId())
-            .map(StoreFeedback::getScore)
-            .orElse(null);
-    return Mappers.toDto(store, true, isFav, rating, reviewCount, null, myRating);
+        user != null
+            ? storeFeedbackRepository
+                .findByUserIdAndThriftStoreId(user.getId(), store.getId())
+                .map(StoreFeedback::getScore)
+                .orElse(null)
+            : null;
+
+    var contents = getGuideContentsByThriftStoreUseCase.execute(store.getId());
+    var contentIds = contents.stream().map(GuideContent::getId).toList();
+    var engagement =
+        guideContentEngagementService.getEngagement(contentIds, user != null ? user.getId() : null);
+    var contentDtos =
+        contents.stream()
+            .map(
+                content -> {
+                  var summaryEntry =
+                      engagement.getOrDefault(
+                          content.getId(),
+                          new GuideContentEngagementService.EngagementSummary(0L, 0L, false));
+                  return Mappers.toDto(
+                      content,
+                      summaryEntry.likeCount(),
+                      summaryEntry.commentCount(),
+                      summaryEntry.likedByMe());
+                })
+            .toList();
+
+    return Mappers.toDto(store, true, isFav, rating, reviewCount, null, myRating, contentDtos);
   }
 
   @PostMapping
@@ -396,9 +427,24 @@ public class ThriftStoreController {
   }
 
   @GetMapping("/{storeId}/contents")
-  public List<GuideContentDto> getContentsByThriftStoreId(@PathVariable java.util.UUID storeId) {
-    return getGuideContentsByThriftStoreUseCase.execute(storeId).stream()
-        .map(Mappers::toDto)
+  public List<GuideContentDto> getContentsByThriftStoreId(
+      @PathVariable java.util.UUID storeId,
+      @RequestHeader(name = "Authorization", required = false) String authHeader) {
+    var user = currentUserOrNull(authHeader);
+    var contents = getGuideContentsByThriftStoreUseCase.execute(storeId);
+    var contentIds = contents.stream().map(GuideContent::getId).toList();
+    var engagement =
+        guideContentEngagementService.getEngagement(contentIds, user != null ? user.getId() : null);
+    return contents.stream()
+        .map(
+            content -> {
+              var summary =
+                  engagement.getOrDefault(
+                      content.getId(),
+                      new GuideContentEngagementService.EngagementSummary(0L, 0L, false));
+              return Mappers.toDto(
+                  content, summary.likeCount(), summary.commentCount(), summary.likedByMe());
+            })
         .toList();
   }
 
@@ -535,6 +581,17 @@ public class ThriftStoreController {
   private com.edufelip.meer.core.auth.AuthUser currentUser(String authHeader) {
     java.util.UUID userId = extractUserId(authHeader);
     return authUserRepository.findById(userId).orElseThrow(InvalidTokenException::new);
+  }
+
+  private com.edufelip.meer.core.auth.AuthUser currentUserOrNull(String authHeader) {
+    java.util.UUID userId = extractUserIdOrNull(authHeader);
+    if (userId == null) return null;
+    return authUserRepository.findById(userId).orElseThrow(InvalidTokenException::new);
+  }
+
+  private java.util.UUID extractUserIdOrNull(String authHeader) {
+    if (authHeader == null) return null;
+    return extractUserId(authHeader);
   }
 
   private void validateCreate(StoreRequest body) {

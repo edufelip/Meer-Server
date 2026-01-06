@@ -42,13 +42,13 @@ public class StoreRatingsController {
   @GetMapping
   public PageResponse<StoreRatingDto> list(
       @PathVariable java.util.UUID storeId,
-      @RequestHeader("Authorization") String authHeader,
+      @RequestHeader(name = "Authorization", required = false) String authHeader,
       @RequestParam(name = "page", defaultValue = "1") int page,
       @RequestParam(name = "pageSize", defaultValue = "10") int pageSize) {
     if (page < 1 || pageSize < 1 || pageSize > 100) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination params");
     }
-    currentUser(authHeader);
+    currentUserOrNull(authHeader);
     thriftStoreRepository
         .findById(storeId)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
@@ -58,8 +58,9 @@ public class StoreRatingsController {
     return new PageResponse<>(slice.getContent(), page, slice.hasNext());
   }
 
-  private AuthUser currentUser(String authHeader) {
-    if (authHeader == null || !authHeader.startsWith("Bearer ")) throw new InvalidTokenException();
+  private AuthUser currentUserOrNull(String authHeader) {
+    if (authHeader == null) return null;
+    if (!authHeader.startsWith("Bearer ")) throw new InvalidTokenException();
     String token = authHeader.substring("Bearer ".length()).trim();
     TokenPayload payload;
     try {

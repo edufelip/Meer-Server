@@ -10,6 +10,7 @@ import com.edufelip.meer.mapper.Mappers;
 import com.edufelip.meer.security.token.InvalidTokenException;
 import com.edufelip.meer.security.token.TokenPayload;
 import com.edufelip.meer.security.token.TokenProvider;
+import com.edufelip.meer.service.GuideContentEngagementService;
 import com.edufelip.meer.service.StoreFeedbackService;
 import java.util.List;
 import java.util.Set;
@@ -27,28 +28,33 @@ public class HomeController {
   private final TokenProvider tokenProvider;
   private final AuthUserRepository authUserRepository;
   private final StoreFeedbackService storeFeedbackService;
+  private final GuideContentEngagementService guideContentEngagementService;
 
   public HomeController(
       GetThriftStoresUseCase getThriftStoresUseCase,
       GetGuideContentUseCase getGuideContentUseCase,
       TokenProvider tokenProvider,
       AuthUserRepository authUserRepository,
-      StoreFeedbackService storeFeedbackService) {
+      StoreFeedbackService storeFeedbackService,
+      GuideContentEngagementService guideContentEngagementService) {
     this.getThriftStoresUseCase = getThriftStoresUseCase;
     this.getGuideContentUseCase = getGuideContentUseCase;
     this.tokenProvider = tokenProvider;
     this.authUserRepository = authUserRepository;
     this.storeFeedbackService = storeFeedbackService;
+    this.guideContentEngagementService = guideContentEngagementService;
   }
 
   @GetMapping("/home")
   public HomeResponse home(
-      @RequestHeader("Authorization") String authHeader,
+      @RequestHeader(name = "Authorization", required = false) String authHeader,
       @RequestParam(name = "lat") double lat,
       @RequestParam(name = "lng") double lng) {
-    var user = currentUser(authHeader);
+    var user = currentUserOrNull(authHeader);
     Set<java.util.UUID> favoriteIds =
-        user.getFavorites().stream().map(f -> f.getId()).collect(Collectors.toSet());
+        user != null
+            ? user.getFavorites().stream().map(f -> f.getId()).collect(Collectors.toSet())
+            : Set.of();
 
     var featuredStores = getThriftStoresUseCase.executeRecentTop10();
     var nearbyStores = getThriftStoresUseCase.executeNearby(lat, lng, 0, 10).getContent();
@@ -108,19 +114,21 @@ public class HomeController {
                 })
             .toList();
 
+    var contents = getGuideContentUseCase.executeRecentTop10();
+    var contentIds = contents.stream().map(gc -> gc.getId()).toList();
+    var engagement =
+        guideContentEngagementService.getEngagement(contentIds, user != null ? user.getId() : null);
     List<GuideContentDto> contentDtos =
-        getGuideContentUseCase.executeRecentTop10().stream()
+        contents.stream()
             .map(
-                gc ->
-                    new GuideContentDto(
-                        gc.getId(),
-                        gc.getTitle(),
-                        gc.getDescription(),
-                        gc.getImageUrl(),
-                        gc.getThriftStore() != null ? gc.getThriftStore().getId() : null,
-                        gc.getThriftStore() != null ? gc.getThriftStore().getName() : null,
-                        gc.getThriftStore() != null ? gc.getThriftStore().getCoverImageUrl() : null,
-                        gc.getCreatedAt()))
+                gc -> {
+                  var summary =
+                      engagement.getOrDefault(
+                          gc.getId(),
+                          new GuideContentEngagementService.EngagementSummary(0L, 0L, false));
+                  return Mappers.toDto(
+                      gc, summary.likeCount(), summary.commentCount(), summary.likedByMe());
+                })
             .toList();
 
     return new HomeResponse(featuredDtos, nearbyDtos, contentDtos);
@@ -142,8 +150,9 @@ public class HomeController {
     return R * c;
   }
 
-  private com.edufelip.meer.core.auth.AuthUser currentUser(String authHeader) {
-    if (authHeader == null || !authHeader.startsWith("Bearer ")) throw new InvalidTokenException();
+  private com.edufelip.meer.core.auth.AuthUser currentUserOrNull(String authHeader) {
+    if (authHeader == null) return null;
+    if (!authHeader.startsWith("Bearer ")) throw new InvalidTokenException();
     String token = authHeader.substring("Bearer ".length()).trim();
     TokenPayload payload;
     try {

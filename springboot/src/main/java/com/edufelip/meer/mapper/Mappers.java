@@ -3,8 +3,10 @@ package com.edufelip.meer.mapper;
 import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.core.category.Category;
 import com.edufelip.meer.core.content.GuideContent;
+import com.edufelip.meer.core.content.GuideContentComment;
 import com.edufelip.meer.core.store.ThriftStore;
 import com.edufelip.meer.dto.CategoryDto;
+import com.edufelip.meer.dto.GuideContentCommentDto;
 import com.edufelip.meer.dto.GuideContentDto;
 import com.edufelip.meer.dto.ProfileDto;
 import com.edufelip.meer.dto.StoreImageDto;
@@ -21,6 +23,11 @@ public class Mappers {
   }
 
   public static GuideContentDto toDto(GuideContent content) {
+    return toDto(content, 0L, 0L, false);
+  }
+
+  public static GuideContentDto toDto(
+      GuideContent content, Long likeCount, Long commentCount, Boolean likedByMe) {
     return new GuideContentDto(
         content.getId(),
         content.getTitle(),
@@ -29,7 +36,37 @@ public class Mappers {
         content.getThriftStore() != null ? content.getThriftStore().getId() : null,
         content.getThriftStore() != null ? content.getThriftStore().getName() : null,
         content.getThriftStore() != null ? content.getThriftStore().getCoverImageUrl() : null,
-        content.getCreatedAt());
+        content.getCreatedAt(),
+        likeCount != null ? likeCount : 0L,
+        commentCount != null ? commentCount : 0L,
+        likedByMe != null ? likedByMe : false);
+  }
+
+  public static GuideContentDto withCounts(
+      GuideContentDto base, Long likeCount, Long commentCount, Boolean likedByMe) {
+    return new GuideContentDto(
+        base.id(),
+        base.title(),
+        base.description(),
+        base.imageUrl(),
+        base.thriftStoreId(),
+        base.thriftStoreName(),
+        base.thriftStoreCoverImageUrl(),
+        base.createdAt(),
+        likeCount != null ? likeCount : 0L,
+        commentCount != null ? commentCount : 0L,
+        likedByMe != null ? likedByMe : false);
+  }
+
+  public static GuideContentCommentDto toDto(GuideContentComment comment) {
+    return new GuideContentCommentDto(
+        comment.getId(),
+        comment.getBody(),
+        comment.getUser() != null ? comment.getUser().getId() : null,
+        comment.getUser() != null ? comment.getUser().getDisplayName() : null,
+        comment.getUser() != null ? comment.getUser().getPhotoUrl() : null,
+        comment.getCreatedAt(),
+        comment.getEditedAt() != null);
   }
 
   public static ThriftStoreDto toDto(ThriftStore store, boolean includeContents) {
@@ -60,10 +97,32 @@ public class Mappers {
       Integer reviewCount,
       Double distanceMeters,
       Integer myRating) {
+    return toDto(
+        store,
+        includeContents,
+        isFavoriteOverride,
+        rating,
+        reviewCount,
+        distanceMeters,
+        myRating,
+        null);
+  }
+
+  public static ThriftStoreDto toDto(
+      ThriftStore store,
+      boolean includeContents,
+      Boolean isFavoriteOverride,
+      Double rating,
+      Integer reviewCount,
+      Double distanceMeters,
+      Integer myRating,
+      List<GuideContentDto> contentsOverride) {
     List<GuideContentDto> contentsDto =
-        includeContents && store.getContents() != null
-            ? store.getContents().stream().map(Mappers::toDto).toList()
-            : null;
+        contentsOverride != null
+            ? contentsOverride
+            : (includeContents && store.getContents() != null
+                ? store.getContents().stream().map(Mappers::toDto).toList()
+                : null);
     List<StoreImageDto> images =
         store.getPhotos() != null
             ? store.getPhotos().stream()

@@ -3,6 +3,7 @@ package com.edufelip.meer.web;
 import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.core.auth.Role;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
+import com.edufelip.meer.domain.repo.GuideContentCommentRepository;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
 import com.edufelip.meer.domain.repo.StoreFeedbackRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
@@ -10,6 +11,8 @@ import com.edufelip.meer.dto.*;
 import com.edufelip.meer.mapper.Mappers;
 import com.edufelip.meer.security.token.TokenProvider;
 import com.edufelip.meer.service.GcsStorageService;
+import com.edufelip.meer.service.GuideContentEngagementService;
+import com.edufelip.meer.service.GuideContentModerationService;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -35,22 +38,31 @@ public class AdminDashboardController {
   private final AuthUserRepository authUserRepository;
   private final ThriftStoreRepository thriftStoreRepository;
   private final GuideContentRepository guideContentRepository;
+  private final GuideContentCommentRepository guideContentCommentRepository;
   private final StoreFeedbackRepository storeFeedbackRepository;
   private final GcsStorageService gcsStorageService;
+  private final GuideContentEngagementService guideContentEngagementService;
+  private final GuideContentModerationService guideContentModerationService;
 
   public AdminDashboardController(
       TokenProvider tokenProvider,
       AuthUserRepository authUserRepository,
       ThriftStoreRepository thriftStoreRepository,
       GuideContentRepository guideContentRepository,
+      GuideContentCommentRepository guideContentCommentRepository,
       StoreFeedbackRepository storeFeedbackRepository,
-      GcsStorageService gcsStorageService) {
+      GcsStorageService gcsStorageService,
+      GuideContentEngagementService guideContentEngagementService,
+      GuideContentModerationService guideContentModerationService) {
     this.tokenProvider = tokenProvider;
     this.authUserRepository = authUserRepository;
     this.thriftStoreRepository = thriftStoreRepository;
     this.guideContentRepository = guideContentRepository;
+    this.guideContentCommentRepository = guideContentCommentRepository;
     this.storeFeedbackRepository = storeFeedbackRepository;
     this.gcsStorageService = gcsStorageService;
+    this.guideContentEngagementService = guideContentEngagementService;
+    this.guideContentModerationService = guideContentModerationService;
   }
 
   @GetMapping("/stores")
@@ -103,17 +115,95 @@ public class AdminDashboardController {
         (q != null && !q.isBlank())
             ? guideContentRepository.searchSummaries(q, pageable)
             : guideContentRepository.findAllSummaries(pageable);
-    return new PageResponse<>(slice.getContent(), page, slice.hasNext());
+    var items = slice.getContent();
+    var ids = items.stream().map(GuideContentDto::id).toList();
+    var engagement = guideContentEngagementService.getEngagement(ids, null);
+    var enriched =
+        items.stream()
+            .map(
+                item -> {
+                  var summary =
+                      engagement.getOrDefault(
+                          item.id(),
+                          new GuideContentEngagementService.EngagementSummary(0L, 0L, false));
+                  return Mappers.withCounts(
+                      item, summary.likeCount(), summary.commentCount(), summary.likedByMe());
+                })
+            .toList();
+    return new PageResponse<>(enriched, page, slice.hasNext());
   }
 
   @GetMapping("/contents/{id}")
   public GuideContentDto getContent(
       @RequestHeader("Authorization") String authHeader, @PathVariable Integer id) {
     requireAdmin(authHeader);
-    return guideContentRepository
-        .findById(id)
-        .map(Mappers::toDto)
-        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found"));
+    var content =
+        guideContentRepository
+            .findById(id)
+            .orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found"));
+    var engagement = guideContentEngagementService.getEngagement(List.of(content.getId()), null);
+    var summary =
+        engagement.getOrDefault(
+            content.getId(), new GuideContentEngagementService.EngagementSummary(0L, 0L, false));
+    return Mappers.toDto(content, summary.likeCount(), summary.commentCount(), summary.likedByMe());
+  }
+
+  @DeleteMapping("/contents/{id}")
+  public org.springframework.http.ResponseEntity<Void> deleteContent(
+      @RequestHeader("Authorization") String authHeader, @PathVariable Integer id) {
+    AuthUser admin = requireAdmin(authHeader);
+    var content =
+        guideContentRepository
+            .findById(id)
+            .orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found"));
+    guideContentModerationService.softDeleteContent(content, admin, null);
+    return org.springframework.http.ResponseEntity.noContent().build();
+  }
+
+  @PostMapping("/contents/{id}/restore")
+  public GuideContentDto restoreContent(
+      @RequestHeader("Authorization") String authHeader, @PathVariable Integer id) {
+    requireAdmin(authHeader);
+    var content =
+        guideContentRepository
+            .findById(id)
+            .orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found"));
+    var restored = guideContentModerationService.restoreContent(content);
+    var engagement = guideContentEngagementService.getEngagement(List.of(restored.getId()), null);
+    var summary =
+        engagement.getOrDefault(
+            restored.getId(), new GuideContentEngagementService.EngagementSummary(0L, 0L, false));
+    return Mappers.toDto(
+        restored, summary.likeCount(), summary.commentCount(), summary.likedByMe());
+  }
+
+  @DeleteMapping("/comments/{id}")
+  public org.springframework.http.ResponseEntity<Void> deleteComment(
+      @RequestHeader("Authorization") String authHeader, @PathVariable Integer id) {
+    AuthUser admin = requireAdmin(authHeader);
+    var comment =
+        guideContentCommentRepository
+            .findById(id)
+            .orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found"));
+    guideContentModerationService.softDeleteComment(comment, admin, null);
+    return org.springframework.http.ResponseEntity.noContent().build();
+  }
+
+  @PostMapping("/comments/{id}/restore")
+  public GuideContentCommentDto restoreComment(
+      @RequestHeader("Authorization") String authHeader, @PathVariable Integer id) {
+    requireAdmin(authHeader);
+    var comment =
+        guideContentCommentRepository
+            .findById(id)
+            .orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found"));
+    var restored = guideContentModerationService.restoreComment(comment);
+    return Mappers.toDto(restored);
   }
 
   @GetMapping("/users")

@@ -41,14 +41,15 @@ public class StoreSearchController {
       @RequestParam(name = "q") String q,
       @RequestParam(name = "page", defaultValue = "1") int page,
       @RequestParam(name = "pageSize", defaultValue = "10") int pageSize,
-      @RequestHeader("Authorization") String authHeader) {
+      @RequestHeader(name = "Authorization", required = false) String authHeader) {
     if (q == null || q.isBlank())
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "q is required");
     if (page < 1 || pageSize < 1 || pageSize > 50) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination params");
     }
-    var user = currentUser(authHeader);
-    var favorites = user.getFavorites();
+    var user = currentUserOrNull(authHeader);
+    java.util.Set<com.edufelip.meer.core.store.ThriftStore> favorites =
+        user != null ? user.getFavorites() : java.util.Set.of();
 
     var pageable = PageRequest.of(page - 1, pageSize);
     var result = thriftStoreRepository.search(q, pageable);
@@ -75,8 +76,9 @@ public class StoreSearchController {
     return new PageResponse<>(items, page, result.hasNext());
   }
 
-  private com.edufelip.meer.core.auth.AuthUser currentUser(String authHeader) {
-    if (authHeader == null || !authHeader.startsWith("Bearer ")) throw new InvalidTokenException();
+  private com.edufelip.meer.core.auth.AuthUser currentUserOrNull(String authHeader) {
+    if (authHeader == null) return null;
+    if (!authHeader.startsWith("Bearer ")) throw new InvalidTokenException();
     String token = authHeader.substring("Bearer ".length()).trim();
     TokenPayload payload;
     try {

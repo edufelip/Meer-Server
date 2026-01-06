@@ -1,11 +1,13 @@
 package com.edufelip.meer;
 
+import com.edufelip.meer.domain.CreateGuideContentCommentUseCase;
 import com.edufelip.meer.domain.CreateGuideContentUseCase;
 import com.edufelip.meer.domain.CreateThriftStoreUseCase;
 import com.edufelip.meer.domain.GetGuideContentUseCase;
 import com.edufelip.meer.domain.GetGuideContentsByThriftStoreUseCase;
 import com.edufelip.meer.domain.GetThriftStoreUseCase;
 import com.edufelip.meer.domain.GetThriftStoresUseCase;
+import com.edufelip.meer.domain.UpdateGuideContentCommentUseCase;
 import com.edufelip.meer.domain.auth.AppleLoginUseCase;
 import com.edufelip.meer.domain.auth.DashboardLoginUseCase;
 import com.edufelip.meer.domain.auth.ForgotPasswordUseCase;
@@ -18,6 +20,7 @@ import com.edufelip.meer.domain.auth.ResetPasswordUseCase;
 import com.edufelip.meer.domain.auth.SignupUseCase;
 import com.edufelip.meer.domain.auth.UpdateProfileUseCase;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
+import com.edufelip.meer.domain.repo.GuideContentCommentRepository;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
 import com.edufelip.meer.domain.repo.PasswordResetTokenRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
@@ -85,6 +88,20 @@ public class AppConfig {
   public CreateGuideContentUseCase createGuideContentUseCase(
       GuideContentRepository repo, ThriftStoreRepository storeRepo) {
     return new CreateGuideContentUseCase(repo, storeRepo);
+  }
+
+  @Bean
+  public CreateGuideContentCommentUseCase createGuideContentCommentUseCase(
+      GuideContentCommentRepository repo,
+      GuideContentRepository guideContentRepository,
+      Clock clock) {
+    return new CreateGuideContentCommentUseCase(repo, guideContentRepository, clock);
+  }
+
+  @Bean
+  public UpdateGuideContentCommentUseCase updateGuideContentCommentUseCase(
+      GuideContentCommentRepository repo, Clock clock) {
+    return new UpdateGuideContentCommentUseCase(repo, clock);
   }
 
   @Bean
@@ -175,9 +192,12 @@ public class AppConfig {
 
   @Bean
   public FilterRegistrationBean<RequestGuardsFilter> requestGuardsFilter(
-      SecurityProperties securityProps) {
+      SecurityProperties securityProps,
+      TokenProvider tokenProvider,
+      AuthUserRepository authUserRepository) {
     FilterRegistrationBean<RequestGuardsFilter> registration =
-        new FilterRegistrationBean<>(new RequestGuardsFilter(securityProps));
+        new FilterRegistrationBean<>(
+            new RequestGuardsFilter(securityProps, tokenProvider, authUserRepository));
     registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
     return registration;
   }

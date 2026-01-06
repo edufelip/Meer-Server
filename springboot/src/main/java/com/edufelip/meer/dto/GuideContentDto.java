@@ -8,4 +8,7 @@ public record GuideContentDto(
     java.util.UUID thriftStoreId,
     String thriftStoreName,
     String thriftStoreCoverImageUrl,
-    java.time.Instant createdAt) {}
+    java.time.Instant createdAt,
+    Long likeCount,
+    Long commentCount,
+    Boolean likedByMe) {}

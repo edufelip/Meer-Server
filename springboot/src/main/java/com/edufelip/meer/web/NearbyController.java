@@ -40,7 +40,7 @@ public class NearbyController {
 
   @GetMapping("/nearby")
   public PageResponse<NearbyStoreDto> nearby(
-      @RequestHeader("Authorization") String authHeader,
+      @RequestHeader(name = "Authorization", required = false) String authHeader,
       @RequestParam(name = "lat") double lat,
       @RequestParam(name = "lng") double lng,
       @RequestParam(name = "pageIndex", defaultValue = "0") int pageIndex,
@@ -48,9 +48,11 @@ public class NearbyController {
     if (pageIndex < 0 || pageSize < 1 || pageSize > 100) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination params");
     }
-    var user = currentUser(authHeader);
+    var user = currentUserOrNull(authHeader);
     Set<java.util.UUID> favoriteIds =
-        user.getFavorites().stream().map(f -> f.getId()).collect(Collectors.toSet());
+        user != null
+            ? user.getFavorites().stream().map(f -> f.getId()).collect(Collectors.toSet())
+            : Set.of();
 
     var page = getThriftStoresUseCase.executeNearby(lat, lng, pageIndex, pageSize);
     List<ThriftStore> stores = page.getContent();
@@ -111,8 +113,9 @@ public class NearbyController {
     return R * c;
   }
 
-  private com.edufelip.meer.core.auth.AuthUser currentUser(String authHeader) {
-    if (authHeader == null || !authHeader.startsWith("Bearer ")) throw new InvalidTokenException();
+  private com.edufelip.meer.core.auth.AuthUser currentUserOrNull(String authHeader) {
+    if (authHeader == null) return null;
+    if (!authHeader.startsWith("Bearer ")) throw new InvalidTokenException();
     String token = authHeader.substring("Bearer ".length()).trim();
     TokenPayload payload;
     try {

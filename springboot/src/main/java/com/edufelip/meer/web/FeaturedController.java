@@ -25,10 +25,10 @@ public class FeaturedController {
 
   @GetMapping("/featured")
   public List<FeaturedStoreDto> featured(
-      @RequestHeader("Authorization") String authHeader,
+      @RequestHeader(name = "Authorization", required = false) String authHeader,
       @RequestParam(name = "lat", required = false) Double lat,
       @RequestParam(name = "lng", required = false) Double lng) {
-    currentUser(authHeader); // just validate token
+    currentUserOrNull(authHeader); // validate token if provided
     var stores = getThriftStoresUseCase.executeRecentTop10();
 
     return stores.stream()
@@ -43,8 +43,9 @@ public class FeaturedController {
         .toList();
   }
 
-  private com.edufelip.meer.core.auth.AuthUser currentUser(String authHeader) {
-    if (authHeader == null || !authHeader.startsWith("Bearer ")) throw new InvalidTokenException();
+  private com.edufelip.meer.core.auth.AuthUser currentUserOrNull(String authHeader) {
+    if (authHeader == null) return null;
+    if (!authHeader.startsWith("Bearer ")) throw new InvalidTokenException();
     String token = authHeader.substring("Bearer ".length()).trim();
     try {
       TokenPayload payload = tokenProvider.parseAccessToken(token);

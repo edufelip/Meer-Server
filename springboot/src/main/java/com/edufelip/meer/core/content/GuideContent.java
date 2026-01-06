@@ -27,6 +27,12 @@ public class GuideContent {
   @Column(nullable = false, length = 512)
   private String imageUrl;
 
+  @Column(name = "like_count", nullable = false)
+  private Long likeCount = 0L;
+
+  @Column(name = "comment_count", nullable = false)
+  private Long commentCount = 0L;
+
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "thrift_store_id", columnDefinition = "uuid")
   private ThriftStore thriftStore;
@@ -38,6 +44,16 @@ public class GuideContent {
   @UpdateTimestamp
   @Column(name = "updated_at", nullable = false)
   private Instant updatedAt;
+
+  @Column(name = "deleted_at")
+  private Instant deletedAt;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "deleted_by_user_id", columnDefinition = "uuid")
+  private com.edufelip.meer.core.auth.AuthUser deletedBy;
+
+  @Column(name = "deleted_reason", length = 255)
+  private String deletedReason;
 
   public GuideContent() {}
 
@@ -82,6 +98,14 @@ public class GuideContent {
     return imageUrl;
   }
 
+  public Long getLikeCount() {
+    return likeCount;
+  }
+
+  public Long getCommentCount() {
+    return commentCount;
+  }
+
   public ThriftStore getThriftStore() {
     return thriftStore;
   }
@@ -92,6 +116,18 @@ public class GuideContent {
 
   public Instant getUpdatedAt() {
     return updatedAt;
+  }
+
+  public Instant getDeletedAt() {
+    return deletedAt;
+  }
+
+  public com.edufelip.meer.core.auth.AuthUser getDeletedBy() {
+    return deletedBy;
+  }
+
+  public String getDeletedReason() {
+    return deletedReason;
   }
 
   public void setId(Integer id) {
@@ -118,6 +154,14 @@ public class GuideContent {
     this.imageUrl = imageUrl;
   }
 
+  public void setLikeCount(Long likeCount) {
+    this.likeCount = likeCount;
+  }
+
+  public void setCommentCount(Long commentCount) {
+    this.commentCount = commentCount;
+  }
+
   public void setThriftStore(ThriftStore thriftStore) {
     this.thriftStore = thriftStore;
   }
@@ -128,5 +172,17 @@ public class GuideContent {
 
   public void setUpdatedAt(Instant updatedAt) {
     this.updatedAt = updatedAt;
+  }
+
+  public void setDeletedAt(Instant deletedAt) {
+    this.deletedAt = deletedAt;
+  }
+
+  public void setDeletedBy(com.edufelip.meer.core.auth.AuthUser deletedBy) {
+    this.deletedBy = deletedBy;
+  }
+
+  public void setDeletedReason(String deletedReason) {
+    this.deletedReason = deletedReason;
   }
 }

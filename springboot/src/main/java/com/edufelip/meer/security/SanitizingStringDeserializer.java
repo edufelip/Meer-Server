@@ -1,7 +1,6 @@
 package com.edufelip.meer.security;
 
-import org.jsoup.Jsoup;
-import org.jsoup.safety.Safelist;
+import com.edufelip.meer.util.StringSanitizer;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.JsonParser;
 import tools.jackson.databind.DeserializationContext;
@@ -24,11 +23,6 @@ public class SanitizingStringDeserializer extends StdScalarDeserializer<String> 
   public String deserialize(JsonParser p, DeserializationContext ctxt) throws JacksonException {
     String value = p.getValueAsString();
     if (value == null) return null;
-
-    String cleaned = Jsoup.clean(value, Safelist.none()).trim();
-    if (cleaned.length() > maxLength) {
-      cleaned = cleaned.substring(0, maxLength);
-    }
-    return cleaned;
+    return StringSanitizer.sanitizeAndTruncate(value, maxLength);
   }
 }

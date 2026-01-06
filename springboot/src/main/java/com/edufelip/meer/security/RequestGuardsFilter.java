@@ -1,8 +1,10 @@
 package com.edufelip.meer.security;
 
+import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.security.guards.AppHeaderGuard;
 import com.edufelip.meer.security.guards.FirebaseAuthGuard;
 import com.edufelip.meer.security.guards.GuardException;
+import com.edufelip.meer.security.token.TokenProvider;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -13,9 +15,12 @@ public class RequestGuardsFilter extends OncePerRequestFilter {
   private final AppHeaderGuard appHeaderGuard;
   private final FirebaseAuthGuard authGuard;
 
-  public RequestGuardsFilter(SecurityProperties securityProps) {
+  public RequestGuardsFilter(
+      SecurityProperties securityProps,
+      TokenProvider tokenProvider,
+      AuthUserRepository authUserRepository) {
     this.appHeaderGuard = new AppHeaderGuard(securityProps);
-    this.authGuard = new FirebaseAuthGuard(securityProps);
+    this.authGuard = new FirebaseAuthGuard(securityProps, tokenProvider, authUserRepository);
   }
 
   @Override
@@ -28,16 +33,18 @@ public class RequestGuardsFilter extends OncePerRequestFilter {
       return;
     }
 
-    if (isPublicPath(request)) {
-      try {
-        filterChain.doFilter(request, response);
-      } catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-      return;
-    }
-
     try {
+      if (isPublicPath(request)) {
+        if (shouldRequireAppHeader(request)) {
+          appHeaderGuard.validate(request);
+        }
+        String authHeader = request.getHeader(FirebaseAuthGuard.AUTH_HEADER);
+        if (authHeader != null) {
+          authGuard.validate(request);
+        }
+        filterChain.doFilter(request, response);
+        return;
+      }
       appHeaderGuard.validate(request);
       authGuard.validate(request);
       filterChain.doFilter(request, response);
@@ -52,8 +59,20 @@ public class RequestGuardsFilter extends OncePerRequestFilter {
 
     // Public read-only endpoints
     if ("GET".equals(method)) {
-      if (path.equals("/contents") || path.startsWith("/contents/")) {
+      if (path.equals("/contents") || path.startsWith("/contents/")) return true;
+      if (path.equals("/home")
+          || path.equals("/featured")
+          || path.equals("/nearby")
+          || path.equals("/stores")
+          || path.equals("/stores/search")
+          || path.equals("/categories")) {
         return true;
+      }
+      if (path.startsWith("/categories/") && path.endsWith("/stores")) return true;
+      if (path.startsWith("/stores/")) {
+        if (path.endsWith("/contents") || path.endsWith("/ratings")) return true;
+        String suffix = path.substring("/stores/".length());
+        return !suffix.isBlank() && !suffix.contains("/");
       }
     }
 
@@ -76,6 +95,15 @@ public class RequestGuardsFilter extends OncePerRequestFilter {
       case "/support/contact" -> true;
       default -> false;
     };
+  }
+
+  private boolean shouldRequireAppHeader(HttpServletRequest request) {
+    String path = request.getServletPath().toLowerCase();
+    String method = request.getMethod().toUpperCase();
+    if (!"GET".equals(method)) return false;
+    if (path.startsWith("/actuator")) return false;
+    if (path.startsWith("/dashboard")) return false;
+    return true;
   }
 
   private void sendUnauthorized(HttpServletResponse response, String message) {

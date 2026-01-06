@@ -3,10 +3,13 @@ package com.edufelip.meer.web;
 import com.edufelip.meer.core.support.SupportContact;
 import com.edufelip.meer.domain.repo.SupportContactRepository;
 import com.edufelip.meer.dto.SupportContactRequest;
+import com.edufelip.meer.security.RateLimitService;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,16 +25,24 @@ public class SupportController {
       Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 
   private final SupportContactRepository repository;
+  private final RateLimitService rateLimitService;
 
-  public SupportController(SupportContactRepository repository) {
+  public SupportController(SupportContactRepository repository, RateLimitService rateLimitService) {
     this.repository = repository;
+    this.rateLimitService = rateLimitService;
   }
 
   @PostMapping("/contact")
-  public ResponseEntity<?> contact(@RequestBody(required = false) SupportContactRequest body) {
+  public ResponseEntity<?> contact(
+      @RequestBody(required = false) SupportContactRequest body, HttpServletRequest request) {
     String validationError = validate(body);
     if (validationError != null) {
       return ResponseEntity.badRequest().body(Map.of("message", validationError));
+    }
+    String clientKey = resolveClientKey(request);
+    if (!rateLimitService.allowSupportContact(clientKey)) {
+      return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+          .body(Map.of("message", "Too many support requests"));
     }
 
     repository.save(
@@ -54,5 +65,18 @@ public class SupportController {
 
   private boolean isBlank(String value) {
     return value == null || value.isBlank();
+  }
+
+  private String resolveClientKey(HttpServletRequest request) {
+    if (request == null) return "unknown";
+    String forwarded = request.getHeader("X-Forwarded-For");
+    if (forwarded != null && !forwarded.isBlank()) {
+      return forwarded.split(",")[0].trim();
+    }
+    String realIp = request.getHeader("X-Real-IP");
+    if (realIp != null && !realIp.isBlank()) {
+      return realIp.trim();
+    }
+    return request.getRemoteAddr() != null ? request.getRemoteAddr() : "unknown";
   }
 }

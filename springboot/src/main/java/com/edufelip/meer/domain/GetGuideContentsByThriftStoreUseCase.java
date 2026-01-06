@@ -13,6 +13,6 @@ public class GetGuideContentsByThriftStoreUseCase {
   }
 
   public List<GuideContent> execute(UUID thriftStoreId) {
-    return guideContentRepository.findByThriftStoreId(thriftStoreId);
+    return guideContentRepository.findByThriftStoreIdAndDeletedAtIsNull(thriftStoreId);
   }
 }
