@@ -1,6 +1,5 @@
 package com.edufelip.meer.dto;
 
-import com.edufelip.meer.core.store.Social;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
 import java.util.List;
@@ -37,7 +36,7 @@ public class StoreRequest {
   @Size(max = 10)
   private List<String> categories;
 
-  private Social social;
+  private SocialRequest social;
 
   public String getName() {
     return name;
@@ -127,11 +126,11 @@ public class StoreRequest {
     this.categories = categories;
   }
 
-  public Social getSocial() {
+  public SocialRequest getSocial() {
     return social;
   }
 
-  public void setSocial(Social social) {
+  public void setSocial(SocialRequest social) {
     this.social = social;
   }
 }

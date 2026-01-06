@@ -18,6 +18,7 @@ import com.edufelip.meer.dto.PhotoRegisterRequest;
 import com.edufelip.meer.dto.PhotoUploadRequest;
 import com.edufelip.meer.dto.PhotoUploadResponse;
 import com.edufelip.meer.dto.StoreRequest;
+import com.edufelip.meer.dto.SocialRequest;
 import com.edufelip.meer.dto.ThriftStoreDto;
 import com.edufelip.meer.mapper.Mappers;
 import com.edufelip.meer.security.token.InvalidTokenException;
@@ -205,7 +206,7 @@ public class ThriftStoreController {
     store.setLatitude(body.getLatitude());
     store.setLongitude(body.getLongitude());
     store.setOwner(user);
-    store.setSocial(body.getSocial());
+    store.setSocial(toSocial(body.getSocial()));
     store.setPhone(body.getPhone());
     store.setEmail(body.getEmail());
     store.setTagline(body.getTagline());
@@ -461,7 +462,7 @@ public class ThriftStoreController {
       store.setCategories(normalizeCategories(body.getCategories()));
     if (body.getSocial() != null) {
       validateSocialUrls(body.getSocial());
-      store.setSocial(body.getSocial());
+      applySocialUpdates(store, body.getSocial());
     }
 
     if (body.getLatitude() != null && body.getLongitude() != null) {
@@ -553,14 +554,46 @@ public class ThriftStoreController {
     }
   }
 
-  private void validateSocialUrls(Social social) {
+  private void validateSocialUrls(SocialRequest social) {
     if (social == null) return;
     try {
-      UrlValidatorUtil.ensureHttpUrl(social.getWebsite(), "website");
+      ensureWebsiteContainsDotCom(social.getWebsite());
       UrlValidatorUtil.ensureHttpUrl(social.getFacebook(), "facebook");
       ensureSingleWord(social.getInstagram(), "instagram");
     } catch (IllegalArgumentException ex) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+  }
+
+  private void applySocialUpdates(ThriftStore store, SocialRequest updates) {
+    if (updates == null) return;
+    Social social = store.getSocial();
+    if (social == null) {
+      social = new Social();
+      store.setSocial(social);
+    }
+    if (updates.isFacebookPresent()) social.setFacebook(updates.getFacebook());
+    if (updates.isInstagramPresent()) social.setInstagram(updates.getInstagram());
+    if (updates.isWebsitePresent()) social.setWebsite(updates.getWebsite());
+    if (updates.isWhatsappPresent()) social.setWhatsapp(updates.getWhatsapp());
+  }
+
+  private Social toSocial(SocialRequest request) {
+    if (request == null) return null;
+    Social social = new Social();
+    social.setFacebook(request.getFacebook());
+    social.setInstagram(request.getInstagram());
+    social.setWebsite(request.getWebsite());
+    social.setWhatsapp(request.getWhatsapp());
+    return social;
+  }
+
+  private void ensureWebsiteContainsDotCom(String website) {
+    if (website == null) return;
+    String trimmed = website.trim();
+    if (trimmed.isBlank()) return;
+    if (!trimmed.contains(".com")) {
+      throw new IllegalArgumentException("website must contain .com");
     }
   }
 

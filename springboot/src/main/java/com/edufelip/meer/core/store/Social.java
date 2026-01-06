@@ -14,12 +14,20 @@ public class Social {
   @Column(length = 2048)
   private String website;
 
+  @Column(length = 2048)
+  private String whatsapp;
+
   public Social() {}
 
   public Social(String facebook, String instagram, String website) {
+    this(facebook, instagram, website, null);
+  }
+
+  public Social(String facebook, String instagram, String website, String whatsapp) {
     this.facebook = facebook;
     this.instagram = instagram;
     this.website = website;
+    this.whatsapp = whatsapp;
   }
 
   public String getFacebook() {
@@ -34,6 +42,10 @@ public class Social {
     return website;
   }
 
+  public String getWhatsapp() {
+    return whatsapp;
+  }
+
   public void setFacebook(String facebook) {
     this.facebook = facebook;
   }
@@ -44,5 +56,9 @@ public class Social {
 
   public void setWebsite(String website) {
     this.website = website;
+  }
+
+  public void setWhatsapp(String whatsapp) {
+    this.whatsapp = whatsapp;
   }
 }
