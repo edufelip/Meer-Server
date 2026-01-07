@@ -3,6 +3,7 @@ package com.edufelip.meer.web;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -134,6 +135,36 @@ class GuideContentControllerTest {
                 .content("{\"body\":\"Updated\"}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.edited").value(true));
+  }
+
+  @Test
+  void deleteCommentHardDeletes() throws Exception {
+    UUID userId = UUID.randomUUID();
+    AuthUser user = new AuthUser();
+    user.setId(userId);
+    user.setEmail("user@example.com");
+    user.setDisplayName("User");
+    user.setPasswordHash("hash");
+    user.setRole(Role.USER);
+
+    GuideContent content = new GuideContent();
+    content.setId(1);
+
+    GuideContentComment comment = new GuideContentComment(user, content, "Old");
+    comment.setId(2);
+
+    when(tokenProvider.parseAccessToken("token"))
+        .thenReturn(new TokenPayload(userId, "user@example.com", "User", Role.USER));
+    when(authUserRepository.findById(userId)).thenReturn(Optional.of(user));
+    when(guideContentCommentRepository.findById(2)).thenReturn(Optional.of(comment));
+
+    mockMvc
+        .perform(
+            delete("/contents/{id}/comments/{commentId}", 1, 2)
+                .header("Authorization", "Bearer token"))
+        .andExpect(status().isNoContent());
+
+    verify(guideContentModerationService).hardDeleteComment(comment);
   }
 
   @Test

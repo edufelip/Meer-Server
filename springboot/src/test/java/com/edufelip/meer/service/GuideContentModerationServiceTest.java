@@ -17,7 +17,7 @@ import org.mockito.Mockito;
 class GuideContentModerationServiceTest {
 
   @Test
-  void softDeleteCommentSetsFieldsAndDecrementsCount() {
+  void hardDeleteCommentRemovesAndDecrementsCount() {
     GuideContentRepository contentRepository = Mockito.mock(GuideContentRepository.class);
     GuideContentCommentRepository commentRepository =
         Mockito.mock(GuideContentCommentRepository.class);
@@ -34,70 +34,10 @@ class GuideContentModerationServiceTest {
     GuideContentComment comment = new GuideContentComment(actor, content, "Hello");
     comment.setId(9);
 
-    Mockito.when(commentRepository.save(Mockito.any(GuideContentComment.class)))
-        .thenAnswer(inv -> inv.getArgument(0, GuideContentComment.class));
+    service.hardDeleteComment(comment);
 
-    GuideContentComment deleted = service.softDeleteComment(comment, actor, "spam");
-
-    assertThat(deleted.getDeletedAt()).isEqualTo(TestFixtures.fixedInstant());
-    assertThat(deleted.getDeletedBy()).isEqualTo(actor);
-    assertThat(deleted.getDeletedReason()).isEqualTo("spam");
+    Mockito.verify(commentRepository).delete(comment);
     Mockito.verify(contentRepository).decrementCommentCount(5);
-  }
-
-  @Test
-  void restoreCommentClearsFieldsAndIncrementsCount() {
-    GuideContentRepository contentRepository = Mockito.mock(GuideContentRepository.class);
-    GuideContentCommentRepository commentRepository =
-        Mockito.mock(GuideContentCommentRepository.class);
-    Clock clock = Clock.fixed(TestFixtures.fixedInstant(), ZoneOffset.UTC);
-    GuideContentModerationService service =
-        new GuideContentModerationService(contentRepository, commentRepository, clock);
-
-    AuthUser actor = new AuthUser();
-    actor.setId(UUID.randomUUID());
-
-    GuideContent content = new GuideContent();
-    content.setId(5);
-
-    GuideContentComment comment = new GuideContentComment(actor, content, "Hello");
-    comment.setDeletedAt(TestFixtures.fixedInstant());
-    comment.setDeletedBy(actor);
-    comment.setDeletedReason("spam");
-
-    Mockito.when(commentRepository.save(Mockito.any(GuideContentComment.class)))
-        .thenAnswer(inv -> inv.getArgument(0, GuideContentComment.class));
-
-    GuideContentComment restored = service.restoreComment(comment);
-
-    assertThat(restored.getDeletedAt()).isNull();
-    assertThat(restored.getDeletedBy()).isNull();
-    assertThat(restored.getDeletedReason()).isNull();
-    Mockito.verify(contentRepository).incrementCommentCount(5);
-  }
-
-  @Test
-  void softDeleteCommentIsIdempotent() {
-    GuideContentRepository contentRepository = Mockito.mock(GuideContentRepository.class);
-    GuideContentCommentRepository commentRepository =
-        Mockito.mock(GuideContentCommentRepository.class);
-    Clock clock = Clock.fixed(TestFixtures.fixedInstant(), ZoneOffset.UTC);
-    GuideContentModerationService service =
-        new GuideContentModerationService(contentRepository, commentRepository, clock);
-
-    AuthUser actor = new AuthUser();
-    actor.setId(UUID.randomUUID());
-
-    GuideContent content = new GuideContent();
-    content.setId(5);
-
-    GuideContentComment comment = new GuideContentComment(actor, content, "Hello");
-    comment.setDeletedAt(TestFixtures.fixedInstant());
-
-    service.softDeleteComment(comment, actor, "spam");
-
-    Mockito.verify(commentRepository, Mockito.never()).save(Mockito.any());
-    Mockito.verify(contentRepository, Mockito.never()).decrementCommentCount(Mockito.any());
   }
 
   @Test
