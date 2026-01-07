@@ -44,6 +44,12 @@ storage:
     signed-url-ttl-minutes: ${GCS_SIGNED_URL_TTL_MINUTES:120}
     avatars-prefix: ${GCS_AVATARS_PREFIX:avatars}
 
+firebase:
+  enabled: ${FIREBASE_ENABLED:false}
+  project-id: ${FIREBASE_PROJECT_ID:}
+  credentials-path: ${FIREBASE_CREDENTIALS_PATH:}
+  credentials-json: ${FIREBASE_CREDENTIALS_JSON:}
+
 management:
   endpoints:
     web:
