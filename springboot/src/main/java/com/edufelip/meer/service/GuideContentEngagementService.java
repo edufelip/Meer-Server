@@ -37,7 +37,7 @@ public class GuideContentEngagementService {
 
     Map<Integer, Long> commentCounts = new HashMap<>();
     for (GuideContentCommentRepository.CountView view :
-        guideContentCommentRepository.countActiveByContentIds(contentIds)) {
+        guideContentCommentRepository.countByContentIds(contentIds)) {
       commentCounts.put(view.getContentId(), view.getCnt());
     }
 

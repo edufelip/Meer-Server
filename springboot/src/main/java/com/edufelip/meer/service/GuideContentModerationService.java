@@ -48,33 +48,10 @@ public class GuideContentModerationService {
   }
 
   @Transactional
-  public GuideContentComment softDeleteComment(
-      GuideContentComment comment, AuthUser actor, String reason) {
-    if (comment.getDeletedAt() == null) {
-      comment.setDeletedAt(Instant.now(clock));
-      comment.setDeletedBy(actor);
-      comment.setDeletedReason(reason);
-      GuideContentComment saved = guideContentCommentRepository.save(comment);
-      if (comment.getContent() != null) {
-        guideContentRepository.decrementCommentCount(comment.getContent().getId());
-      }
-      return saved;
+  public void hardDeleteComment(GuideContentComment comment) {
+    guideContentCommentRepository.delete(comment);
+    if (comment.getContent() != null) {
+      guideContentRepository.decrementCommentCount(comment.getContent().getId());
     }
-    return comment;
-  }
-
-  @Transactional
-  public GuideContentComment restoreComment(GuideContentComment comment) {
-    if (comment.getDeletedAt() != null) {
-      comment.setDeletedAt(null);
-      comment.setDeletedBy(null);
-      comment.setDeletedReason(null);
-      GuideContentComment saved = guideContentCommentRepository.save(comment);
-      if (comment.getContent() != null) {
-        guideContentRepository.incrementCommentCount(comment.getContent().getId());
-      }
-      return saved;
-    }
-    return comment;
   }
 }

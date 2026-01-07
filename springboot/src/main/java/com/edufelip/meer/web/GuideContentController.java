@@ -155,8 +155,7 @@ public class GuideContentController {
     GuideContent content = requireActiveContent(id);
     Sort sort = Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id"));
     Pageable pageable = PageRequest.of(page, pageSize, sort);
-    var comments =
-        guideContentCommentRepository.findByContentIdAndDeletedAtIsNull(content.getId(), pageable);
+    var comments = guideContentCommentRepository.findByContentId(content.getId(), pageable);
     var items = comments.getContent().stream().map(Mappers::toDto).toList();
     return new PageResponse<>(items, page, comments.hasNext());
   }
@@ -195,9 +194,6 @@ public class GuideContentController {
             .findById(commentId)
             .orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found"));
-    if (comment.getDeletedAt() != null) {
-      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found");
-    }
     if (comment.getContent() == null || !comment.getContent().getId().equals(id)) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found");
     }
@@ -229,7 +225,7 @@ public class GuideContentController {
     if (!canModerateComment(user, comment)) {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not authorized to delete comment");
     }
-    guideContentModerationService.softDeleteComment(comment, user, null);
+    guideContentModerationService.hardDeleteComment(comment);
     return ResponseEntity.noContent().build();
   }
 

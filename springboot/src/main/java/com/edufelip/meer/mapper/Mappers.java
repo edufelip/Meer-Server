@@ -6,6 +6,7 @@ import com.edufelip.meer.core.content.GuideContent;
 import com.edufelip.meer.core.content.GuideContentComment;
 import com.edufelip.meer.core.store.ThriftStore;
 import com.edufelip.meer.dto.CategoryDto;
+import com.edufelip.meer.dto.DashboardCommentDto;
 import com.edufelip.meer.dto.GuideContentCommentDto;
 import com.edufelip.meer.dto.GuideContentDto;
 import com.edufelip.meer.dto.ProfileDto;
@@ -65,6 +66,23 @@ public class Mappers {
         comment.getUser() != null ? comment.getUser().getId() : null,
         comment.getUser() != null ? comment.getUser().getDisplayName() : null,
         comment.getUser() != null ? comment.getUser().getPhotoUrl() : null,
+        comment.getCreatedAt(),
+        comment.getEditedAt() != null);
+  }
+
+  public static DashboardCommentDto toDashboardCommentDto(GuideContentComment comment) {
+    GuideContent content = comment.getContent();
+    ThriftStore store = content != null ? content.getThriftStore() : null;
+    return new DashboardCommentDto(
+        comment.getId(),
+        comment.getBody(),
+        comment.getUser() != null ? comment.getUser().getId() : null,
+        comment.getUser() != null ? comment.getUser().getDisplayName() : null,
+        comment.getUser() != null ? comment.getUser().getPhotoUrl() : null,
+        content != null ? content.getId() : null,
+        content != null ? content.getTitle() : null,
+        store != null ? store.getId() : null,
+        store != null ? store.getName() : null,
         comment.getCreatedAt(),
         comment.getEditedAt() != null);
   }

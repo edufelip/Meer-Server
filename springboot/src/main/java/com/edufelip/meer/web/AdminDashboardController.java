@@ -16,6 +16,9 @@ import com.edufelip.meer.service.GuideContentModerationService;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -180,30 +183,73 @@ public class AdminDashboardController {
         restored, summary.likeCount(), summary.commentCount(), summary.likedByMe());
   }
 
-  @DeleteMapping("/comments/{id}")
-  public org.springframework.http.ResponseEntity<Void> deleteComment(
-      @RequestHeader("Authorization") String authHeader, @PathVariable Integer id) {
-    AuthUser admin = requireAdmin(authHeader);
-    var comment =
-        guideContentCommentRepository
-            .findById(id)
-            .orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found"));
-    guideContentModerationService.softDeleteComment(comment, admin, null);
-    return org.springframework.http.ResponseEntity.noContent().build();
+  @GetMapping("/contents/{id}/comments")
+  public PageResponse<GuideContentCommentDto> listContentComments(
+      @RequestHeader("Authorization") String authHeader,
+      @PathVariable Integer id,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int pageSize) {
+    requireAdmin(authHeader);
+    if (page < 0 || pageSize < 1 || pageSize > 100) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination params");
+    }
+    if (guideContentRepository.findById(id).isEmpty()) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found");
+    }
+    Sort sort = Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id"));
+    Pageable pageable = PageRequest.of(page, pageSize, sort);
+    var comments = guideContentCommentRepository.findByContentId(id, pageable);
+    var items = comments.getContent().stream().map(Mappers::toDto).toList();
+    return new PageResponse<>(items, page, comments.hasNext());
   }
 
-  @PostMapping("/comments/{id}/restore")
-  public GuideContentCommentDto restoreComment(
-      @RequestHeader("Authorization") String authHeader, @PathVariable Integer id) {
+  @DeleteMapping("/contents/{id}/comments/{commentId}")
+  public org.springframework.http.ResponseEntity<Void> deleteContentComment(
+      @RequestHeader("Authorization") String authHeader,
+      @PathVariable Integer id,
+      @PathVariable Integer commentId) {
     requireAdmin(authHeader);
     var comment =
         guideContentCommentRepository
-            .findById(id)
+            .findById(commentId)
             .orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found"));
-    var restored = guideContentModerationService.restoreComment(comment);
-    return Mappers.toDto(restored);
+    if (comment.getContent() == null || !comment.getContent().getId().equals(id)) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found");
+    }
+    guideContentModerationService.hardDeleteComment(comment);
+    return org.springframework.http.ResponseEntity.noContent().build();
+  }
+
+  @GetMapping("/comments")
+  public PageResponse<DashboardCommentDto> listComments(
+      @RequestHeader("Authorization") String authHeader,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int pageSize,
+      @RequestParam(defaultValue = "newest") String sort,
+      @RequestParam(required = false) String search,
+      @RequestParam(required = false) Integer contentId,
+      @RequestParam(required = false) UUID storeId,
+      @RequestParam(required = false) LocalDate from,
+      @RequestParam(required = false) LocalDate to) {
+    requireAdmin(authHeader);
+    if (page < 0 || pageSize < 1 || pageSize > 100) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination params");
+    }
+    Instant fromInstant =
+        from != null ? from.atStartOfDay(ZoneOffset.UTC).toInstant() : null;
+    Instant toInstant =
+        to != null ? to.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant() : null;
+    Sort.Direction direction =
+        "oldest".equalsIgnoreCase(sort) ? Sort.Direction.ASC : Sort.Direction.DESC;
+    Sort sortSpec = Sort.by(direction, "createdAt").and(Sort.by(direction, "id"));
+    Pageable pageable = PageRequest.of(page, pageSize, sortSpec);
+    String term = (search != null && !search.isBlank()) ? search.trim() : null;
+    var pageRes =
+        guideContentCommentRepository.findDashboardComments(
+            contentId, storeId, fromInstant, toInstant, term, pageable);
+    var items = pageRes.getContent().stream().map(Mappers::toDashboardCommentDto).toList();
+    return new PageResponse<>(items, page, pageRes.hasNext());
   }
 
   @GetMapping("/users")

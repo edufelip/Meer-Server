@@ -1,24 +1,68 @@
 package com.edufelip.meer.domain.repo;
 
 import com.edufelip.meer.core.content.GuideContentComment;
+import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface GuideContentCommentRepository extends JpaRepository<GuideContentComment, Integer> {
-  Page<GuideContentComment> findByContentIdAndDeletedAtIsNull(Integer contentId, Pageable pageable);
+  Page<GuideContentComment> findByContentId(Integer contentId, Pageable pageable);
 
-  @org.springframework.data.jpa.repository.Query(
+  @Query(
       """
             select c.content.id as contentId, count(c) as cnt
             from GuideContentComment c
             where c.content.id in :contentIds
-              and c.deletedAt is null
             group by c.content.id
             """)
-  List<CountView> countActiveByContentIds(
-      @org.springframework.data.repository.query.Param("contentIds") List<Integer> contentIds);
+  List<CountView> countByContentIds(@Param("contentIds") List<Integer> contentIds);
+
+  @Query(
+      value =
+          """
+                select c
+                from GuideContentComment c
+                join fetch c.user u
+                join fetch c.content content
+                left join fetch content.thriftStore store
+                where (:contentId is null or content.id = :contentId)
+                  and (:storeId is null or store.id = :storeId)
+                  and (:from is null or c.createdAt >= :from)
+                  and (:to is null or c.createdAt < :to)
+                  and (
+                    :search is null
+                    or lower(c.body) like lower(concat('%', :search, '%'))
+                    or lower(content.title) like lower(concat('%', :search, '%'))
+                  )
+                """,
+      countQuery =
+          """
+                select count(c)
+                from GuideContentComment c
+                join c.content content
+                left join content.thriftStore store
+                where (:contentId is null or content.id = :contentId)
+                  and (:storeId is null or store.id = :storeId)
+                  and (:from is null or c.createdAt >= :from)
+                  and (:to is null or c.createdAt < :to)
+                  and (
+                    :search is null
+                    or lower(c.body) like lower(concat('%', :search, '%'))
+                    or lower(content.title) like lower(concat('%', :search, '%'))
+                  )
+                """)
+  Page<GuideContentComment> findDashboardComments(
+      @Param("contentId") Integer contentId,
+      @Param("storeId") UUID storeId,
+      @Param("from") Instant from,
+      @Param("to") Instant to,
+      @Param("search") String search,
+      Pageable pageable);
 
   interface CountView {
     Integer getContentId();

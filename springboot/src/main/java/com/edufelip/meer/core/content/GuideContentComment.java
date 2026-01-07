@@ -47,16 +47,6 @@ public class GuideContentComment {
   @JoinColumn(name = "edited_by_user_id", columnDefinition = "uuid")
   private AuthUser editedBy;
 
-  @Column(name = "deleted_at")
-  private Instant deletedAt;
-
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "deleted_by_user_id", columnDefinition = "uuid")
-  private AuthUser deletedBy;
-
-  @Column(name = "deleted_reason", length = 255)
-  private String deletedReason;
-
   public GuideContentComment() {}
 
   public GuideContentComment(AuthUser user, GuideContent content, String body) {
@@ -97,18 +87,6 @@ public class GuideContentComment {
     return editedBy;
   }
 
-  public Instant getDeletedAt() {
-    return deletedAt;
-  }
-
-  public AuthUser getDeletedBy() {
-    return deletedBy;
-  }
-
-  public String getDeletedReason() {
-    return deletedReason;
-  }
-
   public void setId(Integer id) {
     this.id = id;
   }
@@ -141,15 +119,4 @@ public class GuideContentComment {
     this.editedBy = editedBy;
   }
 
-  public void setDeletedAt(Instant deletedAt) {
-    this.deletedAt = deletedAt;
-  }
-
-  public void setDeletedBy(AuthUser deletedBy) {
-    this.deletedBy = deletedBy;
-  }
-
-  public void setDeletedReason(String deletedReason) {
-    this.deletedReason = deletedReason;
-  }
 }
