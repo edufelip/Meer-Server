@@ -7,9 +7,11 @@ import com.edufelip.meer.domain.repo.StoreFeedbackRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
 import com.edufelip.meer.dto.AvatarUploadResponse;
 import com.edufelip.meer.dto.DeleteAccountRequest;
+import com.edufelip.meer.dto.ErrorDto;
 import com.edufelip.meer.dto.ProfileDto;
 import com.edufelip.meer.dto.UpdateProfileRequest;
 import com.edufelip.meer.mapper.Mappers;
+import com.edufelip.meer.security.AuthUserResolver;
 import com.edufelip.meer.security.token.InvalidTokenException;
 import com.edufelip.meer.service.GcsStorageService;
 import com.edufelip.meer.util.UrlValidatorUtil;
@@ -49,6 +51,7 @@ public class ProfileController {
   private final StoreFeedbackRepository storeFeedbackRepository;
   private final ThriftStoreRepository thriftStoreRepository;
   private final GcsStorageService gcsStorageService;
+  private final AuthUserResolver authUserResolver;
   private static final Set<String> ALLOWED_AVATAR_CONTENT_TYPES =
       Set.of("image/jpeg", "image/png", "image/webp");
   private static final long MAX_AVATAR_BYTES = 5 * 1024 * 1024;
@@ -59,18 +62,20 @@ public class ProfileController {
       AuthUserRepository authUserRepository,
       StoreFeedbackRepository storeFeedbackRepository,
       ThriftStoreRepository thriftStoreRepository,
-      GcsStorageService gcsStorageService) {
+      GcsStorageService gcsStorageService,
+      AuthUserResolver authUserResolver) {
     this.getProfileUseCase = getProfileUseCase;
     this.updateProfileUseCase = updateProfileUseCase;
     this.authUserRepository = authUserRepository;
     this.storeFeedbackRepository = storeFeedbackRepository;
     this.thriftStoreRepository = thriftStoreRepository;
     this.gcsStorageService = gcsStorageService;
+    this.authUserResolver = authUserResolver;
   }
 
   @GetMapping
   public ProfileDto getProfile(@RequestHeader("Authorization") String authHeader) {
-    String token = extractBearer(authHeader);
+    String token = authUserResolver.requireBearer(authHeader);
     var user = getProfileUseCase.execute(token);
     return Mappers.toProfileDto(user, true);
   }
@@ -79,7 +84,7 @@ public class ProfileController {
   public AvatarUploadResponse requestAvatarUpload(
       @RequestHeader("Authorization") String authHeader,
       @RequestBody(required = false) java.util.Map<String, String> body) {
-    String token = extractBearer(authHeader);
+    String token = authUserResolver.requireBearer(authHeader);
     var user = getProfileUseCase.execute(token);
     String contentType = body != null ? body.get("contentType") : null;
     if (contentType != null
@@ -89,7 +94,7 @@ public class ProfileController {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported content type");
     }
     var slot = gcsStorageService.createAvatarSlot(user.getId().toString(), contentType);
-    return new AvatarUploadResponse(slot.getUploadUrl(), slot.getFileKey(), slot.getContentType());
+    return new AvatarUploadResponse(slot.uploadUrl(), slot.fileKey(), slot.contentType());
   }
 
   // Alias for clients expecting /auth/me
@@ -102,7 +107,7 @@ public class ProfileController {
   public ProfileDto updateProfile(
       @RequestHeader("Authorization") String authHeader,
       @RequestBody @Valid UpdateProfileRequest body) {
-    String token = extractBearer(authHeader);
+    String token = authUserResolver.requireBearer(authHeader);
     if (body == null)
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body required");
     var currentUser = getProfileUseCase.execute(token);
@@ -110,7 +115,7 @@ public class ProfileController {
     var user =
         updateProfileUseCase.execute(
             token,
-            new UpdateProfileRequest(
+            new UpdateProfileUseCase.Command(
                 body.name(),
                 normalizedAvatar,
                 body.bio(),
@@ -123,7 +128,7 @@ public class ProfileController {
   public ProfileDto patchProfile(
       @RequestHeader("Authorization") String authHeader,
       @RequestBody(required = false) @Valid UpdateProfileRequest body) {
-    String token = extractBearer(authHeader);
+    String token = authUserResolver.requireBearer(authHeader);
 
     if (body == null) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body required");
@@ -136,11 +141,11 @@ public class ProfileController {
     String previousAvatar = currentUser.getPhotoUrl();
     String normalizedAvatar = normalizeAvatarUrl(body.avatarUrl(), currentUser.getId());
 
-    var req =
-        new UpdateProfileRequest(
+    var command =
+        new UpdateProfileUseCase.Command(
             body.name(), normalizedAvatar, body.bio(), body.notifyNewStores(), body.notifyPromos());
 
-    var user = updateProfileUseCase.execute(token, req);
+    var user = updateProfileUseCase.execute(token, command);
     deleteOldAvatarIfReplaced(previousAvatar, user.getPhotoUrl());
     return Mappers.toProfileDto(user, true);
   }
@@ -148,7 +153,7 @@ public class ProfileController {
   @DeleteMapping("/account")
   public ResponseEntity<Void> deleteAccount(
       @RequestHeader("Authorization") String authHeader, @RequestBody DeleteAccountRequest body) {
-    String token = extractBearer(authHeader);
+    String token = authUserResolver.requireBearer(authHeader);
     var user = getProfileUseCase.execute(token);
     if (body == null || body.email() == null || !body.email().equalsIgnoreCase(user.getEmail())) {
       throw new ResponseStatusException(
@@ -185,15 +190,10 @@ public class ProfileController {
     return ResponseEntity.noContent().build();
   }
 
-  private String extractBearer(String header) {
-    if (header == null || !header.startsWith("Bearer ")) throw new InvalidTokenException();
-    return header.substring("Bearer ".length()).trim();
-  }
-
   @ExceptionHandler(InvalidTokenException.class)
   public ResponseEntity<?> handleInvalid(InvalidTokenException ex) {
     return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-        .body(new com.edufelip.meer.dto.ErrorDto(ex.getMessage()));
+        .body(new ErrorDto(ex.getMessage()));
   }
 
   private void deleteOldAvatarIfReplaced(String oldUrl, String newUrl) {

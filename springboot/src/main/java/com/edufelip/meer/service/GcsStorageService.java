@@ -1,6 +1,6 @@
 package com.edufelip.meer.service;
 
-import com.edufelip.meer.dto.PhotoUploadSlot;
+import com.edufelip.meer.domain.port.PhotoStoragePort;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
@@ -8,6 +8,9 @@ import com.google.cloud.storage.HttpMethod;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.Storage.SignUrlOption;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
-public class GcsStorageService {
+public class GcsStorageService implements PhotoStoragePort {
 
   private static final Logger log = LoggerFactory.getLogger(GcsStorageService.class);
 
@@ -49,9 +52,9 @@ public class GcsStorageService {
     this.avatarsPrefix = avatarsPrefix;
   }
 
-  public List<PhotoUploadSlot> createUploadSlots(
+  public List<PhotoStoragePort.UploadSlot> createUploadSlots(
       UUID storeId, int count, List<String> contentTypes) {
-    List<PhotoUploadSlot> slots = new ArrayList<>();
+    List<PhotoStoragePort.UploadSlot> slots = new ArrayList<>();
     for (int i = 0; i < count; i++) {
       String ctype =
           contentTypes != null && contentTypes.size() > i && contentTypes.get(i) != null
@@ -67,12 +70,12 @@ public class GcsStorageService {
               SignUrlOption.httpMethod(HttpMethod.PUT),
               SignUrlOption.withV4Signature(),
               SignUrlOption.withContentType());
-      slots.add(new PhotoUploadSlot(url.toString(), objectName, ctype));
+      slots.add(new PhotoStoragePort.UploadSlot(url.toString(), objectName, ctype));
     }
     return slots;
   }
 
-  public PhotoUploadSlot createAvatarSlot(String userId, String contentType) {
+  public PhotoStoragePort.UploadSlot createAvatarSlot(String userId, String contentType) {
     String ctype = contentType != null ? contentType : "image/jpeg";
     String objectName = "%s/%s-%s".formatted(avatarsPrefix, userId, UUID.randomUUID());
     BlobInfo blobInfo = BlobInfo.newBuilder(bucket, objectName).setContentType(ctype).build();
@@ -84,7 +87,7 @@ public class GcsStorageService {
             SignUrlOption.httpMethod(HttpMethod.PUT),
             SignUrlOption.withV4Signature(),
             SignUrlOption.withContentType());
-    return new PhotoUploadSlot(url.toString(), objectName, ctype);
+    return new PhotoStoragePort.UploadSlot(url.toString(), objectName, ctype);
   }
 
   public Blob fetchRequiredObject(String fileKey) {
@@ -94,6 +97,12 @@ public class GcsStorageService {
           HttpStatus.BAD_REQUEST, "Uploaded file not found: " + fileKey);
     }
     return blob;
+  }
+
+  @Override
+  public StoredObject fetchRequired(String fileKey) {
+    Blob blob = fetchRequiredObject(fileKey);
+    return new StoredObject(blob.getContentType(), blob.getSize());
   }
 
   public String publicUrl(String fileKey) {
@@ -132,6 +141,9 @@ public class GcsStorageService {
 
   public void deleteByUrl(String url) {
     if (url == null || url.isBlank()) return;
+    if (deleteLocalIfUploads(url)) {
+      return;
+    }
     String key = deriveKey(url);
     if (key == null) {
       log.warn("GCS delete skipped (URL not in configured bucket): {}", url);
@@ -156,5 +168,16 @@ public class GcsStorageService {
   private String stripQuery(String path) {
     int idx = path.indexOf('?');
     return idx >= 0 ? path.substring(0, idx) : path;
+  }
+
+  private boolean deleteLocalIfUploads(String url) {
+    if (url == null || !url.startsWith("/uploads/")) return false;
+    try {
+      Path path = Paths.get("springboot", url.substring(1));
+      Files.deleteIfExists(path);
+      return true;
+    } catch (Exception ignored) {
+      return false;
+    }
   }
 }

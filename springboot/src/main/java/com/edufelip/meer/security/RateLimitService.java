@@ -1,5 +1,6 @@
 package com.edufelip.meer.security;
 
+import com.edufelip.meer.domain.port.RateLimitPort;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.time.Duration;
@@ -7,7 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.springframework.stereotype.Service;
 
 @Service
-public class RateLimitService {
+public class RateLimitService implements RateLimitPort {
 
   private static final int COMMENT_CREATE_LIMIT = 10;
   private static final int COMMENT_EDIT_LIMIT = 20;
@@ -20,18 +21,22 @@ public class RateLimitService {
   private final Cache<String, AtomicInteger> perHourCache =
       Caffeine.newBuilder().expireAfterWrite(Duration.ofHours(1)).maximumSize(50_000).build();
 
+  @Override
   public boolean allowCommentCreate(String userKey) {
     return incrementWithinLimit(perMinuteCache, "comment:create:" + userKey, COMMENT_CREATE_LIMIT);
   }
 
+  @Override
   public boolean allowCommentEdit(String userKey) {
     return incrementWithinLimit(perMinuteCache, "comment:edit:" + userKey, COMMENT_EDIT_LIMIT);
   }
 
+  @Override
   public boolean allowLikeAction(String userKey) {
     return incrementWithinLimit(perMinuteCache, "content:like:" + userKey, LIKE_LIMIT);
   }
 
+  @Override
   public boolean allowSupportContact(String clientKey) {
     return incrementWithinLimit(
         perHourCache, "support:contact:" + clientKey, SUPPORT_CONTACT_LIMIT);

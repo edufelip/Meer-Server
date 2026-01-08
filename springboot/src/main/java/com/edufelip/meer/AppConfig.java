@@ -3,16 +3,31 @@ package com.edufelip.meer;
 import com.edufelip.meer.domain.CreateCategoryUseCase;
 import com.edufelip.meer.domain.CreateGuideContentCommentUseCase;
 import com.edufelip.meer.domain.CreateGuideContentUseCase;
+import com.edufelip.meer.domain.CreateOwnedGuideContentUseCase;
+import com.edufelip.meer.domain.CreateStoreGuideContentUseCase;
 import com.edufelip.meer.domain.CreateThriftStoreUseCase;
+import com.edufelip.meer.domain.DeleteGuideContentUseCase;
+import com.edufelip.meer.domain.DeleteThriftStoreUseCase;
 import com.edufelip.meer.domain.DeleteCategoryUseCase;
 import com.edufelip.meer.domain.GetCategoriesUseCase;
 import com.edufelip.meer.domain.GetGuideContentUseCase;
 import com.edufelip.meer.domain.GetGuideContentsByThriftStoreUseCase;
+import com.edufelip.meer.domain.LikeGuideContentUseCase;
+import com.edufelip.meer.domain.GetStoreContentsUseCase;
+import com.edufelip.meer.domain.GetStoreDetailsUseCase;
+import com.edufelip.meer.domain.GetStoreListingsUseCase;
 import com.edufelip.meer.domain.GetThriftStoreUseCase;
 import com.edufelip.meer.domain.GetThriftStoresUseCase;
+import com.edufelip.meer.domain.ReplaceStorePhotosUseCase;
+import com.edufelip.meer.domain.RequestGuideContentImageUploadUseCase;
+import com.edufelip.meer.domain.RequestStorePhotoUploadsUseCase;
+import com.edufelip.meer.domain.StoreOwnershipService;
+import com.edufelip.meer.domain.UnlikeGuideContentUseCase;
 import com.edufelip.meer.domain.UpsertPushTokenUseCase;
 import com.edufelip.meer.domain.UpdateCategoryUseCase;
 import com.edufelip.meer.domain.UpdateGuideContentCommentUseCase;
+import com.edufelip.meer.domain.UpdateGuideContentUseCase;
+import com.edufelip.meer.domain.UpdateThriftStoreUseCase;
 import com.edufelip.meer.domain.DeletePushTokenUseCase;
 import com.edufelip.meer.domain.auth.AppleLoginUseCase;
 import com.edufelip.meer.domain.auth.DashboardLoginUseCase;
@@ -28,10 +43,14 @@ import com.edufelip.meer.domain.auth.UpdateProfileUseCase;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.CategoryRepository;
 import com.edufelip.meer.domain.repo.GuideContentCommentRepository;
+import com.edufelip.meer.domain.repo.GuideContentLikeRepository;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
 import com.edufelip.meer.domain.repo.PasswordResetTokenRepository;
 import com.edufelip.meer.domain.repo.PushTokenRepository;
+import com.edufelip.meer.domain.repo.StoreFeedbackRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
+import com.edufelip.meer.domain.port.PhotoStoragePort;
+import com.edufelip.meer.domain.port.RateLimitPort;
 import com.edufelip.meer.logging.RequestResponseLoggingFilter;
 import com.edufelip.meer.config.FirebaseProperties;
 import com.edufelip.meer.security.DashboardAdminGuardFilter;
@@ -42,6 +61,9 @@ import com.edufelip.meer.security.RequestGuardsFilter;
 import com.edufelip.meer.security.SecurityProperties;
 import com.edufelip.meer.security.token.JwtTokenProvider;
 import com.edufelip.meer.security.token.TokenProvider;
+import com.edufelip.meer.service.GuideContentEngagementService;
+import com.edufelip.meer.service.GuideContentModerationService;
+import com.edufelip.meer.service.StoreFeedbackService;
 import java.time.Clock;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -79,8 +101,94 @@ public class AppConfig {
   }
 
   @Bean
-  public CreateThriftStoreUseCase createThriftStoreUseCase(ThriftStoreRepository repo) {
-    return new CreateThriftStoreUseCase(repo);
+  public StoreOwnershipService storeOwnershipService(
+      AuthUserRepository authUserRepository, ThriftStoreRepository thriftStoreRepository) {
+    return new StoreOwnershipService(authUserRepository, thriftStoreRepository);
+  }
+
+  @Bean
+  public CreateThriftStoreUseCase createThriftStoreUseCase(
+      ThriftStoreRepository repo, AuthUserRepository authUserRepository) {
+    return new CreateThriftStoreUseCase(repo, authUserRepository);
+  }
+
+  @Bean
+  public GetStoreContentsUseCase getStoreContentsUseCase(
+      GetGuideContentsByThriftStoreUseCase getGuideContentsByThriftStoreUseCase,
+      GuideContentEngagementService guideContentEngagementService) {
+    return new GetStoreContentsUseCase(
+        getGuideContentsByThriftStoreUseCase, guideContentEngagementService);
+  }
+
+  @Bean
+  public GetStoreListingsUseCase getStoreListingsUseCase(
+      GetThriftStoresUseCase getThriftStoresUseCase,
+      ThriftStoreRepository thriftStoreRepository,
+      StoreFeedbackService storeFeedbackService,
+      CategoryRepository categoryRepository) {
+    return new GetStoreListingsUseCase(
+        getThriftStoresUseCase, thriftStoreRepository, storeFeedbackService, categoryRepository);
+  }
+
+  @Bean
+  public GetStoreDetailsUseCase getStoreDetailsUseCase(
+      GetThriftStoreUseCase getThriftStoreUseCase,
+      StoreFeedbackService storeFeedbackService,
+      StoreFeedbackRepository storeFeedbackRepository,
+      GetStoreContentsUseCase getStoreContentsUseCase) {
+    return new GetStoreDetailsUseCase(
+        getThriftStoreUseCase,
+        storeFeedbackService,
+        storeFeedbackRepository,
+        getStoreContentsUseCase);
+  }
+
+  @Bean
+  public UpdateThriftStoreUseCase updateThriftStoreUseCase(
+      ThriftStoreRepository thriftStoreRepository, StoreOwnershipService storeOwnershipService) {
+    return new UpdateThriftStoreUseCase(thriftStoreRepository, storeOwnershipService);
+  }
+
+  @Bean
+  public DeleteThriftStoreUseCase deleteThriftStoreUseCase(
+      ThriftStoreRepository thriftStoreRepository,
+      AuthUserRepository authUserRepository,
+      StoreFeedbackRepository storeFeedbackRepository,
+      PhotoStoragePort photoStoragePort,
+      StoreOwnershipService storeOwnershipService) {
+    return new DeleteThriftStoreUseCase(
+        thriftStoreRepository,
+        authUserRepository,
+        storeFeedbackRepository,
+        photoStoragePort,
+        storeOwnershipService);
+  }
+
+  @Bean
+  public RequestStorePhotoUploadsUseCase requestStorePhotoUploadsUseCase(
+      ThriftStoreRepository thriftStoreRepository,
+      StoreOwnershipService storeOwnershipService,
+      PhotoStoragePort photoStoragePort) {
+    return new RequestStorePhotoUploadsUseCase(
+        thriftStoreRepository, storeOwnershipService, photoStoragePort);
+  }
+
+  @Bean
+  public ReplaceStorePhotosUseCase replaceStorePhotosUseCase(
+      ThriftStoreRepository thriftStoreRepository,
+      StoreOwnershipService storeOwnershipService,
+      PhotoStoragePort photoStoragePort) {
+    return new ReplaceStorePhotosUseCase(
+        thriftStoreRepository, storeOwnershipService, photoStoragePort);
+  }
+
+  @Bean
+  public CreateStoreGuideContentUseCase createStoreGuideContentUseCase(
+      ThriftStoreRepository thriftStoreRepository,
+      StoreOwnershipService storeOwnershipService,
+      CreateGuideContentUseCase createGuideContentUseCase) {
+    return new CreateStoreGuideContentUseCase(
+        thriftStoreRepository, storeOwnershipService, createGuideContentUseCase);
   }
 
   @Bean
@@ -118,6 +226,58 @@ public class AppConfig {
   public CreateGuideContentUseCase createGuideContentUseCase(
       GuideContentRepository repo, ThriftStoreRepository storeRepo) {
     return new CreateGuideContentUseCase(repo, storeRepo);
+  }
+
+  @Bean
+  public CreateOwnedGuideContentUseCase createOwnedGuideContentUseCase(
+      ThriftStoreRepository thriftStoreRepository,
+      StoreOwnershipService storeOwnershipService,
+      CreateGuideContentUseCase createGuideContentUseCase) {
+    return new CreateOwnedGuideContentUseCase(
+        thriftStoreRepository, storeOwnershipService, createGuideContentUseCase);
+  }
+
+  @Bean
+  public RequestGuideContentImageUploadUseCase requestGuideContentImageUploadUseCase(
+      GuideContentRepository guideContentRepository,
+      StoreOwnershipService storeOwnershipService,
+      PhotoStoragePort photoStoragePort) {
+    return new RequestGuideContentImageUploadUseCase(
+        guideContentRepository, storeOwnershipService, photoStoragePort);
+  }
+
+  @Bean
+  public UpdateGuideContentUseCase updateGuideContentUseCase(
+      GuideContentRepository guideContentRepository,
+      StoreOwnershipService storeOwnershipService) {
+    return new UpdateGuideContentUseCase(guideContentRepository, storeOwnershipService);
+  }
+
+  @Bean
+  public DeleteGuideContentUseCase deleteGuideContentUseCase(
+      GuideContentRepository guideContentRepository,
+      StoreOwnershipService storeOwnershipService,
+      GuideContentModerationService guideContentModerationService) {
+    return new DeleteGuideContentUseCase(
+        guideContentRepository, storeOwnershipService, guideContentModerationService);
+  }
+
+  @Bean
+  public LikeGuideContentUseCase likeGuideContentUseCase(
+      GuideContentRepository guideContentRepository,
+      GuideContentLikeRepository guideContentLikeRepository,
+      RateLimitPort rateLimitPort) {
+    return new LikeGuideContentUseCase(
+        guideContentRepository, guideContentLikeRepository, rateLimitPort);
+  }
+
+  @Bean
+  public UnlikeGuideContentUseCase unlikeGuideContentUseCase(
+      GuideContentRepository guideContentRepository,
+      GuideContentLikeRepository guideContentLikeRepository,
+      RateLimitPort rateLimitPort) {
+    return new UnlikeGuideContentUseCase(
+        guideContentRepository, guideContentLikeRepository, rateLimitPort);
   }
 
   @Bean

@@ -1,14 +1,11 @@
 package com.edufelip.meer.web;
 
-import com.edufelip.meer.core.auth.AuthUser;
-import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.StoreFeedbackRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
 import com.edufelip.meer.dto.PageResponse;
 import com.edufelip.meer.dto.StoreRatingDto;
-import com.edufelip.meer.security.token.InvalidTokenException;
-import com.edufelip.meer.security.token.TokenPayload;
-import com.edufelip.meer.security.token.TokenProvider;
+import com.edufelip.meer.mapper.Mappers;
+import com.edufelip.meer.security.AuthUserResolver;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,18 +20,15 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/stores/{storeId}/ratings")
 public class StoreRatingsController {
 
-  private final TokenProvider tokenProvider;
-  private final AuthUserRepository authUserRepository;
+  private final AuthUserResolver authUserResolver;
   private final ThriftStoreRepository thriftStoreRepository;
   private final StoreFeedbackRepository storeFeedbackRepository;
 
   public StoreRatingsController(
-      TokenProvider tokenProvider,
-      AuthUserRepository authUserRepository,
+      AuthUserResolver authUserResolver,
       ThriftStoreRepository thriftStoreRepository,
       StoreFeedbackRepository storeFeedbackRepository) {
-    this.tokenProvider = tokenProvider;
-    this.authUserRepository = authUserRepository;
+    this.authUserResolver = authUserResolver;
     this.thriftStoreRepository = thriftStoreRepository;
     this.storeFeedbackRepository = storeFeedbackRepository;
   }
@@ -48,26 +42,15 @@ public class StoreRatingsController {
     if (page < 1 || pageSize < 1 || pageSize > 100) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination params");
     }
-    currentUserOrNull(authHeader);
+    authUserResolver.optionalUser(authHeader);
     thriftStoreRepository
         .findById(storeId)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
 
     var pageable = PageRequest.of(page - 1, pageSize);
     var slice = storeFeedbackRepository.findRatingsByStoreId(storeId, pageable);
-    return new PageResponse<>(slice.getContent(), page, slice.hasNext());
+    var mapped = slice.map(Mappers::toDto);
+    return new PageResponse<>(mapped.getContent(), page, mapped.hasNext());
   }
 
-  private AuthUser currentUserOrNull(String authHeader) {
-    if (authHeader == null) return null;
-    if (!authHeader.startsWith("Bearer ")) throw new InvalidTokenException();
-    String token = authHeader.substring("Bearer ".length()).trim();
-    TokenPayload payload;
-    try {
-      payload = tokenProvider.parseAccessToken(token);
-    } catch (RuntimeException ex) {
-      throw new InvalidTokenException();
-    }
-    return authUserRepository.findById(payload.getUserId()).orElseThrow(InvalidTokenException::new);
-  }
 }

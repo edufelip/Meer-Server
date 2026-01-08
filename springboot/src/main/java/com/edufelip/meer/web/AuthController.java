@@ -1,11 +1,11 @@
 package com.edufelip.meer.web;
 
 import com.edufelip.meer.domain.auth.*;
-import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.dto.AuthDtos;
 import com.edufelip.meer.dto.ProfileDto;
 import com.edufelip.meer.mapper.AuthMappers;
 import com.edufelip.meer.mapper.Mappers;
+import com.edufelip.meer.security.AuthUserResolver;
 import com.edufelip.meer.security.token.InvalidRefreshTokenException;
 import com.edufelip.meer.security.token.InvalidTokenException;
 import java.util.Map;
@@ -24,8 +24,7 @@ public class AuthController {
   private final RefreshTokenUseCase refreshTokenUseCase;
   private final ForgotPasswordUseCase forgotPasswordUseCase;
   private final ResetPasswordUseCase resetPasswordUseCase;
-  private final AuthUserRepository authUserRepository;
-  private final com.edufelip.meer.security.token.TokenProvider tokenProvider;
+  private final AuthUserResolver authUserResolver;
 
   public AuthController(
       LoginUseCase loginUseCase,
@@ -35,8 +34,7 @@ public class AuthController {
       RefreshTokenUseCase refreshTokenUseCase,
       ForgotPasswordUseCase forgotPasswordUseCase,
       ResetPasswordUseCase resetPasswordUseCase,
-      AuthUserRepository authUserRepository,
-      com.edufelip.meer.security.token.TokenProvider tokenProvider) {
+      AuthUserResolver authUserResolver) {
     this.loginUseCase = loginUseCase;
     this.signupUseCase = signupUseCase;
     this.googleLoginUseCase = googleLoginUseCase;
@@ -44,8 +42,7 @@ public class AuthController {
     this.refreshTokenUseCase = refreshTokenUseCase;
     this.forgotPasswordUseCase = forgotPasswordUseCase;
     this.resetPasswordUseCase = resetPasswordUseCase;
-    this.authUserRepository = authUserRepository;
-    this.tokenProvider = tokenProvider;
+    this.authUserResolver = authUserResolver;
   }
 
   @PostMapping("/login")
@@ -115,10 +112,7 @@ public class AuthController {
 
   @GetMapping("/me")
   public ResponseEntity<Map<String, Object>> me(@RequestHeader("Authorization") String authHeader) {
-    String token = extractBearer(authHeader);
-    var payload = tokenProvider.parseAccessToken(token);
-    var user =
-        authUserRepository.findById(payload.getUserId()).orElseThrow(InvalidTokenException::new);
+    var user = authUserResolver.requireUser(authHeader);
     ProfileDto profile = Mappers.toProfileDto(user, true);
     return ResponseEntity.ok(Map.of("user", profile));
   }
@@ -149,8 +143,4 @@ public class AuthController {
     return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", ex.getMessage()));
   }
 
-  private String extractBearer(String authHeader) {
-    if (authHeader == null || !authHeader.startsWith("Bearer ")) throw new InvalidTokenException();
-    return authHeader.substring("Bearer ".length()).trim();
-  }
 }

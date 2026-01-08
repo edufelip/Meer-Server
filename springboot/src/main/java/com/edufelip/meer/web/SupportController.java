@@ -1,9 +1,9 @@
 package com.edufelip.meer.web;
 
 import com.edufelip.meer.core.support.SupportContact;
+import com.edufelip.meer.domain.port.RateLimitPort;
 import com.edufelip.meer.domain.repo.SupportContactRepository;
 import com.edufelip.meer.dto.SupportContactRequest;
-import com.edufelip.meer.security.RateLimitService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -25,9 +25,9 @@ public class SupportController {
       Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 
   private final SupportContactRepository repository;
-  private final RateLimitService rateLimitService;
+  private final RateLimitPort rateLimitService;
 
-  public SupportController(SupportContactRepository repository, RateLimitService rateLimitService) {
+  public SupportController(SupportContactRepository repository, RateLimitPort rateLimitService) {
     this.repository = repository;
     this.rateLimitService = rateLimitService;
   }

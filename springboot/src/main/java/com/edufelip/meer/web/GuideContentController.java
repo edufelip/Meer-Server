@@ -2,31 +2,28 @@ package com.edufelip.meer.web;
 
 import com.edufelip.meer.core.content.GuideContent;
 import com.edufelip.meer.core.content.GuideContentComment;
-import com.edufelip.meer.core.content.GuideContentLike;
 import com.edufelip.meer.domain.CreateGuideContentCommentUseCase;
+import com.edufelip.meer.domain.CreateOwnedGuideContentUseCase;
+import com.edufelip.meer.domain.DeleteGuideContentUseCase;
 import com.edufelip.meer.domain.GetGuideContentUseCase;
+import com.edufelip.meer.domain.LikeGuideContentUseCase;
+import com.edufelip.meer.domain.RequestGuideContentImageUploadUseCase;
+import com.edufelip.meer.domain.UnlikeGuideContentUseCase;
 import com.edufelip.meer.domain.UpdateGuideContentCommentUseCase;
-import com.edufelip.meer.domain.repo.AuthUserRepository;
+import com.edufelip.meer.domain.UpdateGuideContentUseCase;
 import com.edufelip.meer.domain.repo.GuideContentCommentRepository;
-import com.edufelip.meer.domain.repo.GuideContentLikeRepository;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
-import com.edufelip.meer.domain.repo.ThriftStoreRepository;
 import com.edufelip.meer.dto.ContentCreateRequest;
 import com.edufelip.meer.dto.ContentUploadSlotResponse;
 import com.edufelip.meer.dto.GuideContentCommentDto;
 import com.edufelip.meer.dto.GuideContentCommentRequest;
 import com.edufelip.meer.dto.GuideContentDto;
 import com.edufelip.meer.dto.PageResponse;
-import com.edufelip.meer.dto.PhotoUploadSlot;
 import com.edufelip.meer.mapper.Mappers;
-import com.edufelip.meer.security.RateLimitService;
-import com.edufelip.meer.security.token.InvalidTokenException;
-import com.edufelip.meer.security.token.TokenPayload;
-import com.edufelip.meer.security.token.TokenProvider;
-import com.edufelip.meer.service.GcsStorageService;
+import com.edufelip.meer.security.AuthUserResolver;
+import com.edufelip.meer.domain.port.RateLimitPort;
 import com.edufelip.meer.service.GuideContentEngagementService;
 import com.edufelip.meer.service.GuideContentModerationService;
-import com.edufelip.meer.util.UrlValidatorUtil;
 import jakarta.validation.Valid;
 import java.util.Collections;
 import java.util.List;
@@ -56,41 +53,47 @@ public class GuideContentController {
   private final GetGuideContentUseCase getGuideContentUseCase;
   private final GuideContentRepository guideContentRepository;
   private final GuideContentCommentRepository guideContentCommentRepository;
-  private final GuideContentLikeRepository guideContentLikeRepository;
   private final CreateGuideContentCommentUseCase createGuideContentCommentUseCase;
   private final UpdateGuideContentCommentUseCase updateGuideContentCommentUseCase;
-  private final AuthUserRepository authUserRepository;
-  private final TokenProvider tokenProvider;
-  private final GcsStorageService gcsStorageService;
-  private final ThriftStoreRepository thriftStoreRepository;
+  private final RequestGuideContentImageUploadUseCase requestGuideContentImageUploadUseCase;
+  private final CreateOwnedGuideContentUseCase createOwnedGuideContentUseCase;
+  private final UpdateGuideContentUseCase updateGuideContentUseCase;
+  private final DeleteGuideContentUseCase deleteGuideContentUseCase;
+  private final LikeGuideContentUseCase likeGuideContentUseCase;
+  private final UnlikeGuideContentUseCase unlikeGuideContentUseCase;
+  private final AuthUserResolver authUserResolver;
   private final GuideContentEngagementService guideContentEngagementService;
   private final GuideContentModerationService guideContentModerationService;
-  private final RateLimitService rateLimitService;
+  private final RateLimitPort rateLimitService;
 
   public GuideContentController(
       GetGuideContentUseCase getGuideContentUseCase,
       GuideContentRepository guideContentRepository,
       GuideContentCommentRepository guideContentCommentRepository,
-      GuideContentLikeRepository guideContentLikeRepository,
       CreateGuideContentCommentUseCase createGuideContentCommentUseCase,
       UpdateGuideContentCommentUseCase updateGuideContentCommentUseCase,
-      AuthUserRepository authUserRepository,
-      TokenProvider tokenProvider,
-      GcsStorageService gcsStorageService,
-      ThriftStoreRepository thriftStoreRepository,
+      RequestGuideContentImageUploadUseCase requestGuideContentImageUploadUseCase,
+      CreateOwnedGuideContentUseCase createOwnedGuideContentUseCase,
+      UpdateGuideContentUseCase updateGuideContentUseCase,
+      DeleteGuideContentUseCase deleteGuideContentUseCase,
+      LikeGuideContentUseCase likeGuideContentUseCase,
+      UnlikeGuideContentUseCase unlikeGuideContentUseCase,
+      AuthUserResolver authUserResolver,
       GuideContentEngagementService guideContentEngagementService,
       GuideContentModerationService guideContentModerationService,
-      RateLimitService rateLimitService) {
+      RateLimitPort rateLimitService) {
     this.getGuideContentUseCase = getGuideContentUseCase;
     this.guideContentRepository = guideContentRepository;
     this.guideContentCommentRepository = guideContentCommentRepository;
-    this.guideContentLikeRepository = guideContentLikeRepository;
     this.createGuideContentCommentUseCase = createGuideContentCommentUseCase;
     this.updateGuideContentCommentUseCase = updateGuideContentCommentUseCase;
-    this.authUserRepository = authUserRepository;
-    this.tokenProvider = tokenProvider;
-    this.gcsStorageService = gcsStorageService;
-    this.thriftStoreRepository = thriftStoreRepository;
+    this.requestGuideContentImageUploadUseCase = requestGuideContentImageUploadUseCase;
+    this.createOwnedGuideContentUseCase = createOwnedGuideContentUseCase;
+    this.updateGuideContentUseCase = updateGuideContentUseCase;
+    this.deleteGuideContentUseCase = deleteGuideContentUseCase;
+    this.likeGuideContentUseCase = likeGuideContentUseCase;
+    this.unlikeGuideContentUseCase = unlikeGuideContentUseCase;
+    this.authUserResolver = authUserResolver;
     this.guideContentEngagementService = guideContentEngagementService;
     this.guideContentModerationService = guideContentModerationService;
     this.rateLimitService = rateLimitService;
@@ -107,7 +110,7 @@ public class GuideContentController {
     if (page < 0 || pageSize < 1 || pageSize > 100) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination params");
     }
-    var user = currentUserOrNull(authHeader);
+    var user = authUserResolver.optionalUser(authHeader);
     Sort.Direction direction =
         "oldest".equalsIgnoreCase(sort) ? Sort.Direction.ASC : Sort.Direction.DESC;
     Sort s = Sort.by(direction, "createdAt").and(Sort.by(direction, "id"));
@@ -120,7 +123,8 @@ public class GuideContentController {
             : (storeId != null
                 ? guideContentRepository.findAllSummariesByStoreIdActive(storeId, pageable)
                 : guideContentRepository.findAllSummariesActive(pageable));
-    var items = enrichContentDtos(slice.getContent(), user);
+    var summaries = slice.getContent().stream().map(Mappers::toDto).toList();
+    var items = enrichContentDtos(summaries, user);
     return new PageResponse<>(items, page, slice.hasNext());
   }
 
@@ -128,7 +132,7 @@ public class GuideContentController {
   public GuideContentDto getById(
       @PathVariable Integer id,
       @RequestHeader(name = "Authorization", required = false) String authHeader) {
-    var user = currentUserOrNull(authHeader);
+    var user = authUserResolver.optionalUser(authHeader);
     var content = getGuideContentUseCase.execute(id);
     if (content == null) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found");
@@ -151,7 +155,7 @@ public class GuideContentController {
     if (page < 0 || pageSize < 1 || pageSize > 100) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination params");
     }
-    currentUserOrNull(authHeader);
+    authUserResolver.optionalUser(authHeader);
     GuideContent content = requireActiveContent(id);
     Sort sort = Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id"));
     Pageable pageable = PageRequest.of(page, pageSize, sort);
@@ -165,7 +169,7 @@ public class GuideContentController {
       @PathVariable Integer id,
       @RequestBody GuideContentCommentRequest body,
       @RequestHeader("Authorization") String authHeader) {
-    var user = currentUser(authHeader);
+    var user = authUserResolver.requireUser(authHeader);
     if (body == null) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is required");
     }
@@ -184,7 +188,7 @@ public class GuideContentController {
       @PathVariable Integer commentId,
       @RequestBody GuideContentCommentRequest body,
       @RequestHeader("Authorization") String authHeader) {
-    var user = currentUser(authHeader);
+    var user = authUserResolver.requireUser(authHeader);
     if (body == null) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is required");
     }
@@ -213,7 +217,7 @@ public class GuideContentController {
       @PathVariable Integer id,
       @PathVariable Integer commentId,
       @RequestHeader("Authorization") String authHeader) {
-    var user = currentUser(authHeader);
+    var user = authUserResolver.requireUser(authHeader);
     GuideContentComment comment =
         guideContentCommentRepository
             .findById(commentId)
@@ -232,33 +236,16 @@ public class GuideContentController {
   @PostMapping("/{id:\\d+}/likes")
   public ResponseEntity<Void> likeContent(
       @PathVariable Integer id, @RequestHeader("Authorization") String authHeader) {
-    var user = currentUser(authHeader);
-    GuideContent content = requireActiveContent(id);
-    if (!rateLimitService.allowLikeAction(user.getId().toString())) {
-      throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Too many like actions");
-    }
-    if (!guideContentLikeRepository.existsByUserIdAndContentId(user.getId(), content.getId())) {
-      guideContentLikeRepository.save(new GuideContentLike(user, content));
-      guideContentRepository.incrementLikeCount(content.getId());
-    }
+    var user = authUserResolver.requireUser(authHeader);
+    likeGuideContentUseCase.execute(user, id);
     return ResponseEntity.noContent().build();
   }
 
   @DeleteMapping("/{id:\\d+}/likes")
   public ResponseEntity<Void> unlikeContent(
       @PathVariable Integer id, @RequestHeader("Authorization") String authHeader) {
-    var user = currentUser(authHeader);
-    GuideContent content = requireActiveContent(id);
-    if (!rateLimitService.allowLikeAction(user.getId().toString())) {
-      throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Too many like actions");
-    }
-    guideContentLikeRepository
-        .findByUserIdAndContentId(user.getId(), content.getId())
-        .ifPresent(
-            like -> {
-              guideContentLikeRepository.delete(like);
-              guideContentRepository.decrementLikeCount(content.getId());
-            });
+    var user = authUserResolver.requireUser(authHeader);
+    unlikeGuideContentUseCase.execute(user, id);
     return ResponseEntity.noContent().build();
   }
 
@@ -266,31 +253,13 @@ public class GuideContentController {
   public GuideContentDto create(
       @RequestBody @Valid ContentCreateRequest body,
       @RequestHeader("Authorization") String authHeader) {
-    var user = currentUser(authHeader);
-    if (body == null || body.title() == null || body.title().isBlank()) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "title is required");
+    var user = authUserResolver.requireUser(authHeader);
+    if (body == null) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is required");
     }
-    if (body.description() == null || body.description().isBlank()) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "description is required");
-    }
-    if (body.storeId() == null) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "storeId is required");
-    }
-    var thriftStore =
-        thriftStoreRepository
-            .findById(body.storeId())
-            .orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
-    if (!isOwnerOrAdmin(user, thriftStore.getId())) {
-      throw new ResponseStatusException(
-          HttpStatus.FORBIDDEN, "You must own this store to add content");
-    }
-    String defaultCategory = "general";
-    String defaultType = "article";
-    var content =
-        new GuideContent(
-            null, body.title(), body.description(), defaultCategory, defaultType, "", thriftStore);
-    var saved = guideContentRepository.save(content);
+    var command =
+        new CreateOwnedGuideContentUseCase.Command(body.title(), body.description(), body.storeId());
+    var saved = createOwnedGuideContentUseCase.execute(user, command);
     return Mappers.toDto(saved, 0L, 0L, false);
   }
 
@@ -299,31 +268,10 @@ public class GuideContentController {
       @PathVariable Integer contentId,
       @RequestHeader("Authorization") String authHeader,
       @RequestBody(required = false) java.util.Map<String, String> body) {
-    var user = currentUser(authHeader);
-    var content =
-        guideContentRepository
-            .findById(contentId)
-            .orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found"));
-    if (content.getDeletedAt() != null) {
-      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found");
-    }
-    if (content.getThriftStore() == null
-        || !isOwnerOrAdmin(user, content.getThriftStore().getId())) {
-      throw new ResponseStatusException(
-          HttpStatus.FORBIDDEN, "You must own this store to upload content images");
-    }
+    var user = authUserResolver.requireUser(authHeader);
     String ctype = body != null ? body.get("contentType") : null;
-    if (ctype != null
-        && !(ctype.equalsIgnoreCase("image/jpeg")
-            || ctype.equalsIgnoreCase("image/png")
-            || ctype.equalsIgnoreCase("image/webp"))) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported content type");
-    }
-    UUID storeId = content.getThriftStore().getId();
-    PhotoUploadSlot slot = gcsStorageService.createUploadSlots(storeId, 1, List.of(ctype)).get(0);
-    return new ContentUploadSlotResponse(
-        slot.getUploadUrl(), slot.getFileKey(), slot.getContentType());
+    var slot = requestGuideContentImageUploadUseCase.execute(user, contentId, ctype);
+    return new ContentUploadSlotResponse(slot.uploadUrl(), slot.fileKey(), slot.contentType());
   }
 
   @PutMapping("/{id:\\d+}")
@@ -331,29 +279,14 @@ public class GuideContentController {
       @PathVariable Integer id,
       @RequestBody GuideContent body,
       @RequestHeader("Authorization") String authHeader) {
-    var user = currentUser(authHeader);
-    var content =
-        guideContentRepository
-            .findById(id)
-            .orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found"));
-    if (content.getDeletedAt() != null) {
-      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found");
+    var user = authUserResolver.requireUser(authHeader);
+    if (body == null) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is required");
     }
-    if (!isOwnerOrAdmin(user, content.getThriftStore().getId())) {
-      throw new ResponseStatusException(
-          HttpStatus.FORBIDDEN, "You must own this store to update content");
-    }
-    if (body.getTitle() != null) content.setTitle(body.getTitle());
-    if (body.getDescription() != null) content.setDescription(body.getDescription());
-    if (body.getImageUrl() != null) {
-      validateHttpUrl(body.getImageUrl(), "imageUrl");
-      content.setImageUrl(body.getImageUrl());
-    }
-    // keep default category/type if still null
-    if (content.getCategoryLabel() == null) content.setCategoryLabel("general");
-    if (content.getType() == null) content.setType("article");
-    guideContentRepository.save(content);
+    var command =
+        new UpdateGuideContentUseCase.Command(
+            body.getTitle(), body.getDescription(), body.getImageUrl());
+    var content = updateGuideContentUseCase.execute(user, id, command);
     var engagement =
         guideContentEngagementService.getEngagement(
             Collections.singletonList(content.getId()), user != null ? user.getId() : null);
@@ -366,44 +299,9 @@ public class GuideContentController {
   @DeleteMapping("/{id:\\d+}")
   public ResponseEntity<Void> delete(
       @PathVariable Integer id, @RequestHeader("Authorization") String authHeader) {
-    var user = currentUser(authHeader);
-    var content =
-        guideContentRepository
-            .findById(id)
-            .orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found"));
-    if (!isOwnerOrAdmin(user, content.getThriftStore().getId())) {
-      throw new ResponseStatusException(
-          HttpStatus.FORBIDDEN, "You must own this store to delete content");
-    }
-    guideContentModerationService.softDeleteContent(content, user, null);
+    var user = authUserResolver.requireUser(authHeader);
+    deleteGuideContentUseCase.execute(user, id);
     return ResponseEntity.noContent().build();
-  }
-
-  private boolean isOwnerOrAdmin(com.edufelip.meer.core.auth.AuthUser user, UUID storeId) {
-    if (user == null || storeId == null) return false;
-    if (user.getRole() == com.edufelip.meer.core.auth.Role.ADMIN) return true;
-    return user.getOwnedThriftStore() != null && storeId.equals(user.getOwnedThriftStore().getId());
-  }
-
-  private com.edufelip.meer.core.auth.AuthUser currentUser(String authHeader) {
-    com.edufelip.meer.core.auth.AuthUser user = currentUserOrNull(authHeader);
-    if (user == null) throw new InvalidTokenException();
-    return user;
-  }
-
-  private com.edufelip.meer.core.auth.AuthUser currentUserOrNull(String authHeader) {
-    if (authHeader == null) return null;
-    if (authHeader.isBlank()) throw new InvalidTokenException();
-    if (!authHeader.startsWith("Bearer ")) throw new InvalidTokenException();
-    String token = authHeader.substring("Bearer ".length()).trim();
-    TokenPayload payload;
-    try {
-      payload = tokenProvider.parseAccessToken(token);
-    } catch (RuntimeException ex) {
-      throw new InvalidTokenException();
-    }
-    return authUserRepository.findById(payload.getUserId()).orElseThrow(InvalidTokenException::new);
   }
 
   private GuideContent requireActiveContent(Integer contentId) {
@@ -455,11 +353,4 @@ public class GuideContentController {
     return comment.getUser() != null && user.getId().equals(comment.getUser().getId());
   }
 
-  private void validateHttpUrl(String url, String field) {
-    try {
-      UrlValidatorUtil.ensureHttpUrl(url, field);
-    } catch (IllegalArgumentException ex) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
-    }
-  }
 }

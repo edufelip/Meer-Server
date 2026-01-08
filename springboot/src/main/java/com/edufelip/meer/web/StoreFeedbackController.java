@@ -1,13 +1,10 @@
 package com.edufelip.meer.web;
 
 import com.edufelip.meer.core.auth.AuthUser;
-import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
 import com.edufelip.meer.dto.FeedbackRequest;
 import com.edufelip.meer.dto.FeedbackResponse;
-import com.edufelip.meer.security.token.InvalidTokenException;
-import com.edufelip.meer.security.token.TokenPayload;
-import com.edufelip.meer.security.token.TokenProvider;
+import com.edufelip.meer.security.AuthUserResolver;
 import com.edufelip.meer.service.StoreFeedbackService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -26,18 +23,15 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/stores/{storeId}/feedback")
 public class StoreFeedbackController {
 
-  private final TokenProvider tokenProvider;
-  private final AuthUserRepository authUserRepository;
+  private final AuthUserResolver authUserResolver;
   private final ThriftStoreRepository thriftStoreRepository;
   private final StoreFeedbackService storeFeedbackService;
 
   public StoreFeedbackController(
-      TokenProvider tokenProvider,
-      AuthUserRepository authUserRepository,
+      AuthUserResolver authUserResolver,
       ThriftStoreRepository thriftStoreRepository,
       StoreFeedbackService storeFeedbackService) {
-    this.tokenProvider = tokenProvider;
-    this.authUserRepository = authUserRepository;
+    this.authUserResolver = authUserResolver;
     this.thriftStoreRepository = thriftStoreRepository;
     this.storeFeedbackService = storeFeedbackService;
   }
@@ -48,7 +42,7 @@ public class StoreFeedbackController {
       @PathVariable java.util.UUID storeId,
       @RequestBody @Valid FeedbackRequest body,
       @RequestHeader("Authorization") String authHeader) {
-    var user = currentUser(authHeader);
+    var user = authUserResolver.requireUser(authHeader);
     var store =
         thriftStoreRepository
             .findById(storeId)
@@ -62,7 +56,7 @@ public class StoreFeedbackController {
   @GetMapping
   public ResponseEntity<FeedbackResponse> getMine(
       @PathVariable java.util.UUID storeId, @RequestHeader("Authorization") String authHeader) {
-    var user = currentUser(authHeader);
+    var user = authUserResolver.requireUser(authHeader);
     return storeFeedbackService
         .find(user.getId(), storeId)
         .map(fb -> ResponseEntity.ok(new FeedbackResponse(fb.getScore(), fb.getBody())))
@@ -73,7 +67,7 @@ public class StoreFeedbackController {
   @DeleteMapping
   public ResponseEntity<Void> delete(
       @PathVariable java.util.UUID storeId, @RequestHeader("Authorization") String authHeader) {
-    var user = currentUser(authHeader);
+    var user = authUserResolver.requireUser(authHeader);
     // ensure store exists for proper 404 semantics
     thriftStoreRepository
         .findById(storeId)
@@ -82,15 +76,4 @@ public class StoreFeedbackController {
     return ResponseEntity.noContent().build();
   }
 
-  private AuthUser currentUser(String authHeader) {
-    if (authHeader == null || !authHeader.startsWith("Bearer ")) throw new InvalidTokenException();
-    String token = authHeader.substring("Bearer ".length()).trim();
-    TokenPayload payload;
-    try {
-      payload = tokenProvider.parseAccessToken(token);
-    } catch (RuntimeException ex) {
-      throw new InvalidTokenException();
-    }
-    return authUserRepository.findById(payload.getUserId()).orElseThrow(InvalidTokenException::new);
-  }
 }

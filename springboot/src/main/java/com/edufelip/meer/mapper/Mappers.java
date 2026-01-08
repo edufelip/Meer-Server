@@ -5,14 +5,26 @@ import com.edufelip.meer.core.category.Category;
 import com.edufelip.meer.core.content.GuideContent;
 import com.edufelip.meer.core.content.GuideContentComment;
 import com.edufelip.meer.core.store.ThriftStore;
+import com.edufelip.meer.domain.CreateThriftStoreUseCase;
+import com.edufelip.meer.domain.GuideContentSummary;
+import com.edufelip.meer.domain.ReplaceStorePhotosUseCase;
+import com.edufelip.meer.domain.StoreRatingView;
+import com.edufelip.meer.domain.UpdateThriftStoreUseCase;
+import com.edufelip.meer.domain.port.PhotoStoragePort;
 import com.edufelip.meer.dto.CategoryDto;
 import com.edufelip.meer.dto.DashboardCommentDto;
 import com.edufelip.meer.dto.GuideContentCommentDto;
 import com.edufelip.meer.dto.GuideContentDto;
+import com.edufelip.meer.dto.PhotoRegisterRequest;
+import com.edufelip.meer.dto.PhotoUploadSlot;
+import com.edufelip.meer.dto.PhotoUploadResponse;
 import com.edufelip.meer.dto.ProfileDto;
+import com.edufelip.meer.dto.StoreRatingDto;
+import com.edufelip.meer.dto.StoreRequest;
 import com.edufelip.meer.dto.StoreImageDto;
 import com.edufelip.meer.dto.ThriftStoreDto;
 import java.util.List;
+import java.util.UUID;
 
 public class Mappers {
   public static CategoryDto toDto(Category category) {
@@ -25,6 +37,22 @@ public class Mappers {
 
   public static GuideContentDto toDto(GuideContent content) {
     return toDto(content, 0L, 0L, false);
+  }
+
+  public static GuideContentDto toDto(GuideContentSummary summary) {
+    if (summary == null) return null;
+    return new GuideContentDto(
+        summary.id(),
+        summary.title(),
+        summary.description(),
+        summary.imageUrl(),
+        summary.thriftStoreId(),
+        summary.thriftStoreName(),
+        summary.thriftStoreCoverImageUrl(),
+        summary.createdAt(),
+        0L,
+        0L,
+        false);
   }
 
   public static GuideContentDto toDto(
@@ -59,6 +87,18 @@ public class Mappers {
         likedByMe != null ? likedByMe : false);
   }
 
+  public static StoreRatingDto toDto(StoreRatingView view) {
+    if (view == null) return null;
+    return new StoreRatingDto(
+        view.id(),
+        view.storeId(),
+        view.score(),
+        view.body(),
+        view.authorName(),
+        view.authorAvatarUrl(),
+        view.createdAt());
+  }
+
   public static GuideContentCommentDto toDto(GuideContentComment comment) {
     return new GuideContentCommentDto(
         comment.getId(),
@@ -89,6 +129,19 @@ public class Mappers {
 
   public static ThriftStoreDto toDto(ThriftStore store, boolean includeContents) {
     return toDto(store, includeContents, null, null, null, null, null);
+  }
+
+  public static ThriftStoreDto toDtoForUser(
+      ThriftStore store, AuthUser user, boolean includeContents) {
+    return toDto(
+        store,
+        includeContents,
+        isFavorite(user, store != null ? store.getId() : null),
+        null,
+        null,
+        null,
+        null,
+        null);
   }
 
   public static ThriftStoreDto toDto(
@@ -204,4 +257,88 @@ public class Mappers {
         owned,
         user.getCreatedAt());
   }
+
+  public static CreateThriftStoreUseCase.Command toCreateCommand(StoreRequest body) {
+    if (body == null) return null;
+    return new CreateThriftStoreUseCase.Command(
+        body.getName(),
+        body.getDescription(),
+        body.getOpeningHours(),
+        body.getAddressLine(),
+        body.getLatitude(),
+        body.getLongitude(),
+        body.getPhone(),
+        body.getEmail(),
+        body.getTagline(),
+        body.getNeighborhood(),
+        body.getCategories(),
+        body.getSocial() != null
+            ? new CreateThriftStoreUseCase.SocialInput(
+                body.getSocial().getFacebook(),
+                body.getSocial().getInstagram(),
+                body.getSocial().getWebsite(),
+                body.getSocial().getWhatsapp())
+            : null);
+  }
+
+  public static UpdateThriftStoreUseCase.Command toUpdateCommand(StoreRequest body) {
+    if (body == null) return null;
+    return new UpdateThriftStoreUseCase.Command(
+        body.getName(),
+        body.getDescription(),
+        body.getOpeningHours(),
+        body.getAddressLine(),
+        body.getLatitude(),
+        body.getLongitude(),
+        body.getPhone(),
+        body.getEmail(),
+        body.getTagline(),
+        body.getNeighborhood(),
+        body.getCategories(),
+        body.getSocial() != null
+            ? new UpdateThriftStoreUseCase.SocialUpdate(
+                body.getSocial().getFacebook(),
+                body.getSocial().isFacebookPresent(),
+                body.getSocial().getInstagram(),
+                body.getSocial().isInstagramPresent(),
+                body.getSocial().getWebsite(),
+                body.getSocial().isWebsitePresent(),
+                body.getSocial().getWhatsapp(),
+                body.getSocial().isWhatsappPresent())
+            : null);
+  }
+
+  public static ReplaceStorePhotosUseCase.Command toReplacePhotosCommand(
+      PhotoRegisterRequest request) {
+    if (request == null) return new ReplaceStorePhotosUseCase.Command(null, null);
+    List<ReplaceStorePhotosUseCase.PhotoItem> items =
+        request.getPhotos() != null
+            ? request.getPhotos().stream()
+                .map(
+                    item ->
+                        new ReplaceStorePhotosUseCase.PhotoItem(
+                            item.getPhotoId(), item.getFileKey(), item.getPosition()))
+                .toList()
+            : null;
+    return new ReplaceStorePhotosUseCase.Command(items, request.getDeletePhotoIds());
+  }
+
+  public static PhotoUploadResponse toPhotoUploadResponse(
+      List<PhotoStoragePort.UploadSlot> slots) {
+    List<PhotoUploadSlot> uploads =
+        slots != null
+            ? slots.stream()
+                .map(
+                    slot ->
+                        new PhotoUploadSlot(slot.uploadUrl(), slot.fileKey(), slot.contentType()))
+                .toList()
+            : List.of();
+    return new PhotoUploadResponse(uploads);
+  }
+
+  public static Boolean isFavorite(AuthUser user, UUID storeId) {
+    if (user == null || storeId == null || user.getFavorites() == null) return false;
+    return user.getFavorites().stream().anyMatch(f -> storeId.equals(f.getId()));
+  }
+
 }

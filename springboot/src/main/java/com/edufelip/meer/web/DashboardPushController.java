@@ -3,12 +3,12 @@ package com.edufelip.meer.web;
 import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.core.auth.Role;
 import com.edufelip.meer.core.push.PushEnvironment;
+import com.edufelip.meer.domain.PushNotificationException;
+import com.edufelip.meer.domain.port.PushNotificationPort;
 import com.edufelip.meer.dto.PushBroadcastRequest;
 import com.edufelip.meer.dto.PushTestRequest;
 import com.edufelip.meer.dto.PushUserNotificationRequest;
 import com.edufelip.meer.security.AdminContext;
-import com.edufelip.meer.service.PushNotificationService;
-import com.google.firebase.messaging.FirebaseMessagingException;
 import java.util.UUID;
 import jakarta.validation.Valid;
 import java.util.Map;
@@ -27,9 +27,9 @@ import org.springframework.web.server.ResponseStatusException;
 @ConditionalOnProperty(prefix = "firebase", name = "enabled", havingValue = "true")
 public class DashboardPushController {
 
-  private final PushNotificationService pushNotificationService;
+  private final PushNotificationPort pushNotificationService;
 
-  public DashboardPushController(PushNotificationService pushNotificationService) {
+  public DashboardPushController(PushNotificationPort pushNotificationService) {
     this.pushNotificationService = pushNotificationService;
   }
 
@@ -43,7 +43,7 @@ public class DashboardPushController {
       String messageId =
           pushNotificationService.sendTestPush(body.token(), body.title(), body.body(), type, body.id());
       return ResponseEntity.ok(Map.of("messageId", messageId));
-    } catch (FirebaseMessagingException ex) {
+    } catch (PushNotificationException ex) {
       throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Push send failed");
     }
   }
@@ -62,7 +62,7 @@ public class DashboardPushController {
           pushNotificationService.sendToTopic(
               topic, body.title(), body.body(), Map.of("type", type, "id", body.id()));
       return ResponseEntity.ok(Map.of("messageId", messageId));
-    } catch (FirebaseMessagingException ex) {
+    } catch (PushNotificationException ex) {
       throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Push send failed");
     }
   }

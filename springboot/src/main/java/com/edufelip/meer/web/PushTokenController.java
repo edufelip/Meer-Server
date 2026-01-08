@@ -5,9 +5,8 @@ import com.edufelip.meer.core.push.PushPlatform;
 import com.edufelip.meer.domain.DeletePushTokenUseCase;
 import com.edufelip.meer.domain.UpsertPushTokenUseCase;
 import com.edufelip.meer.dto.PushTokenRequest;
-import com.edufelip.meer.security.token.InvalidTokenException;
+import com.edufelip.meer.security.AuthUserResolver;
 import com.edufelip.meer.security.token.TokenPayload;
-import com.edufelip.meer.security.token.TokenProvider;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -23,15 +22,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/push-tokens")
 public class PushTokenController {
 
-  private final TokenProvider tokenProvider;
+  private final AuthUserResolver authUserResolver;
   private final UpsertPushTokenUseCase upsertPushTokenUseCase;
   private final DeletePushTokenUseCase deletePushTokenUseCase;
 
   public PushTokenController(
-      TokenProvider tokenProvider,
+      AuthUserResolver authUserResolver,
       UpsertPushTokenUseCase upsertPushTokenUseCase,
       DeletePushTokenUseCase deletePushTokenUseCase) {
-    this.tokenProvider = tokenProvider;
+    this.authUserResolver = authUserResolver;
     this.upsertPushTokenUseCase = upsertPushTokenUseCase;
     this.deletePushTokenUseCase = deletePushTokenUseCase;
   }
@@ -40,7 +39,7 @@ public class PushTokenController {
   public ResponseEntity<Void> upsert(
       @RequestHeader("Authorization") String authHeader,
       @RequestBody @Valid PushTokenRequest body) {
-    TokenPayload payload = tokenProvider.parseAccessToken(extractBearer(authHeader));
+    TokenPayload payload = authUserResolver.requirePayload(authHeader);
     PushPlatform platform = PushPlatform.parse(body.platform());
     PushEnvironment environment = PushEnvironment.parse(body.environment());
     upsertPushTokenUseCase.execute(
@@ -58,15 +57,10 @@ public class PushTokenController {
       @RequestHeader("Authorization") String authHeader,
       @PathVariable String deviceId,
       @RequestParam(name = "environment", required = false) String environment) {
-    TokenPayload payload = tokenProvider.parseAccessToken(extractBearer(authHeader));
+    TokenPayload payload = authUserResolver.requirePayload(authHeader);
     PushEnvironment env =
         environment != null && !environment.isBlank() ? PushEnvironment.parse(environment) : null;
     deletePushTokenUseCase.execute(payload.getUserId(), deviceId, env);
     return ResponseEntity.noContent().build();
-  }
-
-  private String extractBearer(String header) {
-    if (header == null || !header.startsWith("Bearer ")) throw new InvalidTokenException();
-    return header.substring("Bearer ".length()).trim();
   }
 }

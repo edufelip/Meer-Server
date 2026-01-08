@@ -118,7 +118,7 @@ public class AdminDashboardController {
         (q != null && !q.isBlank())
             ? guideContentRepository.searchSummaries(q, pageable)
             : guideContentRepository.findAllSummaries(pageable);
-    var items = slice.getContent();
+    var items = slice.getContent().stream().map(Mappers::toDto).toList();
     var ids = items.stream().map(GuideContentDto::id).toList();
     var engagement = guideContentEngagementService.getEngagement(ids, null);
     var enriched =

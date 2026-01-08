@@ -1,7 +1,7 @@
 package com.edufelip.meer.domain.repo;
 
 import com.edufelip.meer.core.store.StoreFeedback;
-import com.edufelip.meer.dto.StoreRatingDto;
+import com.edufelip.meer.domain.StoreRatingView;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -32,7 +32,7 @@ public interface StoreFeedbackRepository extends JpaRepository<StoreFeedback, In
 
   @Query(
       """
-            select new com.edufelip.meer.dto.StoreRatingDto(
+            select new com.edufelip.meer.domain.StoreRatingView(
                 f.id,
                 s.id,
                 f.score,
@@ -48,5 +48,5 @@ public interface StoreFeedbackRepository extends JpaRepository<StoreFeedback, In
               and f.score is not null
             order by f.createdAt desc
             """)
-  Slice<StoreRatingDto> findRatingsByStoreId(@Param("storeId") UUID storeId, Pageable pageable);
+  Slice<StoreRatingView> findRatingsByStoreId(@Param("storeId") UUID storeId, Pageable pageable);
 }

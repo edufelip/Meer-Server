@@ -2,6 +2,8 @@ package com.edufelip.meer.service;
 
 import com.edufelip.meer.core.push.PushEnvironment;
 import com.edufelip.meer.core.push.PushToken;
+import com.edufelip.meer.domain.PushNotificationException;
+import com.edufelip.meer.domain.port.PushNotificationPort;
 import com.edufelip.meer.domain.repo.PushTokenRepository;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
@@ -20,7 +22,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @ConditionalOnProperty(prefix = "firebase", name = "enabled", havingValue = "true")
-public class PushNotificationService {
+public class PushNotificationService implements PushNotificationPort {
   private static final Logger log = LoggerFactory.getLogger(PushNotificationService.class);
   private static final String ANDROID_CHANNEL_ID = "default";
 
@@ -33,8 +35,9 @@ public class PushNotificationService {
     this.pushTokenRepository = pushTokenRepository;
   }
 
+  @Override
   public String sendTestPush(String token, String title, String body, String type, String id)
-      throws FirebaseMessagingException {
+      throws PushNotificationException {
     Message message =
         Message.builder()
             .setToken(token)
@@ -47,11 +50,16 @@ public class PushNotificationService {
             .putData("type", type)
             .putData("id", id)
             .build();
-    return firebaseMessaging.send(message);
+    try {
+      return firebaseMessaging.send(message);
+    } catch (FirebaseMessagingException ex) {
+      throw new PushNotificationException("Failed to send test push", ex);
+    }
   }
 
+  @Override
   public String sendToTopic(String topic, String title, String body, Map<String, String> data)
-      throws FirebaseMessagingException {
+      throws PushNotificationException {
     Message.Builder builder =
         Message.builder()
             .setTopic(topic)
@@ -68,9 +76,14 @@ public class PushNotificationService {
         }
       }
     }
-    return firebaseMessaging.send(builder.build());
+    try {
+      return firebaseMessaging.send(builder.build());
+    } catch (FirebaseMessagingException ex) {
+      throw new PushNotificationException("Failed to send topic push", ex);
+    }
   }
 
+  @Override
   public int sendToUser(
       UUID userId,
       PushEnvironment environment,

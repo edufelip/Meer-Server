@@ -1,7 +1,7 @@
 package com.edufelip.meer.domain.repo;
 
 import com.edufelip.meer.core.content.GuideContent;
-import com.edufelip.meer.dto.GuideContentDto;
+import com.edufelip.meer.domain.GuideContentSummary;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -56,7 +56,7 @@ public interface GuideContentRepository extends JpaRepository<GuideContent, Inte
 
   @org.springframework.data.jpa.repository.Query(
       """
-            select new com.edufelip.meer.dto.GuideContentDto(
+            select new com.edufelip.meer.domain.GuideContentSummary(
                 c.id,
                 c.title,
                 c.description,
@@ -64,20 +64,17 @@ public interface GuideContentRepository extends JpaRepository<GuideContent, Inte
                 s.id,
                 s.name,
                 s.coverImageUrl,
-                c.createdAt,
-                0L,
-                0L,
-                false
+                c.createdAt
             )
             from GuideContent c
             left join c.thriftStore s
             where c.deletedAt is null
             """)
-  Slice<GuideContentDto> findAllSummariesActive(Pageable pageable);
+  Slice<GuideContentSummary> findAllSummariesActive(Pageable pageable);
 
   @org.springframework.data.jpa.repository.Query(
       """
-            select new com.edufelip.meer.dto.GuideContentDto(
+            select new com.edufelip.meer.domain.GuideContentSummary(
                 c.id,
                 c.title,
                 c.description,
@@ -85,19 +82,16 @@ public interface GuideContentRepository extends JpaRepository<GuideContent, Inte
                 s.id,
                 s.name,
                 s.coverImageUrl,
-                c.createdAt,
-                0L,
-                0L,
-                false
+                c.createdAt
             )
             from GuideContent c
             left join c.thriftStore s
             """)
-  Slice<GuideContentDto> findAllSummaries(Pageable pageable);
+  Slice<GuideContentSummary> findAllSummaries(Pageable pageable);
 
   @org.springframework.data.jpa.repository.Query(
       """
-            select new com.edufelip.meer.dto.GuideContentDto(
+            select new com.edufelip.meer.domain.GuideContentSummary(
                 c.id,
                 c.title,
                 c.description,
@@ -105,22 +99,19 @@ public interface GuideContentRepository extends JpaRepository<GuideContent, Inte
                 s.id,
                 s.name,
                 s.coverImageUrl,
-                c.createdAt,
-                0L,
-                0L,
-                false
+                c.createdAt
             )
             from GuideContent c
             left join c.thriftStore s
             where s.id = :storeId
               and c.deletedAt is null
             """)
-  Slice<GuideContentDto> findAllSummariesByStoreIdActive(
+  Slice<GuideContentSummary> findAllSummariesByStoreIdActive(
       @org.springframework.data.repository.query.Param("storeId") UUID storeId, Pageable pageable);
 
   @org.springframework.data.jpa.repository.Query(
       """
-            select new com.edufelip.meer.dto.GuideContentDto(
+            select new com.edufelip.meer.domain.GuideContentSummary(
                 c.id,
                 c.title,
                 c.description,
@@ -128,21 +119,18 @@ public interface GuideContentRepository extends JpaRepository<GuideContent, Inte
                 s.id,
                 s.name,
                 s.coverImageUrl,
-                c.createdAt,
-                0L,
-                0L,
-                false
+                c.createdAt
             )
             from GuideContent c
             left join c.thriftStore s
             where s.id = :storeId
             """)
-  Slice<GuideContentDto> findAllSummariesByStoreId(
+  Slice<GuideContentSummary> findAllSummariesByStoreId(
       @org.springframework.data.repository.query.Param("storeId") UUID storeId, Pageable pageable);
 
   @org.springframework.data.jpa.repository.Query(
       """
-            select new com.edufelip.meer.dto.GuideContentDto(
+            select new com.edufelip.meer.domain.GuideContentSummary(
                 c.id,
                 c.title,
                 c.description,
@@ -150,10 +138,7 @@ public interface GuideContentRepository extends JpaRepository<GuideContent, Inte
                 s.id,
                 s.name,
                 s.coverImageUrl,
-                c.createdAt,
-                0L,
-                0L,
-                false
+                c.createdAt
             )
             from GuideContent c
             left join c.thriftStore s
@@ -161,12 +146,12 @@ public interface GuideContentRepository extends JpaRepository<GuideContent, Inte
               and (lower(c.title) like lower(concat('%', :q, '%'))
                or lower(c.description) like lower(concat('%', :q, '%')))
             """)
-  Slice<GuideContentDto> searchSummariesActive(
+  Slice<GuideContentSummary> searchSummariesActive(
       @org.springframework.data.repository.query.Param("q") String q, Pageable pageable);
 
   @org.springframework.data.jpa.repository.Query(
       """
-            select new com.edufelip.meer.dto.GuideContentDto(
+            select new com.edufelip.meer.domain.GuideContentSummary(
                 c.id,
                 c.title,
                 c.description,
@@ -174,22 +159,19 @@ public interface GuideContentRepository extends JpaRepository<GuideContent, Inte
                 s.id,
                 s.name,
                 s.coverImageUrl,
-                c.createdAt,
-                0L,
-                0L,
-                false
+                c.createdAt
             )
             from GuideContent c
             left join c.thriftStore s
             where lower(c.title) like lower(concat('%', :q, '%'))
                or lower(c.description) like lower(concat('%', :q, '%'))
             """)
-  Slice<GuideContentDto> searchSummaries(
+  Slice<GuideContentSummary> searchSummaries(
       @org.springframework.data.repository.query.Param("q") String q, Pageable pageable);
 
   @org.springframework.data.jpa.repository.Query(
       """
-            select new com.edufelip.meer.dto.GuideContentDto(
+            select new com.edufelip.meer.domain.GuideContentSummary(
                 c.id,
                 c.title,
                 c.description,
@@ -197,10 +179,7 @@ public interface GuideContentRepository extends JpaRepository<GuideContent, Inte
                 s.id,
                 s.name,
                 s.coverImageUrl,
-                c.createdAt,
-                0L,
-                0L,
-                false
+                c.createdAt
             )
             from GuideContent c
             left join c.thriftStore s
@@ -211,14 +190,14 @@ public interface GuideContentRepository extends JpaRepository<GuideContent, Inte
                 or lower(c.description) like lower(concat('%', :q, '%'))
               )
             """)
-  Slice<GuideContentDto> searchSummariesByStoreIdActive(
+  Slice<GuideContentSummary> searchSummariesByStoreIdActive(
       @org.springframework.data.repository.query.Param("storeId") UUID storeId,
       @org.springframework.data.repository.query.Param("q") String q,
       Pageable pageable);
 
   @org.springframework.data.jpa.repository.Query(
       """
-            select new com.edufelip.meer.dto.GuideContentDto(
+            select new com.edufelip.meer.domain.GuideContentSummary(
                 c.id,
                 c.title,
                 c.description,
@@ -226,10 +205,7 @@ public interface GuideContentRepository extends JpaRepository<GuideContent, Inte
                 s.id,
                 s.name,
                 s.coverImageUrl,
-                c.createdAt,
-                0L,
-                0L,
-                false
+                c.createdAt
             )
             from GuideContent c
             left join c.thriftStore s
@@ -239,7 +215,7 @@ public interface GuideContentRepository extends JpaRepository<GuideContent, Inte
                 or lower(c.description) like lower(concat('%', :q, '%'))
               )
             """)
-  Slice<GuideContentDto> searchSummariesByStoreId(
+  Slice<GuideContentSummary> searchSummariesByStoreId(
       @org.springframework.data.repository.query.Param("storeId") UUID storeId,
       @org.springframework.data.repository.query.Param("q") String q,
       Pageable pageable);
