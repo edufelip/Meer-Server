@@ -16,6 +16,7 @@ import com.edufelip.meer.core.store.StoreFeedback;
 import com.edufelip.meer.core.store.ThriftStore;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
+import com.edufelip.meer.security.AuthUserResolver;
 import com.edufelip.meer.security.token.InvalidTokenException;
 import com.edufelip.meer.security.token.TokenPayload;
 import com.edufelip.meer.security.token.TokenProvider;
@@ -33,7 +34,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(StoreFeedbackController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import({RestExceptionHandler.class, TestClockConfig.class})
+@Import({RestExceptionHandler.class, TestClockConfig.class, AuthUserResolver.class})
 class StoreFeedbackControllerTest {
 
   @Autowired private MockMvc mockMvc;

@@ -13,6 +13,8 @@ import com.edufelip.meer.core.auth.Role;
 import com.edufelip.meer.domain.DeletePushTokenUseCase;
 import com.edufelip.meer.domain.UpsertPushTokenUseCase;
 import com.edufelip.meer.config.TestClockConfig;
+import com.edufelip.meer.domain.repo.AuthUserRepository;
+import com.edufelip.meer.security.AuthUserResolver;
 import com.edufelip.meer.security.token.TokenPayload;
 import com.edufelip.meer.security.token.TokenProvider;
 import java.util.UUID;
@@ -27,12 +29,13 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(PushTokenController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import({RestExceptionHandler.class, TestClockConfig.class})
+@Import({RestExceptionHandler.class, TestClockConfig.class, AuthUserResolver.class})
 class PushTokenControllerTest {
 
   @Autowired private MockMvc mockMvc;
 
   @MockitoBean private TokenProvider tokenProvider;
+  @MockitoBean private AuthUserRepository authUserRepository;
   @MockitoBean private UpsertPushTokenUseCase upsertPushTokenUseCase;
   @MockitoBean private DeletePushTokenUseCase deletePushTokenUseCase;
 

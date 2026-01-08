@@ -11,11 +11,10 @@ import com.edufelip.meer.config.TestClockConfig;
 import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.core.auth.Role;
 import com.edufelip.meer.core.push.PushEnvironment;
-import com.edufelip.meer.service.PushNotificationService;
-import com.google.firebase.messaging.FirebaseMessagingException;
+import com.edufelip.meer.domain.PushNotificationException;
+import com.edufelip.meer.domain.port.PushNotificationPort;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -31,7 +30,7 @@ class DashboardPushControllerTest {
 
   @Autowired private MockMvc mockMvc;
 
-  @MockitoBean private PushNotificationService pushNotificationService;
+  @MockitoBean private PushNotificationPort pushNotificationService;
 
   @Test
   void sendTestPushReturnsMessageId() throws Exception {
@@ -88,7 +87,7 @@ class DashboardPushControllerTest {
   @Test
   void sendTestPushHandlesFirebaseFailure() throws Exception {
     AuthUser admin = adminUser();
-    FirebaseMessagingException ex = Mockito.mock(FirebaseMessagingException.class);
+    PushNotificationException ex = new PushNotificationException("fail");
     when(pushNotificationService.sendTestPush(
             eq("token-1"),
             eq("Hello"),

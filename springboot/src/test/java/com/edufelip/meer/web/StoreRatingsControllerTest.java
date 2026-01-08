@@ -15,7 +15,8 @@ import com.edufelip.meer.core.auth.Role;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.StoreFeedbackRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
-import com.edufelip.meer.dto.StoreRatingDto;
+import com.edufelip.meer.domain.StoreRatingView;
+import com.edufelip.meer.security.AuthUserResolver;
 import com.edufelip.meer.security.token.InvalidTokenException;
 import com.edufelip.meer.security.token.TokenPayload;
 import com.edufelip.meer.security.token.TokenProvider;
@@ -36,7 +37,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(StoreRatingsController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import({RestExceptionHandler.class, TestClockConfig.class})
+@Import({RestExceptionHandler.class, TestClockConfig.class, AuthUserResolver.class})
 class StoreRatingsControllerTest {
 
   @Autowired private MockMvc mockMvc;
@@ -64,8 +65,8 @@ class StoreRatingsControllerTest {
         .thenReturn(Optional.of(new com.edufelip.meer.core.store.ThriftStore()));
 
     Instant createdAt = Instant.parse("2024-01-02T10:15:30Z");
-    var dto = new StoreRatingDto(1, storeId, 5, "Great place", "Ana", "https://img", createdAt);
-    var slice = new SliceImpl<>(List.of(dto), PageRequest.of(0, 10), true);
+    var view = new StoreRatingView(1, storeId, 5, "Great place", "Ana", "https://img", createdAt);
+    var slice = new SliceImpl<>(List.of(view), PageRequest.of(0, 10), true);
     when(storeFeedbackRepository.findRatingsByStoreId(eq(storeId), any())).thenReturn(slice);
 
     mockMvc
@@ -119,7 +120,7 @@ class StoreRatingsControllerTest {
 
     when(thriftStoreRepository.findById(storeId))
         .thenReturn(Optional.of(new com.edufelip.meer.core.store.ThriftStore()));
-    var slice = new SliceImpl<StoreRatingDto>(List.of(), PageRequest.of(0, 10), false);
+    var slice = new SliceImpl<StoreRatingView>(List.of(), PageRequest.of(0, 10), false);
     when(storeFeedbackRepository.findRatingsByStoreId(eq(storeId), any())).thenReturn(slice);
 
     mockMvc
@@ -182,7 +183,7 @@ class StoreRatingsControllerTest {
     when(thriftStoreRepository.findById(storeId))
         .thenReturn(Optional.of(new com.edufelip.meer.core.store.ThriftStore()));
 
-    var slice = new SliceImpl<StoreRatingDto>(List.of(), PageRequest.of(0, 10), false);
+    var slice = new SliceImpl<StoreRatingView>(List.of(), PageRequest.of(0, 10), false);
     when(storeFeedbackRepository.findRatingsByStoreId(eq(storeId), any())).thenReturn(slice);
 
     mockMvc

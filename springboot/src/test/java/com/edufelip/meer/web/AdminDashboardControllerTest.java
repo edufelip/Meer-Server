@@ -17,12 +17,12 @@ import com.edufelip.meer.core.content.GuideContent;
 import com.edufelip.meer.core.content.GuideContentComment;
 import com.edufelip.meer.core.store.ThriftStore;
 import com.edufelip.meer.core.store.ThriftStorePhoto;
+import com.edufelip.meer.domain.GuideContentSummary;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.GuideContentCommentRepository;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
 import com.edufelip.meer.domain.repo.StoreFeedbackRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
-import com.edufelip.meer.dto.GuideContentDto;
 import com.edufelip.meer.security.token.TokenProvider;
 import com.edufelip.meer.service.GcsStorageService;
 import com.edufelip.meer.service.GuideContentEngagementService;
@@ -150,8 +150,8 @@ class AdminDashboardControllerTest {
     admin.setRole(Role.ADMIN);
     admin.setEmail("admin@example.com");
 
-    GuideContentDto dto =
-        new GuideContentDto(
+    GuideContentSummary summary =
+        new GuideContentSummary(
             10,
             "Guide",
             "Desc",
@@ -159,13 +159,10 @@ class AdminDashboardControllerTest {
             null,
             null,
             null,
-            java.time.Instant.parse("2024-01-01T00:00:00Z"),
-            0L,
-            0L,
-            false);
+            java.time.Instant.parse("2024-01-01T00:00:00Z"));
 
     when(guideContentRepository.findAllSummaries(org.mockito.ArgumentMatchers.any()))
-        .thenReturn(new SliceImpl<>(List.of(dto)));
+        .thenReturn(new SliceImpl<>(List.of(summary)));
     when(guideContentEngagementService.getEngagement(eq(List.of(10)), eq(null)))
         .thenReturn(
             Map.of(

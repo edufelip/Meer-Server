@@ -9,9 +9,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.edufelip.meer.config.TestClockConfig;
 import com.edufelip.meer.core.support.SupportContact;
+import com.edufelip.meer.domain.port.RateLimitPort;
 import com.edufelip.meer.domain.repo.SupportContactRepository;
 import com.edufelip.meer.dto.SupportContactRequest;
-import com.edufelip.meer.security.RateLimitService;
 import com.edufelip.meer.security.SanitizingJacksonModuleConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -32,7 +32,7 @@ class SupportControllerTest {
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   @MockitoBean private SupportContactRepository repository;
-  @MockitoBean private RateLimitService rateLimitService;
+  @MockitoBean private RateLimitPort rateLimitService;
 
   @Test
   void contactReturnsNoContent() throws Exception {

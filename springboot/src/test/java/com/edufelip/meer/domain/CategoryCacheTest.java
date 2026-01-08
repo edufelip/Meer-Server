@@ -11,24 +11,29 @@ import com.edufelip.meer.domain.repo.CategoryRepository;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.interceptor.SimpleKey;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
-@SpringBootTest(classes = {CategoryCacheTest.CacheTestConfig.class})
+@SpringJUnitConfig(CategoryCacheTest.CacheTestConfig.class)
 class CategoryCacheTest {
 
-  @TestConfiguration
+  @Configuration
   @EnableCaching
   @Import(CacheConfig.class)
   static class CacheTestConfig {
+    @Bean
+    CategoryRepository categoryRepository() {
+      return Mockito.mock(CategoryRepository.class);
+    }
+
     @Bean
     GetCategoriesUseCase getCategoriesUseCase(CategoryRepository repo) {
       return new GetCategoriesUseCase(repo);
@@ -55,11 +60,11 @@ class CategoryCacheTest {
   @Autowired private UpdateCategoryUseCase updateCategoryUseCase;
   @Autowired private DeleteCategoryUseCase deleteCategoryUseCase;
   @Autowired private CacheManager cacheManager;
-
-  @MockitoBean private CategoryRepository categoryRepository;
+  @Autowired private CategoryRepository categoryRepository;
 
   @BeforeEach
   void clearCache() {
+    Mockito.reset(categoryRepository);
     Cache cache = cacheManager.getCache("categoriesAll");
     if (cache != null) {
       cache.clear();

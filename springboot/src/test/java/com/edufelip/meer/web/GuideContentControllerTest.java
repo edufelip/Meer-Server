@@ -1,5 +1,6 @@
 package com.edufelip.meer.web;
 
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -16,17 +17,22 @@ import com.edufelip.meer.core.content.GuideContent;
 import com.edufelip.meer.core.content.GuideContentComment;
 import com.edufelip.meer.core.store.ThriftStore;
 import com.edufelip.meer.domain.CreateGuideContentCommentUseCase;
+import com.edufelip.meer.domain.CreateOwnedGuideContentUseCase;
+import com.edufelip.meer.domain.DeleteGuideContentUseCase;
 import com.edufelip.meer.domain.GetGuideContentUseCase;
+import com.edufelip.meer.domain.LikeGuideContentUseCase;
+import com.edufelip.meer.domain.RequestGuideContentImageUploadUseCase;
+import com.edufelip.meer.domain.UnlikeGuideContentUseCase;
+import com.edufelip.meer.domain.UpdateGuideContentUseCase;
 import com.edufelip.meer.domain.UpdateGuideContentCommentUseCase;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.GuideContentCommentRepository;
-import com.edufelip.meer.domain.repo.GuideContentLikeRepository;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
-import com.edufelip.meer.domain.repo.ThriftStoreRepository;
-import com.edufelip.meer.security.RateLimitService;
+import com.edufelip.meer.domain.port.PhotoStoragePort;
+import com.edufelip.meer.domain.port.RateLimitPort;
+import com.edufelip.meer.security.AuthUserResolver;
 import com.edufelip.meer.security.token.TokenPayload;
 import com.edufelip.meer.security.token.TokenProvider;
-import com.edufelip.meer.service.GcsStorageService;
 import com.edufelip.meer.service.GuideContentEngagementService;
 import com.edufelip.meer.service.GuideContentModerationService;
 import java.time.Instant;
@@ -37,13 +43,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.server.ResponseStatusException;
 
 @WebMvcTest(GuideContentController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import({RestExceptionHandler.class, TestClockConfig.class})
+@Import({RestExceptionHandler.class, TestClockConfig.class, AuthUserResolver.class})
 class GuideContentControllerTest {
 
   @Autowired private MockMvc mockMvc;
@@ -51,21 +59,23 @@ class GuideContentControllerTest {
   @MockitoBean private GetGuideContentUseCase getGuideContentUseCase;
   @MockitoBean private GuideContentRepository guideContentRepository;
   @MockitoBean private GuideContentCommentRepository guideContentCommentRepository;
-  @MockitoBean private GuideContentLikeRepository guideContentLikeRepository;
   @MockitoBean private CreateGuideContentCommentUseCase createGuideContentCommentUseCase;
+  @MockitoBean private CreateOwnedGuideContentUseCase createOwnedGuideContentUseCase;
+  @MockitoBean private UpdateGuideContentUseCase updateGuideContentUseCase;
+  @MockitoBean private DeleteGuideContentUseCase deleteGuideContentUseCase;
+  @MockitoBean private LikeGuideContentUseCase likeGuideContentUseCase;
+  @MockitoBean private UnlikeGuideContentUseCase unlikeGuideContentUseCase;
   @MockitoBean private UpdateGuideContentCommentUseCase updateGuideContentCommentUseCase;
+  @MockitoBean private RequestGuideContentImageUploadUseCase requestGuideContentImageUploadUseCase;
   @MockitoBean private GuideContentEngagementService guideContentEngagementService;
   @MockitoBean private GuideContentModerationService guideContentModerationService;
-  @MockitoBean private RateLimitService rateLimitService;
+  @MockitoBean private RateLimitPort rateLimitService;
   @MockitoBean private AuthUserRepository authUserRepository;
   @MockitoBean private TokenProvider tokenProvider;
-  @MockitoBean private GcsStorageService gcsStorageService;
-  @MockitoBean private ThriftStoreRepository thriftStoreRepository;
 
   @Test
   void requestImageSlotRejectsUnsupportedContentType() throws Exception {
     UUID userId = UUID.randomUUID();
-    UUID storeId = UUID.randomUUID();
 
     AuthUser user = new AuthUser();
     user.setId(userId);
@@ -74,20 +84,15 @@ class GuideContentControllerTest {
     user.setPasswordHash("hash");
     user.setRole(Role.USER);
 
-    ThriftStore store = new ThriftStore();
-    store.setId(storeId);
-    store.setName("Store");
-    store.setAddressLine("123 Road");
-    user.setOwnedThriftStore(store);
-
-    GuideContent content = new GuideContent();
-    content.setId(10);
-    content.setThriftStore(store);
-
     when(tokenProvider.parseAccessToken("token"))
         .thenReturn(new TokenPayload(userId, "user@example.com", "User", Role.USER));
     when(authUserRepository.findById(userId)).thenReturn(Optional.of(user));
-    when(guideContentRepository.findById(10)).thenReturn(Optional.of(content));
+    when(
+            requestGuideContentImageUploadUseCase.execute(
+                org.mockito.ArgumentMatchers.eq(user),
+                org.mockito.ArgumentMatchers.eq(10),
+                org.mockito.ArgumentMatchers.eq("image/gif")))
+        .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported content type"));
 
     mockMvc
         .perform(
@@ -96,6 +101,49 @@ class GuideContentControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"contentType\":\"image/gif\"}"))
         .andExpect(status().isBadRequest());
+
+    verify(requestGuideContentImageUploadUseCase)
+        .execute(user, 10, "image/gif");
+  }
+
+  @Test
+  void requestImageSlotReturnsSlot() throws Exception {
+    UUID userId = UUID.randomUUID();
+
+    AuthUser user = new AuthUser();
+    user.setId(userId);
+    user.setEmail("user@example.com");
+    user.setDisplayName("User");
+    user.setPasswordHash("hash");
+    user.setRole(Role.USER);
+
+    when(tokenProvider.parseAccessToken("token"))
+        .thenReturn(new TokenPayload(userId, "user@example.com", "User", Role.USER));
+    when(authUserRepository.findById(userId)).thenReturn(Optional.of(user));
+
+    PhotoStoragePort.UploadSlot slot =
+        new PhotoStoragePort.UploadSlot(
+            "https://uploads.example.com/slot", "stores/file-key", "image/jpeg");
+    when(
+            requestGuideContentImageUploadUseCase.execute(
+                org.mockito.ArgumentMatchers.eq(user),
+                org.mockito.ArgumentMatchers.eq(10),
+                org.mockito.ArgumentMatchers.eq("image/jpeg")))
+        .thenReturn(slot);
+
+    mockMvc
+        .perform(
+            post("/contents/{contentId}/image/upload", 10)
+                .header("Authorization", "Bearer token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"contentType\":\"image/jpeg\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.uploadUrl").value("https://uploads.example.com/slot"))
+        .andExpect(jsonPath("$.fileKey").value("stores/file-key"))
+        .andExpect(jsonPath("$.contentType").value("image/jpeg"));
+
+    verify(requestGuideContentImageUploadUseCase)
+        .execute(user, 10, "image/jpeg");
   }
 
   @Test
@@ -301,13 +349,14 @@ class GuideContentControllerTest {
     when(tokenProvider.parseAccessToken("token"))
         .thenReturn(new TokenPayload(userId, "user@example.com", "User", Role.USER));
     when(authUserRepository.findById(userId)).thenReturn(Optional.of(user));
-    when(guideContentRepository.findByIdAndDeletedAtIsNull(1)).thenReturn(Optional.of(content));
-    when(rateLimitService.allowLikeAction(userId.toString())).thenReturn(false);
+    doThrow(new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Too many like actions"))
+        .when(likeGuideContentUseCase)
+        .execute(user, 1);
 
     mockMvc
         .perform(post("/contents/{id}/likes", 1).header("Authorization", "Bearer token"))
         .andExpect(status().isTooManyRequests());
 
-    verify(guideContentLikeRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    verify(likeGuideContentUseCase).execute(user, 1);
   }
 }

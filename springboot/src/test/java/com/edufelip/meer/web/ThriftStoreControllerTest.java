@@ -1,6 +1,5 @@
 package com.edufelip.meer.web;
 
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -12,27 +11,28 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.edufelip.meer.config.TestClockConfig;
 import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.core.auth.Role;
+import com.edufelip.meer.core.content.GuideContent;
 import com.edufelip.meer.core.store.Social;
 import com.edufelip.meer.core.store.ThriftStore;
-import com.edufelip.meer.core.store.ThriftStorePhoto;
-import org.hamcrest.Matchers;
-import com.edufelip.meer.domain.CreateGuideContentUseCase;
-import com.edufelip.meer.domain.GetGuideContentsByThriftStoreUseCase;
-import com.edufelip.meer.domain.GetThriftStoreUseCase;
-import com.edufelip.meer.domain.GetThriftStoresUseCase;
+import com.edufelip.meer.domain.CreateStoreGuideContentUseCase;
+import com.edufelip.meer.domain.CreateThriftStoreUseCase;
+import com.edufelip.meer.domain.DeleteThriftStoreUseCase;
+import com.edufelip.meer.domain.GetStoreContentsUseCase;
+import com.edufelip.meer.domain.GetStoreDetailsUseCase;
+import com.edufelip.meer.domain.GetStoreListingsUseCase;
+import com.edufelip.meer.domain.ReplaceStorePhotosUseCase;
+import com.edufelip.meer.domain.RequestStorePhotoUploadsUseCase;
+import com.edufelip.meer.domain.UpdateThriftStoreUseCase;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
-import com.edufelip.meer.domain.repo.CategoryRepository;
-import com.edufelip.meer.domain.repo.StoreFeedbackRepository;
-import com.edufelip.meer.domain.repo.ThriftStoreRepository;
+import com.edufelip.meer.domain.port.PhotoStoragePort;
+import com.edufelip.meer.security.AuthUserResolver;
 import com.edufelip.meer.security.token.TokenPayload;
 import com.edufelip.meer.security.token.TokenProvider;
-import com.edufelip.meer.service.GcsStorageService;
-import com.edufelip.meer.service.GuideContentEngagementService;
-import com.edufelip.meer.service.StoreFeedbackService;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -43,28 +43,26 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(ThriftStoreController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(TestClockConfig.class)
+@Import({TestClockConfig.class, AuthUserResolver.class})
 class ThriftStoreControllerTest {
 
   @Autowired private MockMvc mockMvc;
 
-  @MockitoBean private GetThriftStoreUseCase getThriftStoreUseCase;
-  @MockitoBean private GetThriftStoresUseCase getThriftStoresUseCase;
-  @MockitoBean private GetGuideContentsByThriftStoreUseCase getGuideContentsByThriftStoreUseCase;
-  @MockitoBean private CreateGuideContentUseCase createGuideContentUseCase;
-  @MockitoBean private ThriftStoreRepository thriftStoreRepository;
-  @MockitoBean private CategoryRepository categoryRepository;
+  @MockitoBean private GetStoreListingsUseCase getStoreListingsUseCase;
+  @MockitoBean private GetStoreDetailsUseCase getStoreDetailsUseCase;
+  @MockitoBean private GetStoreContentsUseCase getStoreContentsUseCase;
+  @MockitoBean private CreateThriftStoreUseCase createThriftStoreUseCase;
+  @MockitoBean private UpdateThriftStoreUseCase updateThriftStoreUseCase;
+  @MockitoBean private DeleteThriftStoreUseCase deleteThriftStoreUseCase;
+  @MockitoBean private RequestStorePhotoUploadsUseCase requestStorePhotoUploadsUseCase;
+  @MockitoBean private ReplaceStorePhotosUseCase replaceStorePhotosUseCase;
+  @MockitoBean private CreateStoreGuideContentUseCase createStoreGuideContentUseCase;
   @MockitoBean private AuthUserRepository authUserRepository;
   @MockitoBean private TokenProvider tokenProvider;
-  @MockitoBean private StoreFeedbackService storeFeedbackService;
-  @MockitoBean private GcsStorageService gcsStorageService;
-  @MockitoBean private StoreFeedbackRepository storeFeedbackRepository;
-  @MockitoBean private GuideContentEngagementService guideContentEngagementService;
 
   @Test
-  void adminDeleteStoreCleansRelationsAndAssets() throws Exception {
+  void adminDeleteStoreDelegatesToUseCase() throws Exception {
     UUID adminId = UUID.randomUUID();
-    UUID ownerId = UUID.randomUUID();
     UUID storeId = UUID.randomUUID();
 
     AuthUser admin = new AuthUser();
@@ -74,25 +72,9 @@ class ThriftStoreControllerTest {
     admin.setPasswordHash("hash");
     admin.setRole(Role.ADMIN);
 
-    AuthUser owner = new AuthUser();
-    owner.setId(ownerId);
-    owner.setEmail("owner@example.com");
-    owner.setDisplayName("Owner");
-    owner.setPasswordHash("hash");
-
-    ThriftStore store = new ThriftStore();
-    store.setId(storeId);
-    store.setOwner(owner);
-    owner.setOwnedThriftStore(store);
-
-    ThriftStorePhoto photo =
-        new ThriftStorePhoto(store, "https://storage.googleapis.com/bucket/photo.jpg", 0);
-    store.setPhotos(List.of(photo));
-
     when(tokenProvider.parseAccessToken("admin-token"))
         .thenReturn(new TokenPayload(adminId, "admin@example.com", "Admin", Role.ADMIN));
     when(authUserRepository.findById(adminId)).thenReturn(Optional.of(admin));
-    when(thriftStoreRepository.findById(storeId)).thenReturn(Optional.of(store));
 
     mockMvc
         .perform(
@@ -101,12 +83,7 @@ class ThriftStoreControllerTest {
                 .contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isNoContent());
 
-    verify(authUserRepository, times(1)).deleteFavoritesByStoreId(storeId);
-    verify(storeFeedbackRepository, times(1)).deleteByThriftStoreId(storeId);
-    verify(authUserRepository, times(1)).save(owner);
-    verify(gcsStorageService, times(1))
-        .deleteByUrl("https://storage.googleapis.com/bucket/photo.jpg");
-    verify(thriftStoreRepository, times(1)).delete(store);
+    verify(deleteThriftStoreUseCase).execute(admin, storeId);
   }
 
   @Test
@@ -124,13 +101,11 @@ class ThriftStoreControllerTest {
     when(tokenProvider.parseAccessToken("token"))
         .thenReturn(new TokenPayload(userId, "owner@example.com", "Owner", Role.USER));
     when(authUserRepository.findById(userId)).thenReturn(Optional.of(user));
-    when(thriftStoreRepository.save(org.mockito.ArgumentMatchers.any(ThriftStore.class)))
-        .thenAnswer(
-            inv -> {
-              ThriftStore store = inv.getArgument(0, ThriftStore.class);
-              store.setId(storeId);
-              return store;
-            });
+    ThriftStore created = new ThriftStore();
+    created.setId(storeId);
+    created.setSocial(new Social(null, null, "https://example.com", "https://wa.me/5511999999999"));
+    when(createThriftStoreUseCase.execute(ArgumentMatchers.eq(user), ArgumentMatchers.any()))
+        .thenReturn(created);
 
     String body =
         """
@@ -160,7 +135,7 @@ class ThriftStoreControllerTest {
   }
 
   @Test
-  void updateStoreMergesSocialFields() throws Exception {
+  void updateStoreReturnsUpdatedSocial() throws Exception {
     UUID userId = UUID.randomUUID();
     UUID storeId = UUID.randomUUID();
 
@@ -171,16 +146,16 @@ class ThriftStoreControllerTest {
     owner.setPasswordHash("hash");
     owner.setRole(Role.USER);
 
-    ThriftStore store = new ThriftStore();
-    store.setId(storeId);
-    store.setOwner(owner);
-    owner.setOwnedThriftStore(store);
-    store.setSocial(new Social("https://facebook.com/store", "insta", "https://old.com", "wa123"));
+    ThriftStore updated = new ThriftStore();
+    updated.setId(storeId);
+    updated.setSocial(
+        new Social("https://facebook.com/store", "insta", "https://new.com", "wa123"));
 
     when(tokenProvider.parseAccessToken("token"))
         .thenReturn(new TokenPayload(userId, "owner@example.com", "Owner", Role.USER));
     when(authUserRepository.findById(userId)).thenReturn(Optional.of(owner));
-    when(thriftStoreRepository.findById(storeId)).thenReturn(Optional.of(store));
+    when(updateThriftStoreUseCase.execute(ArgumentMatchers.eq(owner), ArgumentMatchers.eq(storeId), ArgumentMatchers.any()))
+        .thenReturn(updated);
 
     String body =
         """
@@ -204,7 +179,7 @@ class ThriftStoreControllerTest {
   }
 
   @Test
-  void updateStoreClearsExplicitNullSocialFields() throws Exception {
+  void requestPhotoUploadSlotsDelegatesToUseCase() throws Exception {
     UUID userId = UUID.randomUUID();
     UUID storeId = UUID.randomUUID();
 
@@ -215,43 +190,46 @@ class ThriftStoreControllerTest {
     owner.setPasswordHash("hash");
     owner.setRole(Role.USER);
 
-    ThriftStore store = new ThriftStore();
-    store.setId(storeId);
-    store.setOwner(owner);
-    owner.setOwnedThriftStore(store);
-    store.setSocial(
-        new Social("https://facebook.com/store", "insta", "https://old.com", "wa123"));
-
     when(tokenProvider.parseAccessToken("token"))
         .thenReturn(new TokenPayload(userId, "owner@example.com", "Owner", Role.USER));
     when(authUserRepository.findById(userId)).thenReturn(Optional.of(owner));
-    when(thriftStoreRepository.findById(storeId)).thenReturn(Optional.of(store));
+
+    PhotoStoragePort.UploadSlot slot =
+        new PhotoStoragePort.UploadSlot(
+            "https://uploads.example.com/slot", "stores/file-key", "image/jpeg");
+    when(
+            requestStorePhotoUploadsUseCase.execute(
+                ArgumentMatchers.eq(owner),
+                ArgumentMatchers.eq(storeId),
+                ArgumentMatchers.eq(1),
+                ArgumentMatchers.eq(List.of("image/jpeg"))))
+        .thenReturn(List.of(slot));
 
     String body =
         """
         {
-          "social": {
-            "instagram": null,
-            "website": null
-          }
+          "count": 1,
+          "contentTypes": ["image/jpeg"]
         }
         """;
 
     mockMvc
         .perform(
-            put("/stores/{id}", storeId)
+            post("/stores/{storeId}/photos/uploads", storeId)
                 .header("Authorization", "Bearer token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.instagram").value(Matchers.nullValue()))
-        .andExpect(jsonPath("$.website").value(Matchers.nullValue()))
-        .andExpect(jsonPath("$.facebook").value("https://facebook.com/store"))
-        .andExpect(jsonPath("$.whatsapp").value("wa123"));
+        .andExpect(jsonPath("$.uploads[0].uploadUrl").value("https://uploads.example.com/slot"))
+        .andExpect(jsonPath("$.uploads[0].fileKey").value("stores/file-key"))
+        .andExpect(jsonPath("$.uploads[0].contentType").value("image/jpeg"));
+
+    verify(requestStorePhotoUploadsUseCase)
+        .execute(owner, storeId, 1, List.of("image/jpeg"));
   }
 
   @Test
-  void updateStoreRejectsWebsiteWithoutDotCom() throws Exception {
+  void createGuideContentDelegatesToUseCase() throws Exception {
     UUID userId = UUID.randomUUID();
     UUID storeId = UUID.randomUUID();
 
@@ -262,31 +240,50 @@ class ThriftStoreControllerTest {
     owner.setPasswordHash("hash");
     owner.setRole(Role.USER);
 
-    ThriftStore store = new ThriftStore();
-    store.setId(storeId);
-    store.setOwner(owner);
-    owner.setOwnedThriftStore(store);
-
     when(tokenProvider.parseAccessToken("token"))
         .thenReturn(new TokenPayload(userId, "owner@example.com", "Owner", Role.USER));
     when(authUserRepository.findById(userId)).thenReturn(Optional.of(owner));
-    when(thriftStoreRepository.findById(storeId)).thenReturn(Optional.of(store));
+
+    ThriftStore store = new ThriftStore();
+    store.setId(storeId);
+    store.setName("Guide Store");
+    store.setCoverImageUrl("cover");
+
+    GuideContent saved =
+        new GuideContent(1, "Title", "Desc", "cat", "type", "image", store);
+    when(
+            createStoreGuideContentUseCase.execute(
+                ArgumentMatchers.eq(owner),
+                ArgumentMatchers.eq(storeId),
+                ArgumentMatchers.any(GuideContent.class)))
+        .thenReturn(saved);
 
     String body =
         """
         {
-          "social": {
-            "website": "https://example.org"
-          }
+          "title": "Title",
+          "description": "Desc",
+          "categoryLabel": "cat",
+          "type": "type",
+          "imageUrl": "image"
         }
         """;
 
     mockMvc
         .perform(
-            put("/stores/{id}", storeId)
+            post("/stores/{storeId}/contents", storeId)
                 .header("Authorization", "Bearer token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body))
-        .andExpect(status().isBadRequest());
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(1))
+        .andExpect(jsonPath("$.thriftStoreId").value(storeId.toString()))
+        .andExpect(jsonPath("$.thriftStoreName").value("Guide Store"));
+
+    verify(createStoreGuideContentUseCase)
+        .execute(
+            ArgumentMatchers.eq(owner),
+            ArgumentMatchers.eq(storeId),
+            ArgumentMatchers.any(GuideContent.class));
   }
 }

@@ -13,8 +13,15 @@ import com.edufelip.meer.core.auth.Role;
 import com.edufelip.meer.core.content.GuideContent;
 import com.edufelip.meer.core.store.ThriftStore;
 import com.edufelip.meer.domain.CreateGuideContentCommentUseCase;
+import com.edufelip.meer.domain.CreateOwnedGuideContentUseCase;
+import com.edufelip.meer.domain.DeleteGuideContentUseCase;
 import com.edufelip.meer.domain.GetGuideContentUseCase;
+import com.edufelip.meer.domain.GuideContentSummary;
+import com.edufelip.meer.domain.LikeGuideContentUseCase;
+import com.edufelip.meer.domain.RequestGuideContentImageUploadUseCase;
+import com.edufelip.meer.domain.UnlikeGuideContentUseCase;
 import com.edufelip.meer.domain.UpdateGuideContentCommentUseCase;
+import com.edufelip.meer.domain.UpdateGuideContentUseCase;
 import com.edufelip.meer.domain.auth.AppleLoginUseCase;
 import com.edufelip.meer.domain.auth.AuthResult;
 import com.edufelip.meer.domain.auth.AuthenticatedUser;
@@ -31,11 +38,10 @@ import com.edufelip.meer.domain.repo.GuideContentLikeRepository;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
 import com.edufelip.meer.domain.repo.SupportContactRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
-import com.edufelip.meer.dto.GuideContentDto;
-import com.edufelip.meer.security.RateLimitService;
+import com.edufelip.meer.domain.port.RateLimitPort;
+import com.edufelip.meer.security.AuthUserResolver;
 import com.edufelip.meer.security.SanitizingJacksonModuleConfig;
 import com.edufelip.meer.security.token.TokenProvider;
-import com.edufelip.meer.service.GcsStorageService;
 import com.edufelip.meer.service.GuideContentEngagementService;
 import com.edufelip.meer.service.GuideContentModerationService;
 import com.edufelip.meer.support.SnapshotAssertions;
@@ -65,7 +71,7 @@ import org.springframework.test.web.servlet.MockMvc;
       GuideContentController.class
     })
 @AutoConfigureMockMvc(addFilters = false)
-@Import({SanitizingJacksonModuleConfig.class, TestClockConfig.class})
+@Import({SanitizingJacksonModuleConfig.class, TestClockConfig.class, AuthUserResolver.class})
 class PublicApiSnapshotTest {
 
   @Autowired private MockMvc mockMvc;
@@ -83,7 +89,7 @@ class PublicApiSnapshotTest {
   @MockitoBean private DashboardLoginUseCase dashboardLoginUseCase;
 
   @MockitoBean private SupportContactRepository supportContactRepository;
-  @MockitoBean private RateLimitService rateLimitService;
+  @MockitoBean private RateLimitPort rateLimitService;
 
   @MockitoBean private GetGuideContentUseCase getGuideContentUseCase;
   @MockitoBean private GuideContentRepository guideContentRepository;
@@ -91,9 +97,14 @@ class PublicApiSnapshotTest {
   @MockitoBean private GuideContentLikeRepository guideContentLikeRepository;
   @MockitoBean private CreateGuideContentCommentUseCase createGuideContentCommentUseCase;
   @MockitoBean private UpdateGuideContentCommentUseCase updateGuideContentCommentUseCase;
+  @MockitoBean private CreateOwnedGuideContentUseCase createOwnedGuideContentUseCase;
+  @MockitoBean private UpdateGuideContentUseCase updateGuideContentUseCase;
+  @MockitoBean private DeleteGuideContentUseCase deleteGuideContentUseCase;
+  @MockitoBean private LikeGuideContentUseCase likeGuideContentUseCase;
+  @MockitoBean private UnlikeGuideContentUseCase unlikeGuideContentUseCase;
   @MockitoBean private GuideContentEngagementService guideContentEngagementService;
   @MockitoBean private GuideContentModerationService guideContentModerationService;
-  @MockitoBean private GcsStorageService gcsStorageService;
+  @MockitoBean private RequestGuideContentImageUploadUseCase requestGuideContentImageUploadUseCase;
   @MockitoBean private ThriftStoreRepository thriftStoreRepository;
 
   @Test
@@ -267,8 +278,8 @@ class PublicApiSnapshotTest {
   void guideContentListSnapshot() throws Exception {
     UUID storeId = UUID.fromString("22222222-2222-2222-2222-222222222222");
     Instant createdAt = Instant.parse("2024-01-01T00:00:00Z");
-    GuideContentDto dto =
-        new GuideContentDto(
+    GuideContentSummary summary =
+        new GuideContentSummary(
             1,
             "How to thrift",
             "Desc",
@@ -276,11 +287,8 @@ class PublicApiSnapshotTest {
             storeId,
             "Store",
             "https://cover",
-            createdAt,
-            0L,
-            0L,
-            false);
-    var slice = new SliceImpl<>(List.of(dto), PageRequest.of(0, 20), false);
+            createdAt);
+    var slice = new SliceImpl<>(List.of(summary), PageRequest.of(0, 20), false);
     when(guideContentRepository.findAllSummariesActive(any())).thenReturn(slice);
     when(guideContentEngagementService.getEngagement(any(), any())).thenReturn(java.util.Map.of());
 
