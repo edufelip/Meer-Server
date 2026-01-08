@@ -17,7 +17,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class FlywayMigrationTest {
 
   @Container
-  static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15-alpine");
+  static final PostgreSQLContainer<?> postgres =
+      new PostgreSQLContainer<>("postgis/postgis:15-3.4-alpine");
 
   @Test
   void migrationsApplyCleanly() {
