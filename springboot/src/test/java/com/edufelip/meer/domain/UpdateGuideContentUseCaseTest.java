@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.core.content.GuideContent;
 import com.edufelip.meer.core.store.ThriftStore;
+import com.edufelip.meer.domain.port.PhotoStoragePort;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
 import java.util.Optional;
 import java.util.UUID;
@@ -22,11 +23,13 @@ class UpdateGuideContentUseCaseTest {
   void updatesFieldsAndDefaults() {
     GuideContentRepository repository = Mockito.mock(GuideContentRepository.class);
     StoreOwnershipService storeOwnershipService = Mockito.mock(StoreOwnershipService.class);
+    PhotoStoragePort photoStoragePort = Mockito.mock(PhotoStoragePort.class);
     UpdateGuideContentUseCase useCase =
-        new UpdateGuideContentUseCase(repository, storeOwnershipService);
+        new UpdateGuideContentUseCase(repository, storeOwnershipService, photoStoragePort);
 
     ThriftStore store = new ThriftStore();
-    store.setId(UUID.randomUUID());
+    UUID storeId = UUID.randomUUID();
+    store.setId(storeId);
 
     GuideContent content = new GuideContent();
     content.setId(10);
@@ -38,16 +41,20 @@ class UpdateGuideContentUseCaseTest {
     AuthUser user = new AuthUser();
     user.setId(UUID.randomUUID());
 
+    String imageUrl = "https://storage.googleapis.com/test-bucket/stores/" + storeId + "/photos/a";
+    when(photoStoragePort.extractFileKey(imageUrl)).thenReturn("stores/" + storeId + "/photos/a");
+    when(photoStoragePort.fetchRequired("stores/" + storeId + "/photos/a"))
+        .thenReturn(new PhotoStoragePort.StoredObject("image/jpeg", 1024L));
+    when(photoStoragePort.publicUrl("stores/" + storeId + "/photos/a"))
+        .thenReturn("https://cdn.example.com/stores/" + storeId + "/photos/a");
+
     GuideContent updated =
-        useCase.execute(
-            user,
-            10,
-            new UpdateGuideContentUseCase.Command(
-                "New", "Desc", "https://example.com/image.jpg"));
+        useCase.execute(user, 10, new UpdateGuideContentUseCase.Command("New", "Desc", imageUrl));
 
     assertThat(updated.getTitle()).isEqualTo("New");
     assertThat(updated.getDescription()).isEqualTo("Desc");
-    assertThat(updated.getImageUrl()).isEqualTo("https://example.com/image.jpg");
+    assertThat(updated.getImageUrl())
+        .isEqualTo("https://cdn.example.com/stores/" + storeId + "/photos/a");
     assertThat(updated.getCategoryLabel()).isEqualTo("general");
     assertThat(updated.getType()).isEqualTo("article");
     verify(storeOwnershipService).ensureOwnerOrAdminStrict(user, store);
@@ -57,8 +64,9 @@ class UpdateGuideContentUseCaseTest {
   void rejectsInvalidImageUrl() {
     GuideContentRepository repository = Mockito.mock(GuideContentRepository.class);
     StoreOwnershipService storeOwnershipService = Mockito.mock(StoreOwnershipService.class);
+    PhotoStoragePort photoStoragePort = Mockito.mock(PhotoStoragePort.class);
     UpdateGuideContentUseCase useCase =
-        new UpdateGuideContentUseCase(repository, storeOwnershipService);
+        new UpdateGuideContentUseCase(repository, storeOwnershipService, photoStoragePort);
 
     ThriftStore store = new ThriftStore();
     store.setId(UUID.randomUUID());
@@ -75,9 +83,40 @@ class UpdateGuideContentUseCaseTest {
     assertThatThrownBy(
             () ->
                 useCase.execute(
+                    user, 10, new UpdateGuideContentUseCase.Command("T", "D", "not-a-url")))
+        .isInstanceOf(ResponseStatusException.class)
+        .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
+        .isEqualTo(HttpStatus.BAD_REQUEST);
+  }
+
+  @Test
+  void rejectsExternalImageUrl() {
+    GuideContentRepository repository = Mockito.mock(GuideContentRepository.class);
+    StoreOwnershipService storeOwnershipService = Mockito.mock(StoreOwnershipService.class);
+    PhotoStoragePort photoStoragePort = Mockito.mock(PhotoStoragePort.class);
+    UpdateGuideContentUseCase useCase =
+        new UpdateGuideContentUseCase(repository, storeOwnershipService, photoStoragePort);
+
+    ThriftStore store = new ThriftStore();
+    store.setId(UUID.randomUUID());
+
+    GuideContent content = new GuideContent();
+    content.setId(10);
+    content.setThriftStore(store);
+
+    when(repository.findByIdAndDeletedAtIsNull(10)).thenReturn(Optional.of(content));
+    when(photoStoragePort.extractFileKey("https://example.com/image.jpg")).thenReturn(null);
+
+    AuthUser user = new AuthUser();
+    user.setId(UUID.randomUUID());
+
+    assertThatThrownBy(
+            () ->
+                useCase.execute(
                     user,
                     10,
-                    new UpdateGuideContentUseCase.Command("T", "D", "not-a-url")))
+                    new UpdateGuideContentUseCase.Command(
+                        "T", "D", "https://example.com/image.jpg")))
         .isInstanceOf(ResponseStatusException.class)
         .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
         .isEqualTo(HttpStatus.BAD_REQUEST);

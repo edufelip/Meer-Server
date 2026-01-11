@@ -57,6 +57,12 @@ public class LocalPhotoStorageFake implements PhotoStoragePort {
   }
 
   @Override
+  public String extractFileKey(String url) {
+    if (url == null) return null;
+    return url.startsWith("/uploads/") ? url.substring("/uploads/".length()) : null;
+  }
+
+  @Override
   public void deleteByUrl(String url) {
     if (url == null) return;
     if (!url.startsWith("/uploads/")) return;

@@ -1,6 +1,5 @@
 package com.edufelip.meer.web;
 
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -16,15 +15,13 @@ import com.edufelip.meer.core.auth.Role;
 import com.edufelip.meer.core.content.GuideContent;
 import com.edufelip.meer.core.content.GuideContentComment;
 import com.edufelip.meer.core.store.ThriftStore;
-import com.edufelip.meer.core.store.ThriftStorePhoto;
 import com.edufelip.meer.domain.GuideContentSummary;
+import com.edufelip.meer.domain.auth.DeleteUserUseCase;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.GuideContentCommentRepository;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
-import com.edufelip.meer.domain.repo.StoreFeedbackRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
 import com.edufelip.meer.security.token.TokenProvider;
-import com.edufelip.meer.service.GcsStorageService;
 import com.edufelip.meer.service.GuideContentEngagementService;
 import com.edufelip.meer.service.GuideContentModerationService;
 import java.util.HashSet;
@@ -57,13 +54,12 @@ class AdminDashboardControllerTest {
   @MockitoBean private ThriftStoreRepository thriftStoreRepository;
   @MockitoBean private GuideContentRepository guideContentRepository;
   @MockitoBean private GuideContentCommentRepository guideContentCommentRepository;
-  @MockitoBean private StoreFeedbackRepository storeFeedbackRepository;
-  @MockitoBean private GcsStorageService gcsStorageService;
+  @MockitoBean private DeleteUserUseCase deleteUserUseCase;
   @MockitoBean private GuideContentEngagementService guideContentEngagementService;
   @MockitoBean private GuideContentModerationService guideContentModerationService;
 
   @Test
-  void deleteUserRemovesStoresAssetsFavoritesAndFeedback() throws Exception {
+  void deleteUserInvokesUseCase() throws Exception {
     UUID adminId = UUID.randomUUID();
     UUID targetId = UUID.randomUUID();
     UUID storeId = UUID.randomUUID();
@@ -83,9 +79,6 @@ class AdminDashboardControllerTest {
     ThriftStore store = new ThriftStore();
     store.setId(storeId);
     store.setOwner(target);
-    ThriftStorePhoto photo =
-        new ThriftStorePhoto(store, "https://storage.googleapis.com/bucket/photo-1.jpg", 0);
-    store.setPhotos(List.of(photo));
     target.setOwnedThriftStore(store);
 
     Set<ThriftStore> favorites = new HashSet<>();
@@ -93,9 +86,6 @@ class AdminDashboardControllerTest {
     target.setFavorites(favorites);
 
     when(authUserRepository.findById(targetId)).thenReturn(Optional.of(target));
-    when(thriftStoreRepository.findById(storeId)).thenReturn(Optional.of(store));
-    when(thriftStoreRepository.findByOwnerId(targetId)).thenReturn(List.of(store));
-
     mockMvc
         .perform(
             delete("/dashboard/users/{id}", targetId)
@@ -104,16 +94,8 @@ class AdminDashboardControllerTest {
                 .contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isNoContent());
 
-    verify(thriftStoreRepository, times(1)).delete(argThat(ts -> ts.getId().equals(storeId)));
-    verify(authUserRepository, times(1)).deleteFavoritesByStoreId(storeId);
-    verify(storeFeedbackRepository, times(1)).deleteByThriftStoreId(storeId);
-    verify(storeFeedbackRepository, times(1)).deleteByUserId(targetId);
-    verify(gcsStorageService, times(1))
-        .deleteByUrl("https://storage.googleapis.com/bucket/avatar.png");
-    verify(gcsStorageService, times(1))
-        .deleteByUrl("https://storage.googleapis.com/bucket/photo-1.jpg");
-    verify(authUserRepository, times(1)).delete(target);
-    verify(authUserRepository, times(2)).save(target);
+    verify(authUserRepository, times(1)).save(target);
+    verify(deleteUserUseCase, times(1)).execute(target, "ADMIN_DELETE");
   }
 
   @Test
@@ -138,8 +120,7 @@ class AdminDashboardControllerTest {
                 .contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isNoContent());
 
-    verify(storeFeedbackRepository, times(1)).deleteByUserId(adminId);
-    verify(authUserRepository, times(1)).delete(admin);
+    verify(deleteUserUseCase, times(1)).execute(admin, "ADMIN_DELETE");
   }
 
   @Test
@@ -164,9 +145,7 @@ class AdminDashboardControllerTest {
     when(guideContentRepository.findAllSummaries(org.mockito.ArgumentMatchers.any()))
         .thenReturn(new SliceImpl<>(List.of(summary)));
     when(guideContentEngagementService.getEngagement(eq(List.of(10)), eq(null)))
-        .thenReturn(
-            Map.of(
-                10, new GuideContentEngagementService.EngagementSummary(5L, 7L, false)));
+        .thenReturn(Map.of(10, new GuideContentEngagementService.EngagementSummary(5L, 7L, false)));
 
     mockMvc
         .perform(
@@ -191,9 +170,7 @@ class AdminDashboardControllerTest {
 
     when(guideContentRepository.findById(10)).thenReturn(Optional.of(content));
     when(guideContentEngagementService.getEngagement(eq(List.of(10)), eq(null)))
-        .thenReturn(
-            Map.of(
-                10, new GuideContentEngagementService.EngagementSummary(3L, 4L, false)));
+        .thenReturn(Map.of(10, new GuideContentEngagementService.EngagementSummary(3L, 4L, false)));
 
     mockMvc
         .perform(

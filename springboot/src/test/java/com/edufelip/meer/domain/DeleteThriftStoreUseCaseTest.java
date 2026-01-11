@@ -6,12 +6,7 @@ import static org.mockito.Mockito.when;
 import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.core.auth.Role;
 import com.edufelip.meer.core.store.ThriftStore;
-import com.edufelip.meer.core.store.ThriftStorePhoto;
-import com.edufelip.meer.domain.port.PhotoStoragePort;
-import com.edufelip.meer.domain.repo.AuthUserRepository;
-import com.edufelip.meer.domain.repo.StoreFeedbackRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -22,19 +17,11 @@ class DeleteThriftStoreUseCaseTest {
   @Test
   void deletesStoreAndCleansRelations() {
     ThriftStoreRepository thriftStoreRepository = Mockito.mock(ThriftStoreRepository.class);
-    AuthUserRepository authUserRepository = Mockito.mock(AuthUserRepository.class);
-    StoreFeedbackRepository storeFeedbackRepository =
-        Mockito.mock(StoreFeedbackRepository.class);
-    PhotoStoragePort photoStoragePort = Mockito.mock(PhotoStoragePort.class);
     StoreOwnershipService ownershipService = Mockito.mock(StoreOwnershipService.class);
+    StoreDeletionService storeDeletionService = Mockito.mock(StoreDeletionService.class);
 
     DeleteThriftStoreUseCase useCase =
-        new DeleteThriftStoreUseCase(
-            thriftStoreRepository,
-            authUserRepository,
-            storeFeedbackRepository,
-            photoStoragePort,
-            ownershipService);
+        new DeleteThriftStoreUseCase(thriftStoreRepository, ownershipService, storeDeletionService);
 
     UUID storeId = UUID.randomUUID();
     AuthUser owner = new AuthUser();
@@ -45,9 +32,6 @@ class DeleteThriftStoreUseCaseTest {
     store.setId(storeId);
     store.setOwner(owner);
     owner.setOwnedThriftStore(store);
-    ThriftStorePhoto photo = new ThriftStorePhoto(store, "/uploads/stores/photo.jpg", 0);
-    store.setPhotos(List.of(photo));
-
     when(thriftStoreRepository.findById(storeId)).thenReturn(Optional.of(store));
 
     AuthUser admin = new AuthUser();
@@ -57,10 +41,7 @@ class DeleteThriftStoreUseCaseTest {
 
     useCase.execute(admin, storeId);
 
-    verify(authUserRepository).save(owner);
-    verify(authUserRepository).deleteFavoritesByStoreId(storeId);
-    verify(storeFeedbackRepository).deleteByThriftStoreId(storeId);
-    verify(photoStoragePort).deleteByUrl("/uploads/stores/photo.jpg");
-    verify(thriftStoreRepository).delete(store);
+    verify(storeDeletionService)
+        .deleteStoreWithAssets(Mockito.eq(store), Mockito.anySet(), Mockito.eq("STORE_DELETE"));
   }
 }
