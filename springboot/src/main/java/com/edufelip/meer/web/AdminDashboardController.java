@@ -2,27 +2,20 @@ package com.edufelip.meer.web;
 
 import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.core.auth.Role;
+import com.edufelip.meer.domain.auth.DeleteUserUseCase;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.GuideContentCommentRepository;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
-import com.edufelip.meer.domain.repo.StoreFeedbackRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
 import com.edufelip.meer.dto.*;
 import com.edufelip.meer.mapper.Mappers;
 import com.edufelip.meer.security.token.TokenProvider;
-import com.edufelip.meer.service.GcsStorageService;
 import com.edufelip.meer.service.GuideContentEngagementService;
 import com.edufelip.meer.service.GuideContentModerationService;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -42,8 +35,7 @@ public class AdminDashboardController {
   private final ThriftStoreRepository thriftStoreRepository;
   private final GuideContentRepository guideContentRepository;
   private final GuideContentCommentRepository guideContentCommentRepository;
-  private final StoreFeedbackRepository storeFeedbackRepository;
-  private final GcsStorageService gcsStorageService;
+  private final DeleteUserUseCase deleteUserUseCase;
   private final GuideContentEngagementService guideContentEngagementService;
   private final GuideContentModerationService guideContentModerationService;
 
@@ -53,8 +45,7 @@ public class AdminDashboardController {
       ThriftStoreRepository thriftStoreRepository,
       GuideContentRepository guideContentRepository,
       GuideContentCommentRepository guideContentCommentRepository,
-      StoreFeedbackRepository storeFeedbackRepository,
-      GcsStorageService gcsStorageService,
+      DeleteUserUseCase deleteUserUseCase,
       GuideContentEngagementService guideContentEngagementService,
       GuideContentModerationService guideContentModerationService) {
     this.tokenProvider = tokenProvider;
@@ -62,8 +53,7 @@ public class AdminDashboardController {
     this.thriftStoreRepository = thriftStoreRepository;
     this.guideContentRepository = guideContentRepository;
     this.guideContentCommentRepository = guideContentCommentRepository;
-    this.storeFeedbackRepository = storeFeedbackRepository;
-    this.gcsStorageService = gcsStorageService;
+    this.deleteUserUseCase = deleteUserUseCase;
     this.guideContentEngagementService = guideContentEngagementService;
     this.guideContentModerationService = guideContentModerationService;
   }
@@ -236,10 +226,8 @@ public class AdminDashboardController {
     if (page < 0 || pageSize < 1 || pageSize > 100) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination params");
     }
-    Instant fromInstant =
-        from != null ? from.atStartOfDay(ZoneOffset.UTC).toInstant() : null;
-    Instant toInstant =
-        to != null ? to.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant() : null;
+    Instant fromInstant = from != null ? from.atStartOfDay(ZoneOffset.UTC).toInstant() : null;
+    Instant toInstant = to != null ? to.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant() : null;
     Sort.Direction direction =
         "oldest".equalsIgnoreCase(sort) ? Sort.Direction.ASC : Sort.Direction.DESC;
     Sort sortSpec = Sort.by(direction, "createdAt").and(Sort.by(direction, "id"));
@@ -314,21 +302,7 @@ public class AdminDashboardController {
       authUserRepository.save(target);
     }
 
-    deleteOwnedStores(target);
-
-    // Drop favorites join entries
-    target.getFavorites().clear();
-    authUserRepository.save(target);
-
-    // Delete avatar assets, if any
-    if (target.getPhotoUrl() != null) {
-      if (!deleteLocalIfUploads(target.getPhotoUrl())) {
-        gcsStorageService.deleteByUrl(target.getPhotoUrl());
-      }
-    }
-
-    storeFeedbackRepository.deleteByUserId(target.getId());
-    authUserRepository.delete(target);
+    deleteUserUseCase.execute(target, "ADMIN_DELETE");
     return org.springframework.http.ResponseEntity.noContent().build();
   }
 
@@ -357,51 +331,5 @@ public class AdminDashboardController {
     } catch (IllegalStateException ignored) {
     }
     throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing admin context");
-  }
-
-  private void deleteOwnedStores(AuthUser user) {
-    Set<UUID> processed = new HashSet<>();
-
-    Optional.ofNullable(user.getOwnedThriftStore())
-        .flatMap(store -> thriftStoreRepository.findById(store.getId()))
-        .ifPresent(store -> deleteStoreWithAssets(store, processed));
-
-    thriftStoreRepository
-        .findByOwnerId(user.getId())
-        .forEach(store -> deleteStoreWithAssets(store, processed));
-  }
-
-  private void deleteStoreWithAssets(
-      com.edufelip.meer.core.store.ThriftStore store, Set<UUID> processed) {
-    if (!processed.add(store.getId())) return; // avoid duplicate deletes
-    // Remove dependent rows first to satisfy FK constraints
-    authUserRepository.deleteFavoritesByStoreId(store.getId());
-    storeFeedbackRepository.deleteByThriftStoreId(store.getId());
-
-    if (store.getPhotos() != null) {
-      store.getPhotos().forEach(p -> deletePhotoAsset(p.getUrl()));
-    }
-    thriftStoreRepository.delete(store);
-  }
-
-  private void deletePhotoAsset(String url) {
-    if (url == null) return;
-    if (!deleteLocalIfUploads(url)) {
-      try {
-        gcsStorageService.deleteByUrl(url);
-      } catch (Exception ignored) {
-      }
-    }
-  }
-
-  private boolean deleteLocalIfUploads(String url) {
-    if (url == null || !url.startsWith("/uploads/")) return false;
-    try {
-      Path path = Paths.get("springboot", url.substring(1));
-      Files.deleteIfExists(path);
-      return true;
-    } catch (Exception ignored) {
-      return false;
-    }
   }
 }

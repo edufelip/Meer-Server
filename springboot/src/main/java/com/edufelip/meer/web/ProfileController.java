@@ -1,10 +1,8 @@
 package com.edufelip.meer.web;
 
+import com.edufelip.meer.domain.auth.DeleteUserUseCase;
 import com.edufelip.meer.domain.auth.GetProfileUseCase;
 import com.edufelip.meer.domain.auth.UpdateProfileUseCase;
-import com.edufelip.meer.domain.repo.AuthUserRepository;
-import com.edufelip.meer.domain.repo.StoreFeedbackRepository;
-import com.edufelip.meer.domain.repo.ThriftStoreRepository;
 import com.edufelip.meer.dto.AvatarUploadResponse;
 import com.edufelip.meer.dto.DeleteAccountRequest;
 import com.edufelip.meer.dto.ErrorDto;
@@ -19,7 +17,6 @@ import jakarta.validation.Valid;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -47,9 +44,7 @@ public class ProfileController {
 
   private final GetProfileUseCase getProfileUseCase;
   private final UpdateProfileUseCase updateProfileUseCase;
-  private final AuthUserRepository authUserRepository;
-  private final StoreFeedbackRepository storeFeedbackRepository;
-  private final ThriftStoreRepository thriftStoreRepository;
+  private final DeleteUserUseCase deleteUserUseCase;
   private final GcsStorageService gcsStorageService;
   private final AuthUserResolver authUserResolver;
   private static final Set<String> ALLOWED_AVATAR_CONTENT_TYPES =
@@ -59,16 +54,12 @@ public class ProfileController {
   public ProfileController(
       GetProfileUseCase getProfileUseCase,
       UpdateProfileUseCase updateProfileUseCase,
-      AuthUserRepository authUserRepository,
-      StoreFeedbackRepository storeFeedbackRepository,
-      ThriftStoreRepository thriftStoreRepository,
+      DeleteUserUseCase deleteUserUseCase,
       GcsStorageService gcsStorageService,
       AuthUserResolver authUserResolver) {
     this.getProfileUseCase = getProfileUseCase;
     this.updateProfileUseCase = updateProfileUseCase;
-    this.authUserRepository = authUserRepository;
-    this.storeFeedbackRepository = storeFeedbackRepository;
-    this.thriftStoreRepository = thriftStoreRepository;
+    this.deleteUserUseCase = deleteUserUseCase;
     this.gcsStorageService = gcsStorageService;
     this.authUserResolver = authUserResolver;
   }
@@ -159,41 +150,13 @@ public class ProfileController {
       throw new ResponseStatusException(
           HttpStatus.BAD_REQUEST, "Email confirmation does not match");
     }
-    // delete owned store + photos in GCS
-    Optional.ofNullable(user.getOwnedThriftStore())
-        .flatMap(store -> thriftStoreRepository.findById(store.getId()))
-        .ifPresent(
-            store -> {
-              if (store.getPhotos() != null) {
-                store
-                    .getPhotos()
-                    .forEach(
-                        p -> {
-                          if (!deleteLocalIfUploads(p.getUrl())) {
-                            gcsStorageService.deleteByUrl(p.getUrl());
-                          }
-                        });
-              }
-              thriftStoreRepository.delete(store);
-            });
-    // cleanup: favorites and feedbacks
-    user.getFavorites().clear();
-    // delete avatar if locally stored or GCS
-    if (user.getPhotoUrl() != null) {
-      if (!deleteLocalIfUploads(user.getPhotoUrl())) {
-        gcsStorageService.deleteByUrl(user.getPhotoUrl());
-      }
-    }
-    authUserRepository.save(user);
-    storeFeedbackRepository.deleteByUserId(user.getId());
-    authUserRepository.delete(user);
+    deleteUserUseCase.execute(user, "ACCOUNT_DELETE");
     return ResponseEntity.noContent().build();
   }
 
   @ExceptionHandler(InvalidTokenException.class)
   public ResponseEntity<?> handleInvalid(InvalidTokenException ex) {
-    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-        .body(new ErrorDto(ex.getMessage()));
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorDto(ex.getMessage()));
   }
 
   private void deleteOldAvatarIfReplaced(String oldUrl, String newUrl) {

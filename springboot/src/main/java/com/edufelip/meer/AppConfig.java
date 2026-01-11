@@ -1,36 +1,39 @@
 package com.edufelip.meer;
 
+import com.edufelip.meer.config.FirebaseProperties;
 import com.edufelip.meer.domain.CreateCategoryUseCase;
 import com.edufelip.meer.domain.CreateGuideContentCommentUseCase;
 import com.edufelip.meer.domain.CreateGuideContentUseCase;
 import com.edufelip.meer.domain.CreateOwnedGuideContentUseCase;
 import com.edufelip.meer.domain.CreateStoreGuideContentUseCase;
 import com.edufelip.meer.domain.CreateThriftStoreUseCase;
-import com.edufelip.meer.domain.DeleteGuideContentUseCase;
-import com.edufelip.meer.domain.DeleteThriftStoreUseCase;
 import com.edufelip.meer.domain.DeleteCategoryUseCase;
+import com.edufelip.meer.domain.DeleteGuideContentUseCase;
+import com.edufelip.meer.domain.DeletePushTokenUseCase;
+import com.edufelip.meer.domain.DeleteThriftStoreUseCase;
 import com.edufelip.meer.domain.GetCategoriesUseCase;
 import com.edufelip.meer.domain.GetGuideContentUseCase;
 import com.edufelip.meer.domain.GetGuideContentsByThriftStoreUseCase;
-import com.edufelip.meer.domain.LikeGuideContentUseCase;
 import com.edufelip.meer.domain.GetStoreContentsUseCase;
 import com.edufelip.meer.domain.GetStoreDetailsUseCase;
 import com.edufelip.meer.domain.GetStoreListingsUseCase;
 import com.edufelip.meer.domain.GetThriftStoreUseCase;
 import com.edufelip.meer.domain.GetThriftStoresUseCase;
+import com.edufelip.meer.domain.LikeGuideContentUseCase;
 import com.edufelip.meer.domain.ReplaceStorePhotosUseCase;
 import com.edufelip.meer.domain.RequestGuideContentImageUploadUseCase;
 import com.edufelip.meer.domain.RequestStorePhotoUploadsUseCase;
+import com.edufelip.meer.domain.StoreDeletionService;
 import com.edufelip.meer.domain.StoreOwnershipService;
 import com.edufelip.meer.domain.UnlikeGuideContentUseCase;
-import com.edufelip.meer.domain.UpsertPushTokenUseCase;
 import com.edufelip.meer.domain.UpdateCategoryUseCase;
 import com.edufelip.meer.domain.UpdateGuideContentCommentUseCase;
 import com.edufelip.meer.domain.UpdateGuideContentUseCase;
 import com.edufelip.meer.domain.UpdateThriftStoreUseCase;
-import com.edufelip.meer.domain.DeletePushTokenUseCase;
+import com.edufelip.meer.domain.UpsertPushTokenUseCase;
 import com.edufelip.meer.domain.auth.AppleLoginUseCase;
 import com.edufelip.meer.domain.auth.DashboardLoginUseCase;
+import com.edufelip.meer.domain.auth.DeleteUserUseCase;
 import com.edufelip.meer.domain.auth.ForgotPasswordUseCase;
 import com.edufelip.meer.domain.auth.GetProfileUseCase;
 import com.edufelip.meer.domain.auth.GoogleLoginUseCase;
@@ -40,6 +43,9 @@ import com.edufelip.meer.domain.auth.RefreshTokenUseCase;
 import com.edufelip.meer.domain.auth.ResetPasswordUseCase;
 import com.edufelip.meer.domain.auth.SignupUseCase;
 import com.edufelip.meer.domain.auth.UpdateProfileUseCase;
+import com.edufelip.meer.domain.port.AssetDeletionQueuePort;
+import com.edufelip.meer.domain.port.PhotoStoragePort;
+import com.edufelip.meer.domain.port.RateLimitPort;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.CategoryRepository;
 import com.edufelip.meer.domain.repo.GuideContentCommentRepository;
@@ -49,10 +55,7 @@ import com.edufelip.meer.domain.repo.PasswordResetTokenRepository;
 import com.edufelip.meer.domain.repo.PushTokenRepository;
 import com.edufelip.meer.domain.repo.StoreFeedbackRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
-import com.edufelip.meer.domain.port.PhotoStoragePort;
-import com.edufelip.meer.domain.port.RateLimitPort;
 import com.edufelip.meer.logging.RequestResponseLoggingFilter;
-import com.edufelip.meer.config.FirebaseProperties;
 import com.edufelip.meer.security.DashboardAdminGuardFilter;
 import com.edufelip.meer.security.GoogleClientProperties;
 import com.edufelip.meer.security.JwtProperties;
@@ -71,11 +74,13 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
 @EnableCaching
+@EnableScheduling
 @EnableConfigurationProperties({
   SecurityProperties.class,
   JwtProperties.class,
@@ -152,16 +157,10 @@ public class AppConfig {
   @Bean
   public DeleteThriftStoreUseCase deleteThriftStoreUseCase(
       ThriftStoreRepository thriftStoreRepository,
-      AuthUserRepository authUserRepository,
-      StoreFeedbackRepository storeFeedbackRepository,
-      PhotoStoragePort photoStoragePort,
-      StoreOwnershipService storeOwnershipService) {
+      StoreOwnershipService storeOwnershipService,
+      StoreDeletionService storeDeletionService) {
     return new DeleteThriftStoreUseCase(
-        thriftStoreRepository,
-        authUserRepository,
-        storeFeedbackRepository,
-        photoStoragePort,
-        storeOwnershipService);
+        thriftStoreRepository, storeOwnershipService, storeDeletionService);
   }
 
   @Bean
@@ -189,6 +188,21 @@ public class AppConfig {
       CreateGuideContentUseCase createGuideContentUseCase) {
     return new CreateStoreGuideContentUseCase(
         thriftStoreRepository, storeOwnershipService, createGuideContentUseCase);
+  }
+
+  @Bean
+  public StoreDeletionService storeDeletionService(
+      ThriftStoreRepository thriftStoreRepository,
+      AuthUserRepository authUserRepository,
+      StoreFeedbackRepository storeFeedbackRepository,
+      GuideContentRepository guideContentRepository,
+      AssetDeletionQueuePort assetDeletionQueuePort) {
+    return new StoreDeletionService(
+        thriftStoreRepository,
+        authUserRepository,
+        storeFeedbackRepository,
+        guideContentRepository,
+        assetDeletionQueuePort);
   }
 
   @Bean
@@ -249,8 +263,10 @@ public class AppConfig {
   @Bean
   public UpdateGuideContentUseCase updateGuideContentUseCase(
       GuideContentRepository guideContentRepository,
-      StoreOwnershipService storeOwnershipService) {
-    return new UpdateGuideContentUseCase(guideContentRepository, storeOwnershipService);
+      StoreOwnershipService storeOwnershipService,
+      PhotoStoragePort photoStoragePort) {
+    return new UpdateGuideContentUseCase(
+        guideContentRepository, storeOwnershipService, photoStoragePort);
   }
 
   @Bean
@@ -292,6 +308,21 @@ public class AppConfig {
   public UpdateGuideContentCommentUseCase updateGuideContentCommentUseCase(
       GuideContentCommentRepository repo, Clock clock) {
     return new UpdateGuideContentCommentUseCase(repo, clock);
+  }
+
+  @Bean
+  public DeleteUserUseCase deleteUserUseCase(
+      AuthUserRepository authUserRepository,
+      ThriftStoreRepository thriftStoreRepository,
+      StoreFeedbackRepository storeFeedbackRepository,
+      StoreDeletionService storeDeletionService,
+      AssetDeletionQueuePort assetDeletionQueuePort) {
+    return new DeleteUserUseCase(
+        authUserRepository,
+        thriftStoreRepository,
+        storeFeedbackRepository,
+        storeDeletionService,
+        assetDeletionQueuePort);
   }
 
   @Bean

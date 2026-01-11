@@ -1,23 +1,30 @@
 package com.edufelip.meer.domain;
 
 import com.edufelip.meer.core.auth.AuthUser;
+import com.edufelip.meer.domain.port.PhotoStoragePort;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
 import com.edufelip.meer.util.UrlValidatorUtil;
+import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 public class UpdateGuideContentUseCase {
   private static final String DEFAULT_CATEGORY = "general";
   private static final String DEFAULT_TYPE = "article";
+  private static final Set<String> SUPPORTED_CONTENT_TYPES =
+      Set.of("image/jpeg", "image/png", "image/webp");
 
   private final GuideContentRepository guideContentRepository;
   private final StoreOwnershipService storeOwnershipService;
+  private final PhotoStoragePort photoStoragePort;
 
   public UpdateGuideContentUseCase(
       GuideContentRepository guideContentRepository,
-      StoreOwnershipService storeOwnershipService) {
+      StoreOwnershipService storeOwnershipService,
+      PhotoStoragePort photoStoragePort) {
     this.guideContentRepository = guideContentRepository;
     this.storeOwnershipService = storeOwnershipService;
+    this.photoStoragePort = photoStoragePort;
   }
 
   public com.edufelip.meer.core.content.GuideContent execute(
@@ -56,7 +63,25 @@ public class UpdateGuideContentUseCase {
       } catch (IllegalArgumentException ex) {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
       }
-      content.setImageUrl(command.imageUrl());
+      String fileKey = photoStoragePort.extractFileKey(command.imageUrl());
+      if (fileKey == null) {
+        throw new ResponseStatusException(
+            HttpStatus.BAD_REQUEST, "imageUrl must belong to the configured storage bucket");
+      }
+      if (content.getThriftStore() != null && content.getThriftStore().getId() != null) {
+        String expectedPrefix = "stores/" + content.getThriftStore().getId();
+        if (!fileKey.startsWith(expectedPrefix)) {
+          throw new ResponseStatusException(
+              HttpStatus.BAD_REQUEST, "imageUrl must belong to this store");
+        }
+      }
+      var stored = photoStoragePort.fetchRequired(fileKey);
+      String ctype = stored != null ? stored.contentType() : null;
+      if (ctype == null || !SUPPORTED_CONTENT_TYPES.contains(ctype.toLowerCase())) {
+        throw new ResponseStatusException(
+            HttpStatus.BAD_REQUEST, "imageUrl must be jpeg, png or webp");
+      }
+      content.setImageUrl(photoStoragePort.publicUrl(fileKey));
     }
     if (content.getCategoryLabel() == null) {
       content.setCategoryLabel(DEFAULT_CATEGORY);

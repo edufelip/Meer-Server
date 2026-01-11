@@ -15,5 +15,7 @@ public interface PhotoStoragePort {
 
   String publicUrl(String fileKey);
 
+  String extractFileKey(String url);
+
   void deleteByUrl(String url);
 }

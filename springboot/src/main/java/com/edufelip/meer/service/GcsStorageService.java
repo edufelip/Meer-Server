@@ -121,6 +121,7 @@ public class GcsStorageService implements PhotoStoragePort {
    * Extract the object key from a GCS URL (signed or public). Returns null when it does not point
    * to our bucket.
    */
+  @Override
   public String extractFileKey(String url) {
     return deriveKey(url);
   }
