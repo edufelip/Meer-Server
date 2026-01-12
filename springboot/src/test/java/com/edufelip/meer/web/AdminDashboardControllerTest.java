@@ -20,6 +20,7 @@ import com.edufelip.meer.domain.auth.DeleteUserUseCase;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.GuideContentCommentRepository;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
+import com.edufelip.meer.domain.repo.PushTokenRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
 import com.edufelip.meer.security.token.TokenProvider;
 import com.edufelip.meer.service.GuideContentEngagementService;
@@ -54,6 +55,7 @@ class AdminDashboardControllerTest {
   @MockitoBean private ThriftStoreRepository thriftStoreRepository;
   @MockitoBean private GuideContentRepository guideContentRepository;
   @MockitoBean private GuideContentCommentRepository guideContentCommentRepository;
+  @MockitoBean private PushTokenRepository pushTokenRepository;
   @MockitoBean private DeleteUserUseCase deleteUserUseCase;
   @MockitoBean private GuideContentEngagementService guideContentEngagementService;
   @MockitoBean private GuideContentModerationService guideContentModerationService;

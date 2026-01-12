@@ -7,6 +7,8 @@ import com.edufelip.meer.domain.port.PushNotificationPort;
 import com.edufelip.meer.domain.repo.PushTokenRepository;
 import com.google.firebase.messaging.AndroidConfig;
 import com.google.firebase.messaging.AndroidNotification;
+import com.google.firebase.messaging.ApnsConfig;
+import com.google.firebase.messaging.Aps;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
@@ -47,6 +49,10 @@ public class PushNotificationService implements PushNotificationPort {
                     .setNotification(
                         AndroidNotification.builder().setChannelId(ANDROID_CHANNEL_ID).build())
                     .build())
+            .setApnsConfig(
+                ApnsConfig.builder()
+                    .setAps(Aps.builder().setSound("default").build())
+                    .build())
             .putData("type", type)
             .putData("id", id)
             .build();
@@ -68,6 +74,10 @@ public class PushNotificationService implements PushNotificationPort {
                 AndroidConfig.builder()
                     .setNotification(
                         AndroidNotification.builder().setChannelId(ANDROID_CHANNEL_ID).build())
+                    .build())
+            .setApnsConfig(
+                ApnsConfig.builder()
+                    .setAps(Aps.builder().setSound("default").build())
                     .build());
     if (data != null) {
       for (Map.Entry<String, String> entry : data.entrySet()) {
@@ -111,6 +121,10 @@ public class PushNotificationService implements PushNotificationPort {
                 AndroidConfig.builder()
                     .setNotification(
                         AndroidNotification.builder().setChannelId(ANDROID_CHANNEL_ID).build())
+                    .build())
+            .setApnsConfig(
+                ApnsConfig.builder()
+                    .setAps(Aps.builder().setSound("default").build())
                     .build());
     if (data != null) {
       for (Map.Entry<String, String> entry : data.entrySet()) {

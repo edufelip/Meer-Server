@@ -2,10 +2,12 @@ package com.edufelip.meer.web;
 
 import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.core.auth.Role;
+import com.edufelip.meer.core.push.PushToken;
 import com.edufelip.meer.domain.auth.DeleteUserUseCase;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.GuideContentCommentRepository;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
+import com.edufelip.meer.domain.repo.PushTokenRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
 import com.edufelip.meer.dto.*;
 import com.edufelip.meer.mapper.Mappers;
@@ -15,8 +17,11 @@ import com.edufelip.meer.service.GuideContentModerationService;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -35,6 +40,7 @@ public class AdminDashboardController {
   private final ThriftStoreRepository thriftStoreRepository;
   private final GuideContentRepository guideContentRepository;
   private final GuideContentCommentRepository guideContentCommentRepository;
+  private final PushTokenRepository pushTokenRepository;
   private final DeleteUserUseCase deleteUserUseCase;
   private final GuideContentEngagementService guideContentEngagementService;
   private final GuideContentModerationService guideContentModerationService;
@@ -45,6 +51,7 @@ public class AdminDashboardController {
       ThriftStoreRepository thriftStoreRepository,
       GuideContentRepository guideContentRepository,
       GuideContentCommentRepository guideContentCommentRepository,
+      PushTokenRepository pushTokenRepository,
       DeleteUserUseCase deleteUserUseCase,
       GuideContentEngagementService guideContentEngagementService,
       GuideContentModerationService guideContentModerationService) {
@@ -53,6 +60,7 @@ public class AdminDashboardController {
     this.thriftStoreRepository = thriftStoreRepository;
     this.guideContentRepository = guideContentRepository;
     this.guideContentCommentRepository = guideContentCommentRepository;
+    this.pushTokenRepository = pushTokenRepository;
     this.deleteUserUseCase = deleteUserUseCase;
     this.guideContentEngagementService = guideContentEngagementService;
     this.guideContentModerationService = guideContentModerationService;
@@ -261,17 +269,40 @@ public class AdminDashboardController {
             ? authUserRepository.findByEmailContainingIgnoreCaseOrDisplayNameContainingIgnoreCase(
                 q, q, pageable)
             : authUserRepository.findAll(pageable);
+
+    List<UUID> userIds = pageRes.getContent().stream().map(AuthUser::getId).toList();
+    Map<UUID, List<PushToken>> tokensByUser =
+        userIds.isEmpty()
+            ? Map.of()
+            : pushTokenRepository.findByUserIdIn(userIds).stream()
+                .collect(Collectors.groupingBy(PushToken::getUserId));
+
     List<AdminUserDto> items =
         pageRes.getContent().stream()
             .map(
-                u ->
-                    new AdminUserDto(
-                        u.getId().toString(),
-                        u.getDisplayName(),
-                        u.getEmail(),
-                        (u.getRole() != null ? u.getRole() : Role.USER).name(),
-                        u.getCreatedAt(),
-                        u.getPhotoUrl()))
+                u -> {
+                  List<PushTokenDto> tokens =
+                      tokensByUser.getOrDefault(u.getId(), List.of()).stream()
+                          .map(
+                              t ->
+                                  new PushTokenDto(
+                                      t.getId().toString(),
+                                      t.getDeviceId(),
+                                      t.getPlatform() != null ? t.getPlatform().name() : null,
+                                      t.getEnvironment() != null ? t.getEnvironment().name() : null,
+                                      t.getAppVersion(),
+                                      t.getLastSeenAt(),
+                                      t.getCreatedAt()))
+                          .toList();
+                  return new AdminUserDto(
+                      u.getId().toString(),
+                      u.getDisplayName(),
+                      u.getEmail(),
+                      (u.getRole() != null ? u.getRole() : Role.USER).name(),
+                      u.getCreatedAt(),
+                      u.getPhotoUrl(),
+                      tokens);
+                })
             .toList();
     return new PageResponse<>(items, page, pageRes.hasNext());
   }
