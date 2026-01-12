@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 @Testcontainers(disabledWithoutDocker = true)
 @Tag("slow")
@@ -18,7 +19,9 @@ class FlywayMigrationTest {
 
   @Container
   static final PostgreSQLContainer<?> postgres =
-      new PostgreSQLContainer<>("postgis/postgis:15-3.4-alpine");
+      new PostgreSQLContainer<>(
+          DockerImageName.parse("postgis/postgis:15-3.4-alpine")
+              .asCompatibleSubstituteFor("postgres"));
 
   @Test
   void migrationsApplyCleanly() {
