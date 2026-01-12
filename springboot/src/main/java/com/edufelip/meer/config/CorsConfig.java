@@ -11,19 +11,19 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class CorsConfig implements WebMvcConfigurer {
 
-  private final List<String> allowedOrigins;
+  private final List<String> allowedOriginPatterns;
   private final boolean allowCredentials;
 
   public CorsConfig(@Value("${meer.cors.allowed-origins:}") String originsProp) {
     if (StringUtils.hasText(originsProp)) {
-      this.allowedOrigins =
+      this.allowedOriginPatterns =
           Arrays.stream(originsProp.split(","))
               .map(String::trim)
               .filter(s -> !s.isEmpty())
               .toList();
       this.allowCredentials = true; // only set when explicit origins are provided
     } else {
-      this.allowedOrigins = List.of("*");
+      this.allowedOriginPatterns = List.of("*");
       this.allowCredentials = false;
     }
   }
@@ -32,7 +32,9 @@ public class CorsConfig implements WebMvcConfigurer {
   public void addCorsMappings(CorsRegistry registry) {
     registry
         .addMapping("/**")
-        .allowedOrigins(allowedOrigins.toArray(String[]::new))
+        // We use origin patterns so dev/staging can safely allow wildcard subdomains
+        // (e.g. https://*.guiabrecho.com.br) via MEER_CORS_ALLOWED_ORIGINS.
+        .allowedOriginPatterns(allowedOriginPatterns.toArray(String[]::new))
         .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
         // Allow all headers to avoid preflight failures from browser client-hints (sec-ch-ua, etc.)
         .allowedHeaders("*")

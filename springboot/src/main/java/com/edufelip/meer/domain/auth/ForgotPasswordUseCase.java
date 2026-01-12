@@ -1,6 +1,5 @@
 package com.edufelip.meer.domain.auth;
 
-import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.security.PasswordResetProperties;
 import com.edufelip.meer.service.PasswordResetTokenService;
@@ -27,14 +26,20 @@ public class ForgotPasswordUseCase {
     if (email == null || email.isBlank()) {
       return;
     }
-    var user = authUserRepository.findByEmail(email);
+
+    String normalizedEmail = email.trim();
+    if (normalizedEmail.isEmpty()) {
+      return;
+    }
+
+    var user = authUserRepository.findByEmail(normalizedEmail);
     if (user == null) {
       return; // avoid enumeration
     }
 
     UUID token = UUID.randomUUID();
     long ttlMinutes = passwordResetProperties.getTtlMinutes();
-    
+
     // Step 1: Commit to DB (atomic transaction)
     passwordResetTokenService.createNewToken(user, token, ttlMinutes);
 
