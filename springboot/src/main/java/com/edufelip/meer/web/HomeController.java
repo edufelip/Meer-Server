@@ -68,12 +68,7 @@ public class HomeController {
                           ? summary.reviewCount().intValue()
                           : null;
                   return new NearbyStoreDto(
-                      s,
-                      lat,
-                      lng,
-                      Mappers.isFavorite(user, s.getId()),
-                      rating,
-                      reviewCount);
+                      s, lat, lng, Mappers.isFavorite(user, s.getId()), rating, reviewCount);
                 })
             .toList();
 
@@ -96,5 +91,4 @@ public class HomeController {
 
     return new HomeResponse(featuredDtos, nearbyDtos, contentDtos);
   }
-
 }

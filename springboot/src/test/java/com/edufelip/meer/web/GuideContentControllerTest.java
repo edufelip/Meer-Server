@@ -23,13 +23,13 @@ import com.edufelip.meer.domain.GetGuideContentUseCase;
 import com.edufelip.meer.domain.LikeGuideContentUseCase;
 import com.edufelip.meer.domain.RequestGuideContentImageUploadUseCase;
 import com.edufelip.meer.domain.UnlikeGuideContentUseCase;
-import com.edufelip.meer.domain.UpdateGuideContentUseCase;
 import com.edufelip.meer.domain.UpdateGuideContentCommentUseCase;
+import com.edufelip.meer.domain.UpdateGuideContentUseCase;
+import com.edufelip.meer.domain.port.PhotoStoragePort;
+import com.edufelip.meer.domain.port.RateLimitPort;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.GuideContentCommentRepository;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
-import com.edufelip.meer.domain.port.PhotoStoragePort;
-import com.edufelip.meer.domain.port.RateLimitPort;
 import com.edufelip.meer.security.AuthUserResolver;
 import com.edufelip.meer.security.token.TokenPayload;
 import com.edufelip.meer.security.token.TokenProvider;
@@ -87,11 +87,10 @@ class GuideContentControllerTest {
     when(tokenProvider.parseAccessToken("token"))
         .thenReturn(new TokenPayload(userId, "user@example.com", "User", Role.USER));
     when(authUserRepository.findById(userId)).thenReturn(Optional.of(user));
-    when(
-            requestGuideContentImageUploadUseCase.execute(
-                org.mockito.ArgumentMatchers.eq(user),
-                org.mockito.ArgumentMatchers.eq(10),
-                org.mockito.ArgumentMatchers.eq("image/gif")))
+    when(requestGuideContentImageUploadUseCase.execute(
+            org.mockito.ArgumentMatchers.eq(user),
+            org.mockito.ArgumentMatchers.eq(10),
+            org.mockito.ArgumentMatchers.eq("image/gif")))
         .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported content type"));
 
     mockMvc
@@ -102,8 +101,7 @@ class GuideContentControllerTest {
                 .content("{\"contentType\":\"image/gif\"}"))
         .andExpect(status().isBadRequest());
 
-    verify(requestGuideContentImageUploadUseCase)
-        .execute(user, 10, "image/gif");
+    verify(requestGuideContentImageUploadUseCase).execute(user, 10, "image/gif");
   }
 
   @Test
@@ -124,11 +122,10 @@ class GuideContentControllerTest {
     PhotoStoragePort.UploadSlot slot =
         new PhotoStoragePort.UploadSlot(
             "https://uploads.example.com/slot", "stores/file-key", "image/jpeg");
-    when(
-            requestGuideContentImageUploadUseCase.execute(
-                org.mockito.ArgumentMatchers.eq(user),
-                org.mockito.ArgumentMatchers.eq(10),
-                org.mockito.ArgumentMatchers.eq("image/jpeg")))
+    when(requestGuideContentImageUploadUseCase.execute(
+            org.mockito.ArgumentMatchers.eq(user),
+            org.mockito.ArgumentMatchers.eq(10),
+            org.mockito.ArgumentMatchers.eq("image/jpeg")))
         .thenReturn(slot);
 
     mockMvc
@@ -142,8 +139,7 @@ class GuideContentControllerTest {
         .andExpect(jsonPath("$.fileKey").value("stores/file-key"))
         .andExpect(jsonPath("$.contentType").value("image/jpeg"));
 
-    verify(requestGuideContentImageUploadUseCase)
-        .execute(user, 10, "image/jpeg");
+    verify(requestGuideContentImageUploadUseCase).execute(user, 10, "image/jpeg");
   }
 
   @Test

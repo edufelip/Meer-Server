@@ -1,6 +1,5 @@
 package com.edufelip.meer.web;
 
-import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
 import com.edufelip.meer.dto.FeedbackRequest;
 import com.edufelip.meer.dto.FeedbackResponse;
@@ -75,5 +74,4 @@ public class StoreFeedbackController {
     storeFeedbackService.delete(user.getId(), storeId);
     return ResponseEntity.noContent().build();
   }
-
 }

@@ -35,8 +35,7 @@ class GetStoreListingsUseCaseTest {
     store.setLatitude(10.0);
     store.setLongitude(10.0);
 
-    when(getThriftStoresUseCase.executePaged(1, 20))
-        .thenReturn(new PageImpl<>(List.of(store)));
+    when(getThriftStoresUseCase.executePaged(1, 20)).thenReturn(new PageImpl<>(List.of(store)));
     when(storeFeedbackService.getSummaries(List.of(storeId)))
         .thenReturn(Map.of(storeId, new StoreFeedbackService.Summary(4.5, 2L)));
 
@@ -45,7 +44,10 @@ class GetStoreListingsUseCaseTest {
 
     GetStoreListingsUseCase useCase =
         new GetStoreListingsUseCase(
-            getThriftStoresUseCase, thriftStoreRepository, storeFeedbackService, categoryRepository);
+            getThriftStoresUseCase,
+            thriftStoreRepository,
+            storeFeedbackService,
+            categoryRepository);
 
     var result =
         useCase.execute(
@@ -73,8 +75,7 @@ class GetStoreListingsUseCaseTest {
     assertThatThrownBy(
             () ->
                 useCase.execute(
-                    new GetStoreListingsUseCase.ListingQuery(
-                        null, null, null, null, null, 0, 10),
+                    new GetStoreListingsUseCase.ListingQuery(null, null, null, null, null, 0, 10),
                     null))
         .isInstanceOf(ResponseStatusException.class)
         .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())

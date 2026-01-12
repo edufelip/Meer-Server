@@ -118,5 +118,4 @@ public class GuideContentComment {
   public void setEditedBy(AuthUser editedBy) {
     this.editedBy = editedBy;
   }
-
 }

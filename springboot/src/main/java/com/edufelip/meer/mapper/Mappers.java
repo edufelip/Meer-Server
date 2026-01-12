@@ -16,12 +16,12 @@ import com.edufelip.meer.dto.DashboardCommentDto;
 import com.edufelip.meer.dto.GuideContentCommentDto;
 import com.edufelip.meer.dto.GuideContentDto;
 import com.edufelip.meer.dto.PhotoRegisterRequest;
-import com.edufelip.meer.dto.PhotoUploadSlot;
 import com.edufelip.meer.dto.PhotoUploadResponse;
+import com.edufelip.meer.dto.PhotoUploadSlot;
 import com.edufelip.meer.dto.ProfileDto;
+import com.edufelip.meer.dto.StoreImageDto;
 import com.edufelip.meer.dto.StoreRatingDto;
 import com.edufelip.meer.dto.StoreRequest;
-import com.edufelip.meer.dto.StoreImageDto;
 import com.edufelip.meer.dto.ThriftStoreDto;
 import java.util.List;
 import java.util.UUID;
@@ -323,8 +323,7 @@ public class Mappers {
     return new ReplaceStorePhotosUseCase.Command(items, request.getDeletePhotoIds());
   }
 
-  public static PhotoUploadResponse toPhotoUploadResponse(
-      List<PhotoStoragePort.UploadSlot> slots) {
+  public static PhotoUploadResponse toPhotoUploadResponse(List<PhotoStoragePort.UploadSlot> slots) {
     List<PhotoUploadSlot> uploads =
         slots != null
             ? slots.stream()
@@ -340,5 +339,4 @@ public class Mappers {
     if (user == null || storeId == null || user.getFavorites() == null) return false;
     return user.getFavorites().stream().anyMatch(f -> storeId.equals(f.getId()));
   }
-
 }

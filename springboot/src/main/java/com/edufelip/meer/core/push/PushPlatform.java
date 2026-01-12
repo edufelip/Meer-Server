@@ -12,9 +12,7 @@ public enum PushPlatform {
     return switch (normalized) {
       case "ANDROID" -> ANDROID;
       case "IOS" -> IOS;
-      default ->
-          throw new IllegalArgumentException(
-              "platform must be one of: ANDROID, IOS");
+      default -> throw new IllegalArgumentException("platform must be one of: ANDROID, IOS");
     };
   }
 }

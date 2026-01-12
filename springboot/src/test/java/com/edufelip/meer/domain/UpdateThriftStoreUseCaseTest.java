@@ -65,8 +65,7 @@ class UpdateThriftStoreUseCaseTest {
     when(repo.findById(storeId)).thenReturn(Optional.of(store));
 
     UpdateThriftStoreUseCase.SocialUpdate socialUpdate =
-        new UpdateThriftStoreUseCase.SocialUpdate(
-            null, false, null, true, null, true, null, false);
+        new UpdateThriftStoreUseCase.SocialUpdate(null, false, null, true, null, true, null, false);
     UpdateThriftStoreUseCase.Command command =
         new UpdateThriftStoreUseCase.Command(
             null, null, null, null, null, null, null, null, null, null, null, socialUpdate);

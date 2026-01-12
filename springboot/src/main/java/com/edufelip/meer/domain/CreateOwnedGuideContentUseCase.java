@@ -41,7 +41,8 @@ public class CreateOwnedGuideContentUseCase {
     var thriftStore =
         thriftStoreRepository
             .findById(command.storeId())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
+            .orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
     try {
       storeOwnershipService.ensureOwnerOrAdminStrict(user, thriftStore);
     } catch (ResponseStatusException ex) {

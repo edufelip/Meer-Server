@@ -57,8 +57,7 @@ class PushNotificationServiceTest {
     when(firebaseMessaging.send(any(Message.class))).thenThrow(ex);
 
     boolean result =
-        service.sendToStoredToken(
-            token, "Title", "Body", Map.of("type", "store", "id", "abc"));
+        service.sendToStoredToken(token, "Title", "Body", Map.of("type", "store", "id", "abc"));
 
     assertThat(result).isFalse();
     verify(repository).deleteById(tokenId);
@@ -80,8 +79,7 @@ class PushNotificationServiceTest {
     when(firebaseMessaging.send(any(Message.class))).thenThrow(ex);
 
     boolean result =
-        service.sendToStoredToken(
-            token, "Title", "Body", Map.of("type", "store", "id", "xyz"));
+        service.sendToStoredToken(token, "Title", "Body", Map.of("type", "store", "id", "xyz"));
 
     assertThat(result).isFalse();
     verify(repository, never()).deleteById(any());

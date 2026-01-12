@@ -76,9 +76,7 @@ public class UpdateThriftStoreUseCase {
     if (command.social() != null) {
       try {
         StoreSocialValidator.validate(
-            command.social().facebook(),
-            command.social().instagram(),
-            command.social().website());
+            command.social().facebook(), command.social().instagram(), command.social().website());
       } catch (IllegalArgumentException ex) {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
       }

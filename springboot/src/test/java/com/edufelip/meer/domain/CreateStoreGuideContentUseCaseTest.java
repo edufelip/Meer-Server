@@ -41,11 +41,9 @@ class CreateStoreGuideContentUseCaseTest {
     user.setId(UUID.randomUUID());
     store.setOwner(user);
 
-    GuideContent input =
-        new GuideContent(1, "Title", "Desc", "cat", "type", "url", null);
+    GuideContent input = new GuideContent(1, "Title", "Desc", "cat", "type", "url", null);
 
-    GuideContent saved =
-        new GuideContent(1, "Title", "Desc", "cat", "type", "url", store);
+    GuideContent saved = new GuideContent(1, "Title", "Desc", "cat", "type", "url", store);
     when(createGuideContentUseCase.execute(Mockito.any(GuideContent.class))).thenReturn(saved);
 
     GuideContent result = useCase.execute(user, storeId, input);
@@ -79,8 +77,7 @@ class CreateStoreGuideContentUseCaseTest {
     AuthUser user = new AuthUser();
     user.setId(UUID.randomUUID());
 
-    assertThatThrownBy(
-            () -> useCase.execute(user, storeId, new GuideContent()))
+    assertThatThrownBy(() -> useCase.execute(user, storeId, new GuideContent()))
         .isInstanceOf(ResponseStatusException.class)
         .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
         .isEqualTo(HttpStatus.FORBIDDEN);

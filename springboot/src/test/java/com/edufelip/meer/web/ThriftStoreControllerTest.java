@@ -23,8 +23,8 @@ import com.edufelip.meer.domain.GetStoreListingsUseCase;
 import com.edufelip.meer.domain.ReplaceStorePhotosUseCase;
 import com.edufelip.meer.domain.RequestStorePhotoUploadsUseCase;
 import com.edufelip.meer.domain.UpdateThriftStoreUseCase;
-import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.port.PhotoStoragePort;
+import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.security.AuthUserResolver;
 import com.edufelip.meer.security.token.TokenPayload;
 import com.edufelip.meer.security.token.TokenProvider;
@@ -154,7 +154,8 @@ class ThriftStoreControllerTest {
     when(tokenProvider.parseAccessToken("token"))
         .thenReturn(new TokenPayload(userId, "owner@example.com", "Owner", Role.USER));
     when(authUserRepository.findById(userId)).thenReturn(Optional.of(owner));
-    when(updateThriftStoreUseCase.execute(ArgumentMatchers.eq(owner), ArgumentMatchers.eq(storeId), ArgumentMatchers.any()))
+    when(updateThriftStoreUseCase.execute(
+            ArgumentMatchers.eq(owner), ArgumentMatchers.eq(storeId), ArgumentMatchers.any()))
         .thenReturn(updated);
 
     String body =
@@ -197,12 +198,11 @@ class ThriftStoreControllerTest {
     PhotoStoragePort.UploadSlot slot =
         new PhotoStoragePort.UploadSlot(
             "https://uploads.example.com/slot", "stores/file-key", "image/jpeg");
-    when(
-            requestStorePhotoUploadsUseCase.execute(
-                ArgumentMatchers.eq(owner),
-                ArgumentMatchers.eq(storeId),
-                ArgumentMatchers.eq(1),
-                ArgumentMatchers.eq(List.of("image/jpeg"))))
+    when(requestStorePhotoUploadsUseCase.execute(
+            ArgumentMatchers.eq(owner),
+            ArgumentMatchers.eq(storeId),
+            ArgumentMatchers.eq(1),
+            ArgumentMatchers.eq(List.of("image/jpeg"))))
         .thenReturn(List.of(slot));
 
     String body =
@@ -224,8 +224,7 @@ class ThriftStoreControllerTest {
         .andExpect(jsonPath("$.uploads[0].fileKey").value("stores/file-key"))
         .andExpect(jsonPath("$.uploads[0].contentType").value("image/jpeg"));
 
-    verify(requestStorePhotoUploadsUseCase)
-        .execute(owner, storeId, 1, List.of("image/jpeg"));
+    verify(requestStorePhotoUploadsUseCase).execute(owner, storeId, 1, List.of("image/jpeg"));
   }
 
   @Test
@@ -249,13 +248,11 @@ class ThriftStoreControllerTest {
     store.setName("Guide Store");
     store.setCoverImageUrl("cover");
 
-    GuideContent saved =
-        new GuideContent(1, "Title", "Desc", "cat", "type", "image", store);
-    when(
-            createStoreGuideContentUseCase.execute(
-                ArgumentMatchers.eq(owner),
-                ArgumentMatchers.eq(storeId),
-                ArgumentMatchers.any(GuideContent.class)))
+    GuideContent saved = new GuideContent(1, "Title", "Desc", "cat", "type", "image", store);
+    when(createStoreGuideContentUseCase.execute(
+            ArgumentMatchers.eq(owner),
+            ArgumentMatchers.eq(storeId),
+            ArgumentMatchers.any(GuideContent.class)))
         .thenReturn(saved);
 
     String body =

@@ -12,11 +12,7 @@ public class UpdateProfileUseCase {
   private final AuthUserRepository authUserRepository;
 
   public record Command(
-      String name,
-      String avatarUrl,
-      String bio,
-      Boolean notifyNewStores,
-      Boolean notifyPromos) {}
+      String name, String avatarUrl, String bio, Boolean notifyNewStores, Boolean notifyPromos) {}
 
   public UpdateProfileUseCase(TokenProvider tokenProvider, AuthUserRepository authUserRepository) {
     this.tokenProvider = tokenProvider;

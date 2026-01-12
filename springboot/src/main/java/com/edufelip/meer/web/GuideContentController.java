@@ -11,6 +11,7 @@ import com.edufelip.meer.domain.RequestGuideContentImageUploadUseCase;
 import com.edufelip.meer.domain.UnlikeGuideContentUseCase;
 import com.edufelip.meer.domain.UpdateGuideContentCommentUseCase;
 import com.edufelip.meer.domain.UpdateGuideContentUseCase;
+import com.edufelip.meer.domain.port.RateLimitPort;
 import com.edufelip.meer.domain.repo.GuideContentCommentRepository;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
 import com.edufelip.meer.dto.ContentCreateRequest;
@@ -21,7 +22,6 @@ import com.edufelip.meer.dto.GuideContentDto;
 import com.edufelip.meer.dto.PageResponse;
 import com.edufelip.meer.mapper.Mappers;
 import com.edufelip.meer.security.AuthUserResolver;
-import com.edufelip.meer.domain.port.RateLimitPort;
 import com.edufelip.meer.service.GuideContentEngagementService;
 import com.edufelip.meer.service.GuideContentModerationService;
 import jakarta.validation.Valid;
@@ -258,7 +258,8 @@ public class GuideContentController {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is required");
     }
     var command =
-        new CreateOwnedGuideContentUseCase.Command(body.title(), body.description(), body.storeId());
+        new CreateOwnedGuideContentUseCase.Command(
+            body.title(), body.description(), body.storeId());
     var saved = createOwnedGuideContentUseCase.execute(user, command);
     return Mappers.toDto(saved, 0L, 0L, false);
   }
@@ -352,5 +353,4 @@ public class GuideContentController {
     if (user.getRole() == com.edufelip.meer.core.auth.Role.ADMIN) return true;
     return comment.getUser() != null && user.getId().equals(comment.getUser().getId());
   }
-
 }

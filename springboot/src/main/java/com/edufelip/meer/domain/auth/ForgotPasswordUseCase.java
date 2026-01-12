@@ -4,6 +4,7 @@ import com.edufelip.meer.core.auth.PasswordResetToken;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.PasswordResetTokenRepository;
 import com.edufelip.meer.security.PasswordResetProperties;
+import jakarta.transaction.Transactional;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -29,6 +30,7 @@ public class ForgotPasswordUseCase {
     this.clock = clock;
   }
 
+  @Transactional
   public void execute(String email) {
     if (email == null || email.isBlank()) {
       return;

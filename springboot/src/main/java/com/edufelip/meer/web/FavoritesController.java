@@ -96,6 +96,4 @@ public class FavoritesController {
     String version = Integer.toHexString(ids.hashCode());
     return new FavoritesVersionDto(ids, version);
   }
-
- 
 }

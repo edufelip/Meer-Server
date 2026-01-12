@@ -142,5 +142,4 @@ public class AuthController {
   public ResponseEntity<Map<String, String>> handleInvalidToken(RuntimeException ex) {
     return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", ex.getMessage()));
   }
-
 }

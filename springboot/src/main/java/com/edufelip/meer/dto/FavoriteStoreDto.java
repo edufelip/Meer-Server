@@ -13,7 +13,8 @@ public record FavoriteStoreDto(
     Boolean isFavorite,
     Double distanceMeters) {
 
-  public FavoriteStoreDto(ThriftStore store, Double originLat, Double originLng, Boolean isFavorite) {
+  public FavoriteStoreDto(
+      ThriftStore store, Double originLat, Double originLng, Boolean isFavorite) {
     this(
         store.getId(),
         store.getName(),

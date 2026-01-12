@@ -45,7 +45,8 @@ public class UpsertPushTokenUseCase {
 
     String trimmedDeviceId = deviceId.trim();
     String trimmedToken = fcmToken.trim();
-    String normalizedAppVersion = appVersion != null && !appVersion.isBlank() ? appVersion.trim() : null;
+    String normalizedAppVersion =
+        appVersion != null && !appVersion.isBlank() ? appVersion.trim() : null;
 
     Instant now = Instant.now(clock);
     PushToken token =
@@ -65,10 +66,7 @@ public class UpsertPushTokenUseCase {
       token.setFcmToken(trimmedToken);
       token.setLastTokenRefreshAt(now);
       log.info(
-          "FCM token refreshed for user {} device {} env {}",
-          userId,
-          trimmedDeviceId,
-          environment);
+          "FCM token refreshed for user {} device {} env {}", userId, trimmedDeviceId, environment);
     } else if (token.getLastTokenRefreshAt() == null) {
       token.setLastTokenRefreshAt(now);
     }

@@ -50,8 +50,7 @@ class GetStoreDetailsUseCaseTest {
     var contentItem =
         new GetStoreContentsUseCase.ContentItem(
             content, new GuideContentEngagementService.EngagementSummary(1L, 2L, true));
-    when(getStoreContentsUseCase.execute(storeId, user.getId()))
-        .thenReturn(List.of(contentItem));
+    when(getStoreContentsUseCase.execute(storeId, user.getId())).thenReturn(List.of(contentItem));
 
     GetStoreDetailsUseCase useCase =
         new GetStoreDetailsUseCase(

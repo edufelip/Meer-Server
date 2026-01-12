@@ -36,11 +36,7 @@ class DashboardPushControllerTest {
   void sendTestPushReturnsMessageId() throws Exception {
     AuthUser admin = adminUser();
     when(pushNotificationService.sendTestPush(
-            eq("token-1"),
-            eq("Hello"),
-            eq("Body"),
-            eq("guide_content"),
-            eq("123")))
+            eq("token-1"), eq("Hello"), eq("Body"), eq("guide_content"), eq("123")))
         .thenReturn("msg-1");
 
     mockMvc
@@ -89,11 +85,7 @@ class DashboardPushControllerTest {
     AuthUser admin = adminUser();
     PushNotificationException ex = new PushNotificationException("fail");
     when(pushNotificationService.sendTestPush(
-            eq("token-1"),
-            eq("Hello"),
-            eq("Body"),
-            eq("guide_content"),
-            eq("123")))
+            eq("token-1"), eq("Hello"), eq("Body"), eq("guide_content"), eq("123")))
         .thenThrow(ex);
 
     mockMvc

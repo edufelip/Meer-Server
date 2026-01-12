@@ -12,10 +12,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.edufelip.meer.config.TestClockConfig;
 import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.core.auth.Role;
+import com.edufelip.meer.domain.StoreRatingView;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.StoreFeedbackRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
-import com.edufelip.meer.domain.StoreRatingView;
 import com.edufelip.meer.security.AuthUserResolver;
 import com.edufelip.meer.security.token.InvalidTokenException;
 import com.edufelip.meer.security.token.TokenPayload;

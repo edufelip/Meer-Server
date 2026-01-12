@@ -72,5 +72,4 @@ public class StoreSearchController {
 
     return new PageResponse<>(items, page, result.hasNext());
   }
-
 }

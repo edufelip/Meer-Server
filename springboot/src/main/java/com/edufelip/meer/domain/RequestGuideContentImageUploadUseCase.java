@@ -26,8 +26,7 @@ public class RequestGuideContentImageUploadUseCase {
     this.photoStoragePort = photoStoragePort;
   }
 
-  public PhotoStoragePort.UploadSlot execute(
-      AuthUser user, Integer contentId, String contentType) {
+  public PhotoStoragePort.UploadSlot execute(AuthUser user, Integer contentId, String contentType) {
     GuideContent content =
         guideContentRepository
             .findByIdAndDeletedAtIsNull(contentId)

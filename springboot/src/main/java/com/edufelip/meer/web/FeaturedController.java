@@ -29,9 +29,6 @@ public class FeaturedController {
     authUserResolver.optionalPayload(authHeader); // validate token if provided
     var stores = getThriftStoresUseCase.executeRecentTop10();
 
-    return stores.stream()
-        .map(FeaturedStoreDto::new)
-        .toList();
+    return stores.stream().map(FeaturedStoreDto::new).toList();
   }
-
 }

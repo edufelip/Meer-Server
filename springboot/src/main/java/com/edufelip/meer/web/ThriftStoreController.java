@@ -50,6 +50,7 @@ public class ThriftStoreController {
   private final ReplaceStorePhotosUseCase replaceStorePhotosUseCase;
   private final CreateStoreGuideContentUseCase createStoreGuideContentUseCase;
   private final AuthUserResolver authUserResolver;
+
   public ThriftStoreController(
       GetStoreListingsUseCase getStoreListingsUseCase,
       GetStoreDetailsUseCase getStoreDetailsUseCase,
@@ -166,8 +167,7 @@ public class ThriftStoreController {
       @RequestBody PhotoRegisterRequest request) {
     var user = authUserResolver.requireUser(authHeader);
     var refreshed =
-        replaceStorePhotosUseCase.execute(
-            user, storeId, Mappers.toReplacePhotosCommand(request));
+        replaceStorePhotosUseCase.execute(user, storeId, Mappers.toReplacePhotosCommand(request));
     return Mappers.toDtoForUser(refreshed, user, true);
   }
 

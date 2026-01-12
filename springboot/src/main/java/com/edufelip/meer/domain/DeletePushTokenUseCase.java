@@ -22,6 +22,7 @@ public class DeletePushTokenUseCase {
     if (environment == null) {
       return pushTokenRepository.deleteByUserAndDevice(userId, trimmedDeviceId);
     }
-    return pushTokenRepository.deleteByUserDeviceAndEnvironment(userId, trimmedDeviceId, environment);
+    return pushTokenRepository.deleteByUserDeviceAndEnvironment(
+        userId, trimmedDeviceId, environment);
   }
 }

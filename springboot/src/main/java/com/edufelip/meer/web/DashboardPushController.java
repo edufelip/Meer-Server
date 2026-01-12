@@ -9,9 +9,9 @@ import com.edufelip.meer.dto.PushBroadcastRequest;
 import com.edufelip.meer.dto.PushTestRequest;
 import com.edufelip.meer.dto.PushUserNotificationRequest;
 import com.edufelip.meer.security.AdminContext;
-import java.util.UUID;
 import jakarta.validation.Valid;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -35,13 +35,13 @@ public class DashboardPushController {
 
   @PostMapping
   public ResponseEntity<Map<String, String>> sendTestPush(
-      @RequestHeader("Authorization") String authHeader,
-      @RequestBody @Valid PushTestRequest body) {
+      @RequestHeader("Authorization") String authHeader, @RequestBody @Valid PushTestRequest body) {
     requireAdmin(authHeader);
     String type = normalizeType(body.type());
     try {
       String messageId =
-          pushNotificationService.sendTestPush(body.token(), body.title(), body.body(), type, body.id());
+          pushNotificationService.sendTestPush(
+              body.token(), body.title(), body.body(), type, body.id());
       return ResponseEntity.ok(Map.of("messageId", messageId));
     } catch (PushNotificationException ex) {
       throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Push send failed");
@@ -77,11 +77,7 @@ public class DashboardPushController {
     String type = normalizeType(body.type());
     int sent =
         pushNotificationService.sendToUser(
-            userId,
-            environment,
-            body.title(),
-            body.body(),
-            Map.of("type", type, "id", body.id()));
+            userId, environment, body.title(), body.body(), Map.of("type", type, "id", body.id()));
     return ResponseEntity.ok(Map.of("sent", sent));
   }
 

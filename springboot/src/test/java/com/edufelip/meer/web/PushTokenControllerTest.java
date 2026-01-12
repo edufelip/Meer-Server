@@ -7,12 +7,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.edufelip.meer.config.TestClockConfig;
+import com.edufelip.meer.core.auth.Role;
 import com.edufelip.meer.core.push.PushEnvironment;
 import com.edufelip.meer.core.push.PushPlatform;
-import com.edufelip.meer.core.auth.Role;
 import com.edufelip.meer.domain.DeletePushTokenUseCase;
 import com.edufelip.meer.domain.UpsertPushTokenUseCase;
-import com.edufelip.meer.config.TestClockConfig;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.security.AuthUserResolver;
 import com.edufelip.meer.security.token.TokenPayload;
@@ -98,7 +98,6 @@ class PushTokenControllerTest {
                 .header("Authorization", "Bearer token"))
         .andExpect(status().isNoContent());
 
-    verify(deletePushTokenUseCase)
-        .execute(eq(userId), eq("device-1"), eq(PushEnvironment.PROD));
+    verify(deletePushTokenUseCase).execute(eq(userId), eq("device-1"), eq(PushEnvironment.PROD));
   }
 }

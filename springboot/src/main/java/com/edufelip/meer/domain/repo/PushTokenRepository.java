@@ -29,6 +29,5 @@ public interface PushTokenRepository extends JpaRepository<PushToken, UUID> {
   @Modifying
   @Transactional
   @Query("delete from PushToken t where t.userId = :userId and t.deviceId = :deviceId")
-  int deleteByUserAndDevice(
-      @Param("userId") UUID userId, @Param("deviceId") String deviceId);
+  int deleteByUserAndDevice(@Param("userId") UUID userId, @Param("deviceId") String deviceId);
 }

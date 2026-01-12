@@ -25,18 +25,12 @@ class UpsertPushTokenUseCaseTest {
     Clock clock = Clock.fixed(Instant.parse("2025-01-01T00:00:00Z"), ZoneOffset.UTC);
     UUID userId = UUID.randomUUID();
 
-    when(repo.findByUserIdAndDeviceIdAndEnvironment(
-            userId, "device-1", PushEnvironment.DEV))
+    when(repo.findByUserIdAndDeviceIdAndEnvironment(userId, "device-1", PushEnvironment.DEV))
         .thenReturn(Optional.empty());
 
     UpsertPushTokenUseCase useCase = new UpsertPushTokenUseCase(repo, clock);
     useCase.execute(
-        userId,
-        "device-1",
-        "token-1",
-        PushPlatform.ANDROID,
-        "1.0.0",
-        PushEnvironment.DEV);
+        userId, "device-1", "token-1", PushPlatform.ANDROID, "1.0.0", PushEnvironment.DEV);
 
     ArgumentCaptor<PushToken> captor = ArgumentCaptor.forClass(PushToken.class);
     verify(repo).save(captor.capture());
@@ -65,22 +59,14 @@ class UpsertPushTokenUseCaseTest {
     existing.setFcmToken("old-token");
     existing.setLastTokenRefreshAt(Instant.parse("2024-01-01T00:00:00Z"));
 
-    when(repo.findByUserIdAndDeviceIdAndEnvironment(
-            userId, "device-2", PushEnvironment.PROD))
+    when(repo.findByUserIdAndDeviceIdAndEnvironment(userId, "device-2", PushEnvironment.PROD))
         .thenReturn(Optional.of(existing));
 
     UpsertPushTokenUseCase useCase = new UpsertPushTokenUseCase(repo, clock);
-    useCase.execute(
-        userId,
-        "device-2",
-        "new-token",
-        PushPlatform.IOS,
-        null,
-        PushEnvironment.PROD);
+    useCase.execute(userId, "device-2", "new-token", PushPlatform.IOS, null, PushEnvironment.PROD);
 
     assertThat(existing.getFcmToken()).isEqualTo("new-token");
-    assertThat(existing.getLastTokenRefreshAt())
-        .isEqualTo(Instant.parse("2025-02-01T10:15:30Z"));
+    assertThat(existing.getLastTokenRefreshAt()).isEqualTo(Instant.parse("2025-02-01T10:15:30Z"));
     assertThat(existing.getLastSeenAt()).isEqualTo(Instant.parse("2025-02-01T10:15:30Z"));
   }
 
@@ -97,21 +83,14 @@ class UpsertPushTokenUseCaseTest {
     existing.setFcmToken("same-token");
     existing.setLastTokenRefreshAt(Instant.parse("2024-06-01T00:00:00Z"));
 
-    when(repo.findByUserIdAndDeviceIdAndEnvironment(
-            userId, "device-3", PushEnvironment.STAGING))
+    when(repo.findByUserIdAndDeviceIdAndEnvironment(userId, "device-3", PushEnvironment.STAGING))
         .thenReturn(Optional.of(existing));
 
     UpsertPushTokenUseCase useCase = new UpsertPushTokenUseCase(repo, clock);
     useCase.execute(
-        userId,
-        "device-3",
-        "same-token",
-        PushPlatform.ANDROID,
-        "2.0.0",
-        PushEnvironment.STAGING);
+        userId, "device-3", "same-token", PushPlatform.ANDROID, "2.0.0", PushEnvironment.STAGING);
 
-    assertThat(existing.getLastTokenRefreshAt())
-        .isEqualTo(Instant.parse("2024-06-01T00:00:00Z"));
+    assertThat(existing.getLastTokenRefreshAt()).isEqualTo(Instant.parse("2024-06-01T00:00:00Z"));
     assertThat(existing.getLastSeenAt()).isEqualTo(Instant.parse("2025-03-01T08:00:00Z"));
   }
 }

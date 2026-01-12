@@ -42,8 +42,7 @@ public class ReplaceStorePhotosUseCase {
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
     storeOwnershipService.ensureOwnerOrAdmin(user, store);
 
-    List<PhotoItem> items =
-        command.photos() != null ? new ArrayList<>(command.photos()) : null;
+    List<PhotoItem> items = command.photos() != null ? new ArrayList<>(command.photos()) : null;
     if (items == null || items.isEmpty()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "photos array is required");
     }
@@ -105,8 +104,7 @@ public class ReplaceStorePhotosUseCase {
         var existing = existingById.remove(item.photoId());
         if (existing == null) {
           throw new ResponseStatusException(
-              HttpStatus.BAD_REQUEST,
-              "photoId " + item.photoId() + " not found on this store");
+              HttpStatus.BAD_REQUEST, "photoId " + item.photoId() + " not found on this store");
         }
         existing.setDisplayOrder(item.position());
         finalPhotos.add(existing);

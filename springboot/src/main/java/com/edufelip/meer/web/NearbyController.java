@@ -70,6 +70,4 @@ public class NearbyController {
 
     return new PageResponse<>(items, pageIndex, page.hasNext());
   }
-
- 
 }

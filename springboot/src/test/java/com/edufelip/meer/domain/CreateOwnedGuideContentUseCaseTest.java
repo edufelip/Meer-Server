@@ -23,7 +23,8 @@ class CreateOwnedGuideContentUseCaseTest {
   void createsGuideContentWithDefaults() {
     ThriftStoreRepository thriftStoreRepository = Mockito.mock(ThriftStoreRepository.class);
     StoreOwnershipService storeOwnershipService = Mockito.mock(StoreOwnershipService.class);
-    CreateGuideContentUseCase createGuideContentUseCase = Mockito.mock(CreateGuideContentUseCase.class);
+    CreateGuideContentUseCase createGuideContentUseCase =
+        Mockito.mock(CreateGuideContentUseCase.class);
 
     CreateOwnedGuideContentUseCase useCase =
         new CreateOwnedGuideContentUseCase(

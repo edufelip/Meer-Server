@@ -15,8 +15,7 @@ public enum PushEnvironment {
       case "STAGING" -> STAGING;
       case "PROD" -> PROD;
       default ->
-          throw new IllegalArgumentException(
-              "environment must be one of: DEV, STAGING, PROD");
+          throw new IllegalArgumentException("environment must be one of: DEV, STAGING, PROD");
     };
   }
 }

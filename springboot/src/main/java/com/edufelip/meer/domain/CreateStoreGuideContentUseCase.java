@@ -25,7 +25,8 @@ public class CreateStoreGuideContentUseCase {
     var thriftStore =
         thriftStoreRepository
             .findById(storeId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
+            .orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
     storeOwnershipService.ensureOwnerOrAdminStrict(user, thriftStore);
     var contentWithStore =
         new GuideContent(

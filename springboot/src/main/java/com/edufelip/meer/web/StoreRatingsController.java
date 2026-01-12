@@ -52,5 +52,4 @@ public class StoreRatingsController {
     var mapped = slice.map(Mappers::toDto);
     return new PageResponse<>(mapped.getContent(), page, mapped.hasNext());
   }
-
 }
