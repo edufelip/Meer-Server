@@ -367,12 +367,12 @@ public class AppConfig {
   @Bean
   public ForgotPasswordUseCase forgotPasswordUseCase(
       AuthUserRepository repo,
-      PasswordResetTokenRepository passwordResetTokenRepository,
+      com.edufelip.meer.service.PasswordResetTokenService passwordResetTokenService,
       PasswordResetNotifier passwordResetNotifier,
       PasswordResetProperties passwordResetProperties,
       Clock clock) {
     return new ForgotPasswordUseCase(
-        repo, passwordResetTokenRepository, passwordResetNotifier, passwordResetProperties, clock);
+        repo, passwordResetTokenService, passwordResetNotifier, passwordResetProperties, clock);
   }
 
   @Bean

@@ -2,35 +2,29 @@ package com.edufelip.meer.domain.auth;
 
 import com.edufelip.meer.core.auth.PasswordResetToken;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
-import com.edufelip.meer.domain.repo.PasswordResetTokenRepository;
 import com.edufelip.meer.security.PasswordResetProperties;
-import jakarta.transaction.Transactional;
+import com.edufelip.meer.service.PasswordResetTokenService;
 import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.UUID;
 
 public class ForgotPasswordUseCase {
   private final AuthUserRepository authUserRepository;
-  private final PasswordResetTokenRepository passwordResetTokenRepository;
+  private final PasswordResetTokenService passwordResetTokenService;
   private final PasswordResetNotifier passwordResetNotifier;
   private final PasswordResetProperties passwordResetProperties;
-  private final Clock clock;
 
   public ForgotPasswordUseCase(
       AuthUserRepository authUserRepository,
-      PasswordResetTokenRepository passwordResetTokenRepository,
+      PasswordResetTokenService passwordResetTokenService,
       PasswordResetNotifier passwordResetNotifier,
       PasswordResetProperties passwordResetProperties,
       Clock clock) {
     this.authUserRepository = authUserRepository;
-    this.passwordResetTokenRepository = passwordResetTokenRepository;
+    this.passwordResetTokenService = passwordResetTokenService;
     this.passwordResetNotifier = passwordResetNotifier;
     this.passwordResetProperties = passwordResetProperties;
-    this.clock = clock;
   }
 
-  @Transactional
   public void execute(String email) {
     if (email == null || email.isBlank()) {
       return;
@@ -39,11 +33,14 @@ public class ForgotPasswordUseCase {
     if (user == null) {
       return; // avoid enumeration
     }
-    passwordResetTokenRepository.deleteByUserId(user.getId());
+
     UUID token = UUID.randomUUID();
     long ttlMinutes = passwordResetProperties.getTtlMinutes();
-    Instant expiresAt = Instant.now(clock).plus(Duration.ofMinutes(ttlMinutes));
-    passwordResetTokenRepository.save(new PasswordResetToken(token, user, expiresAt));
+    
+    // Step 1: Commit to DB (atomic transaction)
+    passwordResetTokenService.createNewToken(user, token, ttlMinutes);
+
+    // Step 2: Send email (only if Step 1 succeeded)
     String resetLink = passwordResetProperties.buildResetLink(token);
     passwordResetNotifier.sendResetLink(user.getEmail(), resetLink, ttlMinutes);
   }
