@@ -1,10 +1,9 @@
 package com.edufelip.meer.domain.auth;
 
-import com.edufelip.meer.core.auth.PasswordResetToken;
+import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.security.PasswordResetProperties;
 import com.edufelip.meer.service.PasswordResetTokenService;
-import java.time.Clock;
 import java.util.UUID;
 
 public class ForgotPasswordUseCase {
@@ -17,8 +16,7 @@ public class ForgotPasswordUseCase {
       AuthUserRepository authUserRepository,
       PasswordResetTokenService passwordResetTokenService,
       PasswordResetNotifier passwordResetNotifier,
-      PasswordResetProperties passwordResetProperties,
-      Clock clock) {
+      PasswordResetProperties passwordResetProperties) {
     this.authUserRepository = authUserRepository;
     this.passwordResetTokenService = passwordResetTokenService;
     this.passwordResetNotifier = passwordResetNotifier;

@@ -66,6 +66,7 @@ import com.edufelip.meer.security.token.JwtTokenProvider;
 import com.edufelip.meer.security.token.TokenProvider;
 import com.edufelip.meer.service.GuideContentEngagementService;
 import com.edufelip.meer.service.GuideContentModerationService;
+import com.edufelip.meer.service.PasswordResetTokenService;
 import com.edufelip.meer.service.StoreFeedbackService;
 import java.time.Clock;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -365,14 +366,19 @@ public class AppConfig {
   }
 
   @Bean
+  public PasswordResetTokenService passwordResetTokenService(
+      PasswordResetTokenRepository repository, Clock clock) {
+    return new PasswordResetTokenService(repository, clock);
+  }
+
+  @Bean
   public ForgotPasswordUseCase forgotPasswordUseCase(
       AuthUserRepository repo,
-      com.edufelip.meer.service.PasswordResetTokenService passwordResetTokenService,
+      PasswordResetTokenService passwordResetTokenService,
       PasswordResetNotifier passwordResetNotifier,
-      PasswordResetProperties passwordResetProperties,
-      Clock clock) {
+      PasswordResetProperties passwordResetProperties) {
     return new ForgotPasswordUseCase(
-        repo, passwordResetTokenService, passwordResetNotifier, passwordResetProperties, clock);
+        repo, passwordResetTokenService, passwordResetNotifier, passwordResetProperties);
   }
 
   @Bean
