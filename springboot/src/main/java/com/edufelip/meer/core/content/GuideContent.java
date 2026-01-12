@@ -1,5 +1,6 @@
 package com.edufelip.meer.core.content;
 
+import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.core.store.ThriftStore;
 import jakarta.persistence.*;
 import java.time.Instant;
@@ -50,7 +51,7 @@ public class GuideContent {
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "deleted_by_user_id", columnDefinition = "uuid")
-  private com.edufelip.meer.core.auth.AuthUser deletedBy;
+  private AuthUser deletedBy;
 
   @Column(name = "deleted_reason", length = 255)
   private String deletedReason;
@@ -122,7 +123,7 @@ public class GuideContent {
     return deletedAt;
   }
 
-  public com.edufelip.meer.core.auth.AuthUser getDeletedBy() {
+  public AuthUser getDeletedBy() {
     return deletedBy;
   }
 
@@ -178,7 +179,7 @@ public class GuideContent {
     this.deletedAt = deletedAt;
   }
 
-  public void setDeletedBy(com.edufelip.meer.core.auth.AuthUser deletedBy) {
+  public void setDeletedBy(AuthUser deletedBy) {
     this.deletedBy = deletedBy;
   }
 

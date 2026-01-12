@@ -1,6 +1,7 @@
 package com.edufelip.meer.domain;
 
 import com.edufelip.meer.core.auth.AuthUser;
+import com.edufelip.meer.core.content.GuideContent;
 import com.edufelip.meer.domain.port.PhotoStoragePort;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
 import com.edufelip.meer.util.UrlValidatorUtil;
@@ -27,8 +28,7 @@ public class UpdateGuideContentUseCase {
     this.photoStoragePort = photoStoragePort;
   }
 
-  public com.edufelip.meer.core.content.GuideContent execute(
-      AuthUser user, Integer contentId, Command command) {
+  public GuideContent execute(AuthUser user, Integer contentId, Command command) {
     if (command == null) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is required");
     }

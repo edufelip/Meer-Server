@@ -1,11 +1,16 @@
 package com.edufelip.meer.service;
 
+import com.edufelip.meer.core.auth.AuthUser;
+import com.edufelip.meer.core.store.StoreFeedback;
+import com.edufelip.meer.core.store.ThriftStore;
 import com.edufelip.meer.domain.repo.StoreFeedbackRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -27,10 +32,10 @@ public class StoreFeedbackService {
       value = "storeRatings",
       key = "#storeIds",
       unless = "#storeIds == null || #storeIds.isEmpty() || #storeIds.size() > 50")
-  public Map<java.util.UUID, Summary> getSummaries(List<java.util.UUID> storeIds) {
+  public Map<UUID, Summary> getSummaries(List<UUID> storeIds) {
     if (storeIds == null || storeIds.isEmpty()) return Map.of();
     var aggregates = repository.aggregateByStoreIds(storeIds);
-    Map<java.util.UUID, Summary> map = new HashMap<>();
+    Map<UUID, Summary> map = new HashMap<>();
     for (StoreFeedbackRepository.AggregateView view : aggregates) {
       map.put(view.getStoreId(), new Summary(view.getAvgScore(), view.getCnt()));
     }
@@ -38,18 +43,13 @@ public class StoreFeedbackService {
   }
 
   @CacheEvict(cacheNames = "storeRatings", allEntries = true)
-  public com.edufelip.meer.core.store.StoreFeedback upsert(
-      com.edufelip.meer.core.auth.AuthUser user,
-      com.edufelip.meer.core.store.ThriftStore store,
-      Integer score,
-      String body) {
+  public StoreFeedback upsert(AuthUser user, ThriftStore store, Integer score, String body) {
     if (score != null && (score < 1 || score > 5)) {
       throw new IllegalArgumentException("score must be between 1 and 5");
     }
     var existing = repository.findByUserIdAndThriftStoreId(user.getId(), store.getId());
-    com.edufelip.meer.core.store.StoreFeedback fb =
-        existing.orElseGet(
-            () -> new com.edufelip.meer.core.store.StoreFeedback(user, store, null, null));
+    StoreFeedback fb =
+        existing.orElseGet(() -> new StoreFeedback(user, store, null, null));
     Instant now = Instant.now(clock);
     fb.setScore(score);
     fb.setBody(body);
@@ -61,13 +61,12 @@ public class StoreFeedbackService {
   }
 
   @CacheEvict(cacheNames = "storeRatings", allEntries = true)
-  public java.util.Optional<com.edufelip.meer.core.store.StoreFeedback> find(
-      java.util.UUID userId, java.util.UUID storeId) {
+  public Optional<StoreFeedback> find(UUID userId, UUID storeId) {
     return repository.findByUserIdAndThriftStoreId(userId, storeId);
   }
 
   @CacheEvict(cacheNames = "storeRatings", allEntries = true)
-  public void delete(java.util.UUID userId, java.util.UUID storeId) {
+  public void delete(UUID userId, UUID storeId) {
     repository.findByUserIdAndThriftStoreId(userId, storeId).ifPresent(repository::delete);
   }
 }

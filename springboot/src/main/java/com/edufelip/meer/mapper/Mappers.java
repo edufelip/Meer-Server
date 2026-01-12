@@ -1,6 +1,7 @@
 package com.edufelip.meer.mapper;
 
 import com.edufelip.meer.core.auth.AuthUser;
+import com.edufelip.meer.core.auth.Role;
 import com.edufelip.meer.core.category.Category;
 import com.edufelip.meer.core.content.GuideContent;
 import com.edufelip.meer.core.content.GuideContentComment;
@@ -251,7 +252,7 @@ public class Mappers {
         user.getEmail(),
         user.getPhotoUrl(),
         user.getBio(),
-        (user.getRole() != null ? user.getRole() : com.edufelip.meer.core.auth.Role.USER).name(),
+        (user.getRole() != null ? user.getRole() : Role.USER).name(),
         user.isNotifyNewStores(),
         user.isNotifyPromos(),
         owned,

@@ -1,5 +1,6 @@
 package com.edufelip.meer.core.store;
 
+import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.core.content.GuideContent;
 import com.edufelip.meer.util.Uuid7;
 import jakarta.persistence.*;
@@ -71,7 +72,7 @@ public class ThriftStore {
 
   @ManyToOne
   @JoinColumn(name = "owner_id", columnDefinition = "uuid")
-  private com.edufelip.meer.core.auth.AuthUser owner;
+  private AuthUser owner;
 
   public ThriftStore() {}
 

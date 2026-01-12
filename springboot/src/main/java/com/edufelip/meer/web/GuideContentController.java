@@ -1,5 +1,7 @@
 package com.edufelip.meer.web;
 
+import com.edufelip.meer.core.auth.AuthUser;
+import com.edufelip.meer.core.auth.Role;
 import com.edufelip.meer.core.content.GuideContent;
 import com.edufelip.meer.core.content.GuideContentComment;
 import com.edufelip.meer.domain.CreateGuideContentCommentUseCase;
@@ -27,6 +29,7 @@ import com.edufelip.meer.service.GuideContentModerationService;
 import jakarta.validation.Valid;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -268,7 +271,7 @@ public class GuideContentController {
   public ContentUploadSlotResponse requestImageSlot(
       @PathVariable Integer contentId,
       @RequestHeader("Authorization") String authHeader,
-      @RequestBody(required = false) java.util.Map<String, String> body) {
+      @RequestBody(required = false) Map<String, String> body) {
     var user = authUserResolver.requireUser(authHeader);
     String ctype = body != null ? body.get("contentType") : null;
     var slot = requestGuideContentImageUploadUseCase.execute(user, contentId, ctype);
@@ -311,8 +314,7 @@ public class GuideContentController {
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found"));
   }
 
-  private List<GuideContentDto> enrichContentDtos(
-      List<GuideContentDto> base, com.edufelip.meer.core.auth.AuthUser user) {
+  private List<GuideContentDto> enrichContentDtos(List<GuideContentDto> base, AuthUser user) {
     if (base == null || base.isEmpty()) return base;
     var ids = base.stream().map(GuideContentDto::id).toList();
     var engagement =
@@ -330,10 +332,9 @@ public class GuideContentController {
         .toList();
   }
 
-  private boolean canModerateComment(
-      com.edufelip.meer.core.auth.AuthUser user, GuideContentComment comment) {
+  private boolean canModerateComment(AuthUser user, GuideContentComment comment) {
     if (user == null) return false;
-    if (user.getRole() == com.edufelip.meer.core.auth.Role.ADMIN) return true;
+    if (user.getRole() == Role.ADMIN) return true;
     if (comment.getUser() != null && user.getId().equals(comment.getUser().getId())) return true;
     if (comment.getContent() != null
         && comment.getContent().getThriftStore() != null
@@ -347,10 +348,9 @@ public class GuideContentController {
     return false;
   }
 
-  private boolean canEditComment(
-      com.edufelip.meer.core.auth.AuthUser user, GuideContentComment comment) {
+  private boolean canEditComment(AuthUser user, GuideContentComment comment) {
     if (user == null) return false;
-    if (user.getRole() == com.edufelip.meer.core.auth.Role.ADMIN) return true;
+    if (user.getRole() == Role.ADMIN) return true;
     return comment.getUser() != null && user.getId().equals(comment.getUser().getId());
   }
 }
