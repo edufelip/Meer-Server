@@ -40,6 +40,14 @@ public class PushNotificationService implements PushNotificationPort {
   @Override
   public String sendTestPush(String token, String title, String body, String type, String id)
       throws PushNotificationException {
+    // Try to resolve token as a PushToken ID (UUID)
+    try {
+      UUID tokenId = UUID.fromString(token);
+      token = pushTokenRepository.findById(tokenId).map(PushToken::getFcmToken).orElse(token);
+    } catch (IllegalArgumentException e) {
+      // Not a UUID, assume raw FCM token
+    }
+
     Message message =
         Message.builder()
             .setToken(token)
