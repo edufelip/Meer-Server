@@ -4,6 +4,7 @@ import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.core.auth.Role;
 import com.edufelip.meer.core.push.PushEnvironment;
 import com.edufelip.meer.domain.PushNotificationException;
+import com.edufelip.meer.domain.PushNotificationFailureReason;
 import com.edufelip.meer.domain.port.PushNotificationPort;
 import com.edufelip.meer.dto.PushBroadcastRequest;
 import com.edufelip.meer.dto.PushTestRequest;
@@ -12,6 +13,8 @@ import com.edufelip.meer.security.AdminContext;
 import jakarta.validation.Valid;
 import java.util.Map;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +29,8 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/dashboard/push")
 @ConditionalOnProperty(prefix = "firebase", name = "enabled", havingValue = "true")
 public class DashboardPushController {
+
+  private static final Logger log = LoggerFactory.getLogger(DashboardPushController.class);
 
   private final PushNotificationPort pushNotificationService;
 
@@ -44,7 +49,12 @@ public class DashboardPushController {
               body.token(), body.title(), body.body(), type, body.id());
       return ResponseEntity.ok(Map.of("messageId", messageId));
     } catch (PushNotificationException ex) {
-      throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Push send failed");
+      log.warn(
+          "Dashboard test push failed (reason={}, providerCode={})",
+          ex.getFailureReason(),
+          ex.getProviderErrorCode(),
+          ex);
+      throw toResponseStatusException(ex);
     }
   }
 
@@ -63,7 +73,12 @@ public class DashboardPushController {
               topic, body.title(), body.body(), Map.of("type", type, "id", body.id()));
       return ResponseEntity.ok(Map.of("messageId", messageId));
     } catch (PushNotificationException ex) {
-      throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Push send failed");
+      log.warn(
+          "Dashboard broadcast push failed (reason={}, providerCode={})",
+          ex.getFailureReason(),
+          ex.getProviderErrorCode(),
+          ex);
+      throw toResponseStatusException(ex);
     }
   }
 
@@ -135,5 +150,29 @@ public class DashboardPushController {
     } catch (IllegalArgumentException ex) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "userId is invalid");
     }
+  }
+
+  private ResponseStatusException toResponseStatusException(PushNotificationException ex) {
+    PushNotificationFailureReason reason = ex.getFailureReason();
+    String message =
+        ex.getMessage() != null && !ex.getMessage().isBlank() ? ex.getMessage() : "Push send failed";
+
+    if (reason == null) {
+      return new ResponseStatusException(HttpStatus.BAD_GATEWAY, message);
+    }
+
+    return switch (reason) {
+      case TOKEN_NOT_FOUND -> new ResponseStatusException(HttpStatus.NOT_FOUND, message);
+      case TOKEN_INVALID -> new ResponseStatusException(HttpStatus.GONE, message);
+      case TOKEN_PROJECT_MISMATCH ->
+          new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, message);
+      case INVALID_ARGUMENT -> new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+      case QUOTA_EXCEEDED -> new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, message);
+      case UNAVAILABLE -> new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, message);
+      case PERMISSION_DENIED, UNAUTHENTICATED ->
+          new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, message);
+      case THIRD_PARTY_AUTH_ERROR, UNKNOWN ->
+          new ResponseStatusException(HttpStatus.BAD_GATEWAY, message);
+    };
   }
 }

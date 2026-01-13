@@ -1,0 +1,14 @@
+package com.edufelip.meer.domain;
+
+public enum PushNotificationFailureReason {
+  TOKEN_NOT_FOUND,
+  TOKEN_INVALID,
+  TOKEN_PROJECT_MISMATCH,
+  THIRD_PARTY_AUTH_ERROR,
+  PERMISSION_DENIED,
+  UNAUTHENTICATED,
+  QUOTA_EXCEEDED,
+  UNAVAILABLE,
+  INVALID_ARGUMENT,
+  UNKNOWN
+}

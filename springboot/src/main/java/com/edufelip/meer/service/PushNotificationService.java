@@ -3,8 +3,10 @@ package com.edufelip.meer.service;
 import com.edufelip.meer.core.push.PushEnvironment;
 import com.edufelip.meer.core.push.PushToken;
 import com.edufelip.meer.domain.PushNotificationException;
+import com.edufelip.meer.domain.PushNotificationFailureReason;
 import com.edufelip.meer.domain.port.PushNotificationPort;
 import com.edufelip.meer.domain.repo.PushTokenRepository;
+import com.google.firebase.ErrorCode;
 import com.google.firebase.messaging.AndroidConfig;
 import com.google.firebase.messaging.AndroidNotification;
 import com.google.firebase.messaging.ApnsConfig;
@@ -40,17 +42,26 @@ public class PushNotificationService implements PushNotificationPort {
   @Override
   public String sendTestPush(String token, String title, String body, String type, String id)
       throws PushNotificationException {
-    // Try to resolve token as a PushToken ID (UUID)
+    UUID tokenId = null;
+    String resolvedToken = token;
+
+    // Allow admins to pass the stored PushToken ID (UUID) instead of the raw FCM token.
     try {
-      UUID tokenId = UUID.fromString(token);
-      token = pushTokenRepository.findById(tokenId).map(PushToken::getFcmToken).orElse(token);
-    } catch (IllegalArgumentException e) {
+      tokenId = UUID.fromString(token.trim());
+      PushToken stored = pushTokenRepository.findById(tokenId).orElse(null);
+      if (stored == null) {
+        throw new PushNotificationException(
+            PushNotificationFailureReason.TOKEN_NOT_FOUND,
+            "Push token not found: " + tokenId);
+      }
+      resolvedToken = stored.getFcmToken();
+    } catch (IllegalArgumentException ignored) {
       // Not a UUID, assume raw FCM token
     }
 
     Message message =
         Message.builder()
-            .setToken(token)
+            .setToken(resolvedToken)
             .setNotification(Notification.builder().setTitle(title).setBody(body).build())
             .setAndroidConfig(
                 AndroidConfig.builder()
@@ -67,7 +78,17 @@ public class PushNotificationService implements PushNotificationPort {
     try {
       return firebaseMessaging.send(message);
     } catch (FirebaseMessagingException ex) {
-      throw new PushNotificationException("Failed to send test push", ex);
+      PushNotificationFailureReason reason = classifyFailure(ex);
+      String providerCode = providerErrorCode(ex);
+      if (tokenId != null && reason == PushNotificationFailureReason.TOKEN_INVALID) {
+        log.info("Removing invalid push token {} due to provider error {}", tokenId, providerCode);
+        pushTokenRepository.deleteById(tokenId);
+      }
+      throw new PushNotificationException(
+          reason,
+          providerCode,
+          buildFailureMessage("test push", reason, providerCode, ex),
+          ex);
     }
   }
 
@@ -97,7 +118,13 @@ public class PushNotificationService implements PushNotificationPort {
     try {
       return firebaseMessaging.send(builder.build());
     } catch (FirebaseMessagingException ex) {
-      throw new PushNotificationException("Failed to send topic push", ex);
+      PushNotificationFailureReason reason = classifyFailure(ex);
+      String providerCode = providerErrorCode(ex);
+      throw new PushNotificationException(
+          reason,
+          providerCode,
+          buildFailureMessage("topic push", reason, providerCode, ex),
+          ex);
     }
   }
 
@@ -161,5 +188,86 @@ public class PushNotificationService implements PushNotificationPort {
     if (code == null) return false;
     String name = code.name();
     return "UNREGISTERED".equals(name) || "NOT_FOUND".equals(name);
+  }
+
+  private PushNotificationFailureReason classifyFailure(FirebaseMessagingException ex) {
+    if (shouldDeleteToken(ex)) {
+      return PushNotificationFailureReason.TOKEN_INVALID;
+    }
+
+    MessagingErrorCode messagingCode = ex.getMessagingErrorCode();
+    if (messagingCode != null) {
+      String name = messagingCode.name();
+      if ("SENDER_ID_MISMATCH".equals(name)) {
+        return PushNotificationFailureReason.TOKEN_PROJECT_MISMATCH;
+      }
+      if ("THIRD_PARTY_AUTH_ERROR".equals(name)) {
+        return PushNotificationFailureReason.THIRD_PARTY_AUTH_ERROR;
+      }
+      if ("QUOTA_EXCEEDED".equals(name)) {
+        return PushNotificationFailureReason.QUOTA_EXCEEDED;
+      }
+      if ("UNAVAILABLE".equals(name)) {
+        return PushNotificationFailureReason.UNAVAILABLE;
+      }
+      if ("INVALID_ARGUMENT".equals(name)) {
+        return PushNotificationFailureReason.INVALID_ARGUMENT;
+      }
+    }
+
+    ErrorCode baseCode = ex.getErrorCode();
+    if (baseCode != null) {
+      String name = baseCode.name();
+      if ("PERMISSION_DENIED".equals(name)) {
+        return PushNotificationFailureReason.PERMISSION_DENIED;
+      }
+      if ("UNAUTHENTICATED".equals(name)) {
+        return PushNotificationFailureReason.UNAUTHENTICATED;
+      }
+    }
+    return PushNotificationFailureReason.UNKNOWN;
+  }
+
+  private String providerErrorCode(FirebaseMessagingException ex) {
+    MessagingErrorCode messagingCode = ex.getMessagingErrorCode();
+    if (messagingCode != null) {
+      return messagingCode.name();
+    }
+    ErrorCode baseCode = ex.getErrorCode();
+    return baseCode != null ? baseCode.name() : null;
+  }
+
+  private String buildFailureMessage(
+      String action,
+      PushNotificationFailureReason reason,
+      String providerCode,
+      FirebaseMessagingException ex) {
+    String hint =
+        switch (reason) {
+          case TOKEN_INVALID ->
+              "FCM token is invalid/unregistered. Ask the user to open the app to re-register.";
+          case TOKEN_PROJECT_MISMATCH ->
+              "Token belongs to a different Firebase project/environment (sender ID mismatch).";
+          case THIRD_PARTY_AUTH_ERROR ->
+              "Third-party auth error (commonly APNs configuration missing/invalid for iOS).";
+          case PERMISSION_DENIED, UNAUTHENTICATED ->
+              "Firebase credentials are missing/invalid or lack messaging permissions.";
+          case QUOTA_EXCEEDED -> "Firebase/FCM quota exceeded.";
+          case UNAVAILABLE -> "Firebase/FCM is temporarily unavailable.";
+          case INVALID_ARGUMENT -> "Invalid request (often a malformed token).";
+          case TOKEN_NOT_FOUND, UNKNOWN -> "";
+        };
+
+    String details = ex.getMessage() != null ? ex.getMessage().trim() : "";
+    String codeSuffix = providerCode != null ? " (" + providerCode + ")" : "";
+
+    StringBuilder message = new StringBuilder("Failed to send " + action + codeSuffix);
+    if (!hint.isBlank()) {
+      message.append(". ").append(hint);
+    }
+    if (!details.isBlank()) {
+      message.append(" Details: ").append(details);
+    }
+    return message.toString();
   }
 }

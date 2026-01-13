@@ -12,6 +12,7 @@ import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.core.auth.Role;
 import com.edufelip.meer.core.push.PushEnvironment;
 import com.edufelip.meer.domain.PushNotificationException;
+import com.edufelip.meer.domain.PushNotificationFailureReason;
 import com.edufelip.meer.domain.port.PushNotificationPort;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -97,6 +98,50 @@ class DashboardPushControllerTest {
                 .content(
                     "{\"token\":\"token-1\",\"title\":\"Hello\",\"body\":\"Body\",\"type\":\"guide_content\",\"id\":\"123\"}"))
         .andExpect(status().isBadGateway());
+  }
+
+  @Test
+  void sendTestPushMapsTokenNotFoundTo404() throws Exception {
+    AuthUser admin = adminUser();
+    PushNotificationException ex =
+        new PushNotificationException(
+            PushNotificationFailureReason.TOKEN_NOT_FOUND, "Push token not found");
+    when(pushNotificationService.sendTestPush(
+            eq("token-1"), eq("Hello"), eq("Body"), eq("guide_content"), eq("123")))
+        .thenThrow(ex);
+
+    mockMvc
+        .perform(
+            post("/dashboard/push")
+                .requestAttr("adminUser", admin)
+                .header("Authorization", "Bearer token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"token\":\"token-1\",\"title\":\"Hello\",\"body\":\"Body\",\"type\":\"guide_content\",\"id\":\"123\"}"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.message").value("Push token not found"));
+  }
+
+  @Test
+  void sendTestPushMapsInvalidTokenTo410() throws Exception {
+    AuthUser admin = adminUser();
+    PushNotificationException ex =
+        new PushNotificationException(
+            PushNotificationFailureReason.TOKEN_INVALID, "Token is invalid");
+    when(pushNotificationService.sendTestPush(
+            eq("token-1"), eq("Hello"), eq("Body"), eq("guide_content"), eq("123")))
+        .thenThrow(ex);
+
+    mockMvc
+        .perform(
+            post("/dashboard/push")
+                .requestAttr("adminUser", admin)
+                .header("Authorization", "Bearer token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"token\":\"token-1\",\"title\":\"Hello\",\"body\":\"Body\",\"type\":\"guide_content\",\"id\":\"123\"}"))
+        .andExpect(status().isGone())
+        .andExpect(jsonPath("$.message").value("Token is invalid"));
   }
 
   @Test
