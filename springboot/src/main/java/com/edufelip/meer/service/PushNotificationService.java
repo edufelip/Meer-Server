@@ -278,6 +278,10 @@ public class PushNotificationService implements PushNotificationPort {
   private void logFirebaseFailure(String action, FirebaseMessagingException ex) {
     Integer statusCode = null;
     String contentSnippet = null;
+    String requestUrl = null;
+    Boolean authHeaderPresent = null;
+    String authScheme = null;
+    Integer authHeaderLength = null;
     IncomingHttpResponse response = ex.getHttpResponse();
     if (response != null) {
       statusCode = response.getStatusCode();
@@ -285,14 +289,30 @@ public class PushNotificationService implements PushNotificationPort {
       if (content != null && !content.isBlank()) {
         contentSnippet = content.length() > 500 ? content.substring(0, 500) + "..." : content;
       }
+      if (response.getRequest() != null) {
+        requestUrl = response.getRequest().getUrl();
+        Map<String, Object> headers = response.getRequest().getHeaders();
+        Object authHeader = headers != null ? headers.get("Authorization") : null;
+        authHeaderPresent = authHeader != null;
+        if (authHeader != null) {
+          String authValue = authHeader.toString();
+          authHeaderLength = authValue.length();
+          int spaceIndex = authValue.indexOf(' ');
+          authScheme = spaceIndex > 0 ? authValue.substring(0, spaceIndex) : "present";
+        }
+      }
     }
     log.warn(
-        "Firebase {} failed (errorCode={}, messagingErrorCode={}, httpStatus={}, responseBody={}, message={})",
+        "Firebase {} failed (errorCode={}, messagingErrorCode={}, httpStatus={}, responseBody={}, requestUrl={}, authHeaderPresent={}, authScheme={}, authHeaderLength={}, message={})",
         action,
         ex.getErrorCode(),
         ex.getMessagingErrorCode(),
         statusCode,
         contentSnippet,
+        requestUrl,
+        authHeaderPresent,
+        authScheme,
+        authHeaderLength,
         ex.getMessage());
   }
 }
