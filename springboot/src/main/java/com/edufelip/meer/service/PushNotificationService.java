@@ -7,6 +7,7 @@ import com.edufelip.meer.domain.PushNotificationFailureReason;
 import com.edufelip.meer.domain.port.PushNotificationPort;
 import com.edufelip.meer.domain.repo.PushTokenRepository;
 import com.google.firebase.ErrorCode;
+import com.google.firebase.IncomingHttpResponse;
 import com.google.firebase.messaging.AndroidConfig;
 import com.google.firebase.messaging.AndroidNotification;
 import com.google.firebase.messaging.ApnsConfig;
@@ -78,6 +79,7 @@ public class PushNotificationService implements PushNotificationPort {
     try {
       return firebaseMessaging.send(message);
     } catch (FirebaseMessagingException ex) {
+      logFirebaseFailure("test push", ex);
       PushNotificationFailureReason reason = classifyFailure(ex);
       String providerCode = providerErrorCode(ex);
       if (tokenId != null && reason == PushNotificationFailureReason.TOKEN_INVALID) {
@@ -118,6 +120,7 @@ public class PushNotificationService implements PushNotificationPort {
     try {
       return firebaseMessaging.send(builder.build());
     } catch (FirebaseMessagingException ex) {
+      logFirebaseFailure("topic push", ex);
       PushNotificationFailureReason reason = classifyFailure(ex);
       String providerCode = providerErrorCode(ex);
       throw new PushNotificationException(
@@ -173,6 +176,7 @@ public class PushNotificationService implements PushNotificationPort {
       firebaseMessaging.send(message);
       return true;
     } catch (FirebaseMessagingException ex) {
+      logFirebaseFailure("user push", ex);
       if (shouldDeleteToken(ex)) {
         log.info("Removing invalid push token {} for user {}", token.getId(), token.getUserId());
         pushTokenRepository.deleteById(token.getId());
@@ -269,5 +273,26 @@ public class PushNotificationService implements PushNotificationPort {
       message.append(" Details: ").append(details);
     }
     return message.toString();
+  }
+
+  private void logFirebaseFailure(String action, FirebaseMessagingException ex) {
+    Integer statusCode = null;
+    String contentSnippet = null;
+    IncomingHttpResponse response = ex.getHttpResponse();
+    if (response != null) {
+      statusCode = response.getStatusCode();
+      String content = response.getContent();
+      if (content != null && !content.isBlank()) {
+        contentSnippet = content.length() > 500 ? content.substring(0, 500) + "..." : content;
+      }
+    }
+    log.warn(
+        "Firebase {} failed (errorCode={}, messagingErrorCode={}, httpStatus={}, responseBody={}, message={})",
+        action,
+        ex.getErrorCode(),
+        ex.getMessagingErrorCode(),
+        statusCode,
+        contentSnippet,
+        ex.getMessage());
   }
 }

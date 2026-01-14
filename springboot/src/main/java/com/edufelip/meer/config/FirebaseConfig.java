@@ -1,6 +1,7 @@
 package com.edufelip.meer.config;
 
 import com.google.auth.oauth2.GoogleCredentials;
+import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.messaging.FirebaseMessaging;
@@ -9,6 +10,10 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +21,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ConditionalOnProperty(prefix = "firebase", name = "enabled", havingValue = "true")
 public class FirebaseConfig {
+  private static final Logger log = LoggerFactory.getLogger(FirebaseConfig.class);
 
   @Bean
   public FirebaseApp firebaseApp(FirebaseProperties properties) throws IOException {
@@ -23,14 +29,22 @@ public class FirebaseConfig {
     GoogleCredentials credentials = resolveCredentials(properties);
     builder.setCredentials(credentials);
     String projectId = properties.getProjectId();
-    if (projectId != null && !projectId.isBlank()) {
-      builder.setProjectId(projectId.trim());
+    String trimmedProjectId = projectId != null ? projectId.trim() : "";
+    if (!trimmedProjectId.isBlank()) {
+      builder.setProjectId(trimmedProjectId);
     }
+    log.info(
+        "Initializing FirebaseApp (projectId={})",
+        trimmedProjectId.isBlank() ? "<default>" : trimmedProjectId);
 
     if (FirebaseApp.getApps().isEmpty()) {
-      return FirebaseApp.initializeApp(builder.build());
+      FirebaseApp app = FirebaseApp.initializeApp(builder.build());
+      log.info("FirebaseApp initialized: {}", app.getName());
+      return app;
     }
-    return FirebaseApp.getInstance();
+    FirebaseApp app = FirebaseApp.getInstance();
+    log.info("Using existing FirebaseApp: {}", app.getName());
+    return app;
   }
 
   @Bean
@@ -41,17 +55,46 @@ public class FirebaseConfig {
   private GoogleCredentials resolveCredentials(FirebaseProperties properties) throws IOException {
     String json = properties.getCredentialsJson();
     if (json != null && !json.isBlank()) {
+      log.info(
+          "Using Firebase credentials from FIREBASE_CREDENTIALS_JSON (length={})",
+          json.trim().length());
       try (InputStream stream =
           new ByteArrayInputStream(json.trim().getBytes(StandardCharsets.UTF_8))) {
-        return GoogleCredentials.fromStream(stream);
+        GoogleCredentials credentials = GoogleCredentials.fromStream(stream);
+        logCredentialDetails(credentials);
+        return credentials;
       }
     }
     String path = properties.getCredentialsPath();
     if (path != null && !path.isBlank()) {
-      try (InputStream stream = new FileInputStream(path.trim())) {
-        return GoogleCredentials.fromStream(stream);
+      Path credentialsPath = Path.of(path.trim());
+      log.info(
+          "Using Firebase credentials from FIREBASE_CREDENTIALS_PATH={} (exists={}, readable={})",
+          credentialsPath,
+          Files.exists(credentialsPath),
+          Files.isReadable(credentialsPath));
+      try (InputStream stream = new FileInputStream(credentialsPath.toFile())) {
+        GoogleCredentials credentials = GoogleCredentials.fromStream(stream);
+        logCredentialDetails(credentials);
+        return credentials;
       }
     }
-    return GoogleCredentials.getApplicationDefault();
+    log.info("Using Firebase Application Default Credentials");
+    GoogleCredentials credentials = GoogleCredentials.getApplicationDefault();
+    logCredentialDetails(credentials);
+    return credentials;
+  }
+
+  private void logCredentialDetails(GoogleCredentials credentials) {
+    if (credentials instanceof ServiceAccountCredentials serviceAccountCredentials) {
+      log.info(
+          "Firebase service account clientEmail={}, projectId={}",
+          serviceAccountCredentials.getClientEmail(),
+          serviceAccountCredentials.getProjectId());
+      return;
+    }
+    if (credentials != null) {
+      log.info("Firebase credentials type={}", credentials.getClass().getSimpleName());
+    }
   }
 }
