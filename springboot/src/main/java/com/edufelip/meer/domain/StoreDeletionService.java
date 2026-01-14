@@ -50,7 +50,7 @@ public class StoreDeletionService {
     Set<String> assetUrls = collectStoreAssetUrls(store);
     guideContentRepository
         .findByThriftStoreId(store.getId())
-        .forEach(content -> assetUrls.add(content.getImageUrl()));
+        .forEach(content -> addUrl(assetUrls, content.getImageUrl()));
 
     assetDeletionQueuePort.enqueueAll(List.copyOf(assetUrls), sourceType, store.getId().toString());
 
@@ -59,15 +59,18 @@ public class StoreDeletionService {
 
   private Set<String> collectStoreAssetUrls(ThriftStore store) {
     Set<String> urls = new LinkedHashSet<>();
-    if (store.getCoverImageUrl() != null) {
-      urls.add(store.getCoverImageUrl());
-    }
+    addUrl(urls, store.getCoverImageUrl());
     if (store.getGalleryUrls() != null) {
-      urls.addAll(store.getGalleryUrls());
+      store.getGalleryUrls().forEach(url -> addUrl(urls, url));
     }
     if (store.getPhotos() != null) {
-      store.getPhotos().forEach(photo -> urls.add(photo.getUrl()));
+      store.getPhotos().forEach(photo -> addUrl(urls, photo != null ? photo.getUrl() : null));
     }
     return urls;
+  }
+
+  private void addUrl(Set<String> urls, String url) {
+    if (url == null || url.isBlank()) return;
+    urls.add(url);
   }
 }
