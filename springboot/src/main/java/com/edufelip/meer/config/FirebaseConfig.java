@@ -27,6 +27,7 @@ public class FirebaseConfig {
   public FirebaseApp firebaseApp(FirebaseProperties properties) throws IOException {
     FirebaseOptions.Builder builder = FirebaseOptions.builder();
     GoogleCredentials credentials = resolveCredentials(properties);
+    logCredentialRefresh(credentials);
     builder.setCredentials(credentials);
     String projectId = properties.getProjectId();
     String trimmedProjectId = projectId != null ? projectId.trim() : "";
@@ -95,6 +96,25 @@ public class FirebaseConfig {
     }
     if (credentials != null) {
       log.info("Firebase credentials type={}", credentials.getClass().getSimpleName());
+    }
+  }
+
+  private void logCredentialRefresh(GoogleCredentials credentials) {
+    if (credentials == null) {
+      log.warn("Firebase credentials are null; skipping token refresh diagnostics");
+      return;
+    }
+    try {
+      credentials.refreshIfExpired();
+      if (credentials.getAccessToken() == null) {
+        log.warn("Firebase credentials refresh completed but access token is null");
+        return;
+      }
+      log.info(
+          "Firebase access token obtained (expiresAt={})",
+          credentials.getAccessToken().getExpirationTime());
+    } catch (IOException ex) {
+      log.warn("Failed to refresh Firebase access token", ex);
     }
   }
 }
