@@ -386,6 +386,16 @@ public class PushNotificationService implements PushNotificationPort {
     }
 
     String endpoint = String.format(FCM_SEND_ENDPOINT, projectId);
+    String redactedEndpoint = redactProjectId(endpoint, projectId);
+    Map<String, String> redactedHeaders =
+        Map.of(
+            "Authorization", "Bearer <redacted>",
+            "Content-Type", "application/json; charset=UTF-8");
+    log.info(
+        "Firebase {} HTTP fallback request (url={}, headers={})",
+        action,
+        redactedEndpoint,
+        redactedHeaders);
     HttpRequest request =
         HttpRequest.newBuilder()
             .uri(URI.create(endpoint))
@@ -438,6 +448,13 @@ public class PushNotificationService implements PushNotificationPort {
     }
     throw new PushNotificationException(
         PushNotificationFailureReason.UNAUTHENTICATED, "Firebase project ID missing for HTTP fallback.");
+  }
+
+  private String redactProjectId(String endpoint, String projectId) {
+    if (endpoint == null || projectId == null || projectId.isBlank()) {
+      return endpoint;
+    }
+    return endpoint.replace(projectId, "<redacted>");
   }
 
   private String buildFailureMessage(
