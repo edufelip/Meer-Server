@@ -23,6 +23,7 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnProperty(prefix = "firebase", name = "enabled", havingValue = "true")
 public class FirebaseConfig {
   private static final Logger log = LoggerFactory.getLogger(FirebaseConfig.class);
+  private static final String FIREBASE_APP_NAME = "meer-fcm";
   private static final List<String> FIREBASE_SCOPES =
       List.of("https://www.googleapis.com/auth/firebase.messaging");
 
@@ -41,19 +42,27 @@ public class FirebaseConfig {
         "Initializing FirebaseApp (projectId={})",
         trimmedProjectId.isBlank() ? "<default>" : trimmedProjectId);
 
-    if (FirebaseApp.getApps().isEmpty()) {
-      FirebaseApp app = FirebaseApp.initializeApp(builder.build());
-      log.info("FirebaseApp initialized: {}", app.getName());
-      return app;
-    }
-    FirebaseApp app = FirebaseApp.getInstance();
-    log.info("Using existing FirebaseApp: {}", app.getName());
+    FirebaseOptions options = builder.build();
+    FirebaseApp app = getOrCreateApp(options);
+    log.info("Using FirebaseApp '{}' with projectId={}", app.getName(), options.getProjectId());
     return app;
   }
 
   @Bean
   public FirebaseMessaging firebaseMessaging(FirebaseApp app) {
     return FirebaseMessaging.getInstance(app);
+  }
+
+  private FirebaseApp getOrCreateApp(FirebaseOptions options) {
+    for (FirebaseApp app : FirebaseApp.getApps()) {
+      if (FIREBASE_APP_NAME.equals(app.getName())) {
+        log.info("Reusing FirebaseApp: {}", app.getName());
+        return app;
+      }
+    }
+    FirebaseApp app = FirebaseApp.initializeApp(options, FIREBASE_APP_NAME);
+    log.info("FirebaseApp initialized: {}", app.getName());
+    return app;
   }
 
   private GoogleCredentials resolveCredentials(FirebaseProperties properties) throws IOException {
