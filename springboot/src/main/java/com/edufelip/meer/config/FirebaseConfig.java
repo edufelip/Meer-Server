@@ -28,11 +28,17 @@ public class FirebaseConfig {
       List.of("https://www.googleapis.com/auth/firebase.messaging");
 
   @Bean
-  public FirebaseApp firebaseApp(FirebaseProperties properties) throws IOException {
-    FirebaseOptions.Builder builder = FirebaseOptions.builder();
+  public GoogleCredentials firebaseCredentials(FirebaseProperties properties) throws IOException {
     GoogleCredentials credentials = resolveCredentials(properties);
     logCredentialRefresh(credentials);
-    builder.setCredentials(credentials);
+    return credentials;
+  }
+
+  @Bean
+  public FirebaseApp firebaseApp(
+      FirebaseProperties properties, GoogleCredentials firebaseCredentials) {
+    FirebaseOptions.Builder builder = FirebaseOptions.builder();
+    builder.setCredentials(firebaseCredentials);
     String projectId = properties.getProjectId();
     String trimmedProjectId = projectId != null ? projectId.trim() : "";
     if (!trimmedProjectId.isBlank()) {

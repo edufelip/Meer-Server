@@ -6,6 +6,13 @@ import com.edufelip.meer.domain.PushNotificationException;
 import com.edufelip.meer.domain.PushNotificationFailureReason;
 import com.edufelip.meer.domain.port.PushNotificationPort;
 import com.edufelip.meer.domain.repo.PushTokenRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.auth.oauth2.AccessToken;
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.auth.oauth2.ServiceAccountCredentials;
+import com.google.firebase.FirebaseApp;
 import com.google.firebase.ErrorCode;
 import com.google.firebase.IncomingHttpResponse;
 import com.google.firebase.messaging.AndroidConfig;
@@ -17,6 +24,12 @@ import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.MessagingErrorCode;
 import com.google.firebase.messaging.Notification;
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -30,13 +43,24 @@ import org.springframework.stereotype.Service;
 public class PushNotificationService implements PushNotificationPort {
   private static final Logger log = LoggerFactory.getLogger(PushNotificationService.class);
   private static final String ANDROID_CHANNEL_ID = "default";
+  private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
+  private static final String FCM_SEND_ENDPOINT =
+      "https://fcm.googleapis.com/v1/projects/%s/messages:send";
 
   private final FirebaseMessaging firebaseMessaging;
+  private final FirebaseApp firebaseApp;
+  private final GoogleCredentials firebaseCredentials;
   private final PushTokenRepository pushTokenRepository;
+  private final ObjectMapper objectMapper = new ObjectMapper();
 
   public PushNotificationService(
-      FirebaseMessaging firebaseMessaging, PushTokenRepository pushTokenRepository) {
+      FirebaseMessaging firebaseMessaging,
+      FirebaseApp firebaseApp,
+      GoogleCredentials firebaseCredentials,
+      PushTokenRepository pushTokenRepository) {
     this.firebaseMessaging = firebaseMessaging;
+    this.firebaseApp = firebaseApp;
+    this.firebaseCredentials = firebaseCredentials;
     this.pushTokenRepository = pushTokenRepository;
   }
 
@@ -80,6 +104,29 @@ public class PushNotificationService implements PushNotificationPort {
       return firebaseMessaging.send(message);
     } catch (FirebaseMessagingException ex) {
       logFirebaseFailure("test push", ex);
+      if (shouldFallback(ex)) {
+        try {
+          Map<String, String> fallbackData = new LinkedHashMap<>();
+          if (type != null) {
+            fallbackData.put("type", type);
+          }
+          if (id != null) {
+            fallbackData.put("id", id);
+          }
+          String fallbackId =
+              sendViaHttp(
+                  "test push",
+                  resolvedToken,
+                  null,
+                  title,
+                  body,
+                  fallbackData.isEmpty() ? null : fallbackData);
+          log.info("Firebase test push succeeded via HTTP fallback (messageId={})", fallbackId);
+          return fallbackId;
+        } catch (PushNotificationException fallbackEx) {
+          log.warn("Firebase test push HTTP fallback failed", fallbackEx);
+        }
+      }
       PushNotificationFailureReason reason = classifyFailure(ex);
       String providerCode = providerErrorCode(ex);
       if (tokenId != null && reason == PushNotificationFailureReason.TOKEN_INVALID) {
@@ -121,6 +168,15 @@ public class PushNotificationService implements PushNotificationPort {
       return firebaseMessaging.send(builder.build());
     } catch (FirebaseMessagingException ex) {
       logFirebaseFailure("topic push", ex);
+      if (shouldFallback(ex)) {
+        try {
+          String fallbackId = sendViaHttp("topic push", null, topic, title, body, data);
+          log.info("Firebase topic push succeeded via HTTP fallback (messageId={})", fallbackId);
+          return fallbackId;
+        } catch (PushNotificationException fallbackEx) {
+          log.warn("Firebase topic push HTTP fallback failed", fallbackEx);
+        }
+      }
       PushNotificationFailureReason reason = classifyFailure(ex);
       String providerCode = providerErrorCode(ex);
       throw new PushNotificationException(
@@ -177,6 +233,16 @@ public class PushNotificationService implements PushNotificationPort {
       return true;
     } catch (FirebaseMessagingException ex) {
       logFirebaseFailure("user push", ex);
+      if (shouldFallback(ex)) {
+        try {
+          String fallbackId =
+              sendViaHttp("user push", token.getFcmToken(), null, title, body, data);
+          log.info("Firebase user push succeeded via HTTP fallback (messageId={})", fallbackId);
+          return true;
+        } catch (PushNotificationException fallbackEx) {
+          log.warn("Firebase user push HTTP fallback failed", fallbackEx);
+        }
+      }
       if (shouldDeleteToken(ex)) {
         log.info("Removing invalid push token {} for user {}", token.getId(), token.getUserId());
         pushTokenRepository.deleteById(token.getId());
@@ -239,6 +305,139 @@ public class PushNotificationService implements PushNotificationPort {
     }
     ErrorCode baseCode = ex.getErrorCode();
     return baseCode != null ? baseCode.name() : null;
+  }
+
+  private boolean shouldFallback(FirebaseMessagingException ex) {
+    if (ex.getErrorCode() == ErrorCode.UNAUTHENTICATED) {
+      return true;
+    }
+    MessagingErrorCode code = ex.getMessagingErrorCode();
+    if (code == MessagingErrorCode.THIRD_PARTY_AUTH_ERROR) {
+      return true;
+    }
+    String message = ex.getMessage();
+    return message != null
+        && message.contains("missing required authentication credential");
+  }
+
+  private String sendViaHttp(
+      String action,
+      String token,
+      String topic,
+      String title,
+      String body,
+      Map<String, String> data)
+      throws PushNotificationException {
+    String projectId = resolveProjectId();
+    if (firebaseCredentials == null) {
+      throw new PushNotificationException(
+          PushNotificationFailureReason.UNAUTHENTICATED, "Firebase credentials missing for HTTP fallback.");
+    }
+    try {
+      firebaseCredentials.refreshIfExpired();
+    } catch (IOException ex) {
+      throw new PushNotificationException(
+          PushNotificationFailureReason.UNAUTHENTICATED,
+          null,
+          "Failed to refresh Firebase access token for HTTP fallback.",
+          ex);
+    }
+    AccessToken accessToken = firebaseCredentials.getAccessToken();
+    if (accessToken == null || accessToken.getTokenValue() == null) {
+      throw new PushNotificationException(
+          PushNotificationFailureReason.UNAUTHENTICATED, "Firebase access token missing for HTTP fallback.");
+    }
+
+    Map<String, Object> message = new LinkedHashMap<>();
+    if (token != null) {
+      message.put("token", token);
+    }
+    if (topic != null) {
+      message.put("topic", topic);
+    }
+    Map<String, Object> notification = new LinkedHashMap<>();
+    if (title != null) {
+      notification.put("title", title);
+    }
+    if (body != null) {
+      notification.put("body", body);
+    }
+    if (!notification.isEmpty()) {
+      message.put("notification", notification);
+    }
+    message.put(
+        "android",
+        Map.of("notification", Map.of("channel_id", ANDROID_CHANNEL_ID)));
+    message.put(
+        "apns",
+        Map.of("payload", Map.of("aps", Map.of("sound", "default"))));
+    if (data != null && !data.isEmpty()) {
+      message.put("data", data);
+    }
+    String payload;
+    try {
+      payload = objectMapper.writeValueAsString(Map.of("message", message));
+    } catch (JsonProcessingException ex) {
+      throw new PushNotificationException(
+          PushNotificationFailureReason.UNKNOWN,
+          null,
+          "Failed to serialize Firebase HTTP payload.",
+          ex);
+    }
+
+    String endpoint = String.format(FCM_SEND_ENDPOINT, projectId);
+    HttpRequest request =
+        HttpRequest.newBuilder()
+            .uri(URI.create(endpoint))
+            .header("Authorization", "Bearer " + accessToken.getTokenValue())
+            .header("Content-Type", "application/json; charset=UTF-8")
+            .POST(HttpRequest.BodyPublishers.ofString(payload))
+            .build();
+    try {
+      HttpResponse<String> response =
+          HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+      if (response.statusCode() / 100 != 2) {
+        log.warn(
+            "Firebase {} HTTP fallback failed (status={}, body={})",
+            action,
+            response.statusCode(),
+            response.body());
+        throw new PushNotificationException(
+            PushNotificationFailureReason.UNAUTHENTICATED,
+            "Firebase HTTP fallback failed with status " + response.statusCode());
+      }
+      JsonNode node = objectMapper.readTree(response.body());
+      JsonNode name = node.get("name");
+      return name != null ? name.asText() : null;
+    } catch (IOException ex) {
+      throw new PushNotificationException(
+          PushNotificationFailureReason.UNAVAILABLE,
+          null,
+          "Failed to call Firebase HTTP fallback.",
+          ex);
+    } catch (InterruptedException ex) {
+      Thread.currentThread().interrupt();
+      throw new PushNotificationException(
+          PushNotificationFailureReason.UNAVAILABLE,
+          null,
+          "Firebase HTTP fallback interrupted.",
+          ex);
+    }
+  }
+
+  private String resolveProjectId() throws PushNotificationException {
+    String projectId = firebaseApp.getOptions().getProjectId();
+    if (projectId != null && !projectId.isBlank()) {
+      return projectId;
+    }
+    if (firebaseCredentials instanceof ServiceAccountCredentials serviceAccountCredentials) {
+      String serviceProjectId = serviceAccountCredentials.getProjectId();
+      if (serviceProjectId != null && !serviceProjectId.isBlank()) {
+        return serviceProjectId;
+      }
+    }
+    throw new PushNotificationException(
+        PushNotificationFailureReason.UNAUTHENTICATED, "Firebase project ID missing for HTTP fallback.");
   }
 
   private String buildFailureMessage(

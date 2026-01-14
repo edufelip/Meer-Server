@@ -11,6 +11,8 @@ import com.edufelip.meer.core.push.PushToken;
 import com.edufelip.meer.domain.PushNotificationException;
 import com.edufelip.meer.domain.PushNotificationFailureReason;
 import com.edufelip.meer.domain.repo.PushTokenRepository;
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.firebase.FirebaseApp;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
@@ -27,7 +29,7 @@ class PushNotificationServiceTest {
   void sendTestPushResolvesUuidTokenIdToStoredFcmToken() throws Exception {
     FirebaseMessaging firebaseMessaging = Mockito.mock(FirebaseMessaging.class);
     PushTokenRepository repository = Mockito.mock(PushTokenRepository.class);
-    PushNotificationService service = new PushNotificationService(firebaseMessaging, repository);
+    PushNotificationService service = buildService(firebaseMessaging, repository);
 
     UUID tokenId = UUID.randomUUID();
     PushToken stored = new PushToken();
@@ -50,7 +52,7 @@ class PushNotificationServiceTest {
   void sendTestPushThrowsTokenNotFoundWhenUuidDoesNotExist() {
     FirebaseMessaging firebaseMessaging = Mockito.mock(FirebaseMessaging.class);
     PushTokenRepository repository = Mockito.mock(PushTokenRepository.class);
-    PushNotificationService service = new PushNotificationService(firebaseMessaging, repository);
+    PushNotificationService service = buildService(firebaseMessaging, repository);
 
     UUID tokenId = UUID.randomUUID();
     when(repository.findById(tokenId)).thenReturn(Optional.empty());
@@ -68,7 +70,7 @@ class PushNotificationServiceTest {
   void sendTestPushDeletesStoredTokenOnUnregistered() throws Exception {
     FirebaseMessaging firebaseMessaging = Mockito.mock(FirebaseMessaging.class);
     PushTokenRepository repository = Mockito.mock(PushTokenRepository.class);
-    PushNotificationService service = new PushNotificationService(firebaseMessaging, repository);
+    PushNotificationService service = buildService(firebaseMessaging, repository);
 
     UUID tokenId = UUID.randomUUID();
     PushToken stored = new PushToken();
@@ -97,7 +99,7 @@ class PushNotificationServiceTest {
   void sendToStoredTokenReturnsTrueOnSuccess() throws Exception {
     FirebaseMessaging firebaseMessaging = Mockito.mock(FirebaseMessaging.class);
     PushTokenRepository repository = Mockito.mock(PushTokenRepository.class);
-    PushNotificationService service = new PushNotificationService(firebaseMessaging, repository);
+    PushNotificationService service = buildService(firebaseMessaging, repository);
 
     PushToken token = new PushToken();
     token.setId(UUID.randomUUID());
@@ -118,7 +120,7 @@ class PushNotificationServiceTest {
   void sendToStoredTokenDeletesOnUnregistered() throws Exception {
     FirebaseMessaging firebaseMessaging = Mockito.mock(FirebaseMessaging.class);
     PushTokenRepository repository = Mockito.mock(PushTokenRepository.class);
-    PushNotificationService service = new PushNotificationService(firebaseMessaging, repository);
+    PushNotificationService service = buildService(firebaseMessaging, repository);
 
     PushToken token = new PushToken();
     UUID tokenId = UUID.randomUUID();
@@ -141,7 +143,7 @@ class PushNotificationServiceTest {
   void sendToStoredTokenKeepsTokenOnOtherErrors() throws Exception {
     FirebaseMessaging firebaseMessaging = Mockito.mock(FirebaseMessaging.class);
     PushTokenRepository repository = Mockito.mock(PushTokenRepository.class);
-    PushNotificationService service = new PushNotificationService(firebaseMessaging, repository);
+    PushNotificationService service = buildService(firebaseMessaging, repository);
 
     PushToken token = new PushToken();
     token.setId(UUID.randomUUID());
@@ -157,5 +159,12 @@ class PushNotificationServiceTest {
 
     assertThat(result).isFalse();
     verify(repository, never()).deleteById(any());
+  }
+
+  private PushNotificationService buildService(
+      FirebaseMessaging firebaseMessaging, PushTokenRepository repository) {
+    FirebaseApp firebaseApp = Mockito.mock(FirebaseApp.class);
+    GoogleCredentials credentials = Mockito.mock(GoogleCredentials.class);
+    return new PushNotificationService(firebaseMessaging, firebaseApp, credentials, repository);
   }
 }
