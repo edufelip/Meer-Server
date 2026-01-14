@@ -12,6 +12,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -22,6 +23,8 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnProperty(prefix = "firebase", name = "enabled", havingValue = "true")
 public class FirebaseConfig {
   private static final Logger log = LoggerFactory.getLogger(FirebaseConfig.class);
+  private static final List<String> FIREBASE_SCOPES =
+      List.of("https://www.googleapis.com/auth/firebase.messaging");
 
   @Bean
   public FirebaseApp firebaseApp(FirebaseProperties properties) throws IOException {
@@ -61,7 +64,7 @@ public class FirebaseConfig {
           json.trim().length());
       try (InputStream stream =
           new ByteArrayInputStream(json.trim().getBytes(StandardCharsets.UTF_8))) {
-        GoogleCredentials credentials = GoogleCredentials.fromStream(stream);
+        GoogleCredentials credentials = applyScopes(GoogleCredentials.fromStream(stream));
         logCredentialDetails(credentials);
         return credentials;
       }
@@ -75,14 +78,25 @@ public class FirebaseConfig {
           Files.exists(credentialsPath),
           Files.isReadable(credentialsPath));
       try (InputStream stream = new FileInputStream(credentialsPath.toFile())) {
-        GoogleCredentials credentials = GoogleCredentials.fromStream(stream);
+        GoogleCredentials credentials = applyScopes(GoogleCredentials.fromStream(stream));
         logCredentialDetails(credentials);
         return credentials;
       }
     }
     log.info("Using Firebase Application Default Credentials");
-    GoogleCredentials credentials = GoogleCredentials.getApplicationDefault();
+    GoogleCredentials credentials = applyScopes(GoogleCredentials.getApplicationDefault());
     logCredentialDetails(credentials);
+    return credentials;
+  }
+
+  private GoogleCredentials applyScopes(GoogleCredentials credentials) {
+    if (credentials == null) {
+      return null;
+    }
+    if (credentials.createScopedRequired()) {
+      log.info("Applying Firebase OAuth scopes: {}", FIREBASE_SCOPES);
+      return credentials.createScoped(FIREBASE_SCOPES);
+    }
     return credentials;
   }
 
