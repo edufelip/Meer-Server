@@ -66,7 +66,6 @@ jobs:
             SPRING_PROFILES_ACTIVE
             SECURITY_JWT_SECRET SECURITY_JWT_ACCESS_TTL_MINUTES SECURITY_JWT_REFRESH_TTL_DAYS
             GOOGLE_ANDROID_CLIENT_ID GOOGLE_IOS_CLIENT_ID GOOGLE_WEB_CLIENT_ID
-            GOOGLE_APPLICATION_CREDENTIALS
             FIREBASE_ENABLED FIREBASE_PROJECT_ID FIREBASE_CREDENTIALS_PATH
             GCS_BUCKET GCS_PUBLIC_BASE_URL GCS_SIGNED_URL_TTL_MINUTES GCS_AVATARS_PREFIX
             MEER_CORS_ALLOWED_ORIGINS
@@ -181,14 +180,6 @@ jobs:
             sudo mv "/tmp/meer-${{ env.SHA_SHORT }}.jar" "${{ env.REMOTE_JAR }}"
             sudo chown meerdev:meerdev "${{ env.REMOTE_JAR }}"
 
-            # Source env locally for this script (needed for GOOGLE_APPLICATION_CREDENTIALS, etc.)
-            if sudo test -f /opt/meer-dev/.env; then
-              set -a
-              # shellcheck disable=SC1091
-              source <(sudo cat /opt/meer-dev/.env)
-              set +a
-            fi
-
             # Ensure systemd loads env vars from /opt/meer-dev/.env on restart
             sudo mkdir -p /etc/systemd/system/"${{ env.SERVICE }}".service.d
             sudo tee /etc/systemd/system/"${{ env.SERVICE }}".service.d/env.conf >/dev/null <<'EOF'
@@ -196,29 +187,6 @@ jobs:
             EnvironmentFile=/opt/meer-dev/.env
             EOF
             sudo systemctl daemon-reload
-
-            cred_path="${GOOGLE_APPLICATION_CREDENTIALS:-}"
-            if [ -z "$cred_path" ]; then
-              echo "GOOGLE_APPLICATION_CREDENTIALS not set (checked /opt/meer-dev/.env and env var)" >&2
-              exit 1
-            fi
-            if [ "${cred_path#/}" = "$cred_path" ]; then
-              cred_path="/opt/meer-dev/$cred_path"
-            fi
-            if [ "${cred_path%/}" != "$cred_path" ]; then
-              cred_path="${cred_path}service-account.json"
-            fi
-
-            if [ -z "${{ secrets.GCP_SA_B64 }}" ]; then
-              echo "Missing secret GCP_SA_B64" >&2
-              exit 1
-            fi
-
-            sudo mkdir -p "$(dirname "$cred_path")"
-            echo "${{ secrets.GCP_SA_B64 }}" | tr -d '\r\n\t ' | base64 --decode | sudo tee "$cred_path" >/dev/null
-            sudo chown meerdev:meerdev "$cred_path"
-            sudo chmod 600 "$cred_path"
-            sudo test -s "$cred_path" || { echo "Failed to write credentials to $cred_path" >&2; exit 1; }
 
             firebase_cred_path="${FIREBASE_CREDENTIALS_PATH:-}"
             if [ -z "$firebase_cred_path" ]; then
