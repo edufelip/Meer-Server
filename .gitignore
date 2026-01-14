@@ -52,4 +52,4 @@ out/
 
 GEMINI.md
 AGENTS.md
-secrets/
+springboot/firebase-service-account.json
