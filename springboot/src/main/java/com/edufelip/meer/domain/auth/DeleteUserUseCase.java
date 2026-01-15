@@ -72,6 +72,7 @@ public class DeleteUserUseCase {
     }
 
     guideContentCommentRepository.clearEditedByUserId(user.getId());
+    guideContentCommentRepository.clearDeletedByUserId(user.getId());
     guideContentRepository.clearDeletedByUserId(user.getId());
     guideContentCommentRepository.deleteByUserId(user.getId());
     guideContentLikeRepository.deleteByUserId(user.getId());
