@@ -317,13 +317,23 @@ public class AppConfig {
       ThriftStoreRepository thriftStoreRepository,
       StoreFeedbackRepository storeFeedbackRepository,
       StoreDeletionService storeDeletionService,
-      AssetDeletionQueuePort assetDeletionQueuePort) {
+      AssetDeletionQueuePort assetDeletionQueuePort,
+      GuideContentCommentRepository guideContentCommentRepository,
+      GuideContentLikeRepository guideContentLikeRepository,
+      GuideContentRepository guideContentRepository,
+      PushTokenRepository pushTokenRepository,
+      PasswordResetTokenRepository passwordResetTokenRepository) {
     return new DeleteUserUseCase(
         authUserRepository,
         thriftStoreRepository,
         storeFeedbackRepository,
         storeDeletionService,
-        assetDeletionQueuePort);
+        assetDeletionQueuePort,
+        guideContentCommentRepository,
+        guideContentLikeRepository,
+        guideContentRepository,
+        pushTokenRepository,
+        passwordResetTokenRepository);
   }
 
   @Bean

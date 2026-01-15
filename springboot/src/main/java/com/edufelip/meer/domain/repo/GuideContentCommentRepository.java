@@ -7,8 +7,10 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface GuideContentCommentRepository extends JpaRepository<GuideContentComment, Integer> {
   Page<GuideContentComment> findByContentId(Integer contentId, Pageable pageable);
@@ -63,6 +65,16 @@ public interface GuideContentCommentRepository extends JpaRepository<GuideConten
       @Param("to") Instant to,
       @Param("search") String search,
       Pageable pageable);
+
+  @Modifying
+  @Transactional
+  @Query("delete from GuideContentComment c where c.user.id = :userId")
+  void deleteByUserId(@Param("userId") UUID userId);
+
+  @Modifying
+  @Transactional
+  @Query("update GuideContentComment c set c.editedBy = null where c.editedBy.id = :userId")
+  void clearEditedByUserId(@Param("userId") UUID userId);
 
   interface CountView {
     Integer getContentId();

@@ -38,6 +38,11 @@ public interface GuideContentRepository extends JpaRepository<GuideContent, Inte
       "update GuideContent c set c.commentCount = case when c.commentCount > 0 then c.commentCount - 1 else 0 end where c.id = :contentId")
   void decrementCommentCount(@Param("contentId") Integer contentId);
 
+  @Modifying
+  @Transactional
+  @Query("update GuideContent c set c.deletedBy = null where c.deletedBy.id = :userId")
+  void clearDeletedByUserId(@Param("userId") UUID userId);
+
   List<GuideContent> findByThriftStoreId(UUID thriftStoreId);
 
   List<GuideContent> findByThriftStoreIdAndDeletedAtIsNull(UUID thriftStoreId);

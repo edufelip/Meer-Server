@@ -5,6 +5,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface GuideContentLikeRepository extends JpaRepository<GuideContentLike, Integer> {
   Optional<GuideContentLike> findByUserIdAndContentId(UUID userId, Integer contentId);
@@ -30,6 +34,11 @@ public interface GuideContentLikeRepository extends JpaRepository<GuideContentLi
   List<Integer> findLikedContentIds(
       @org.springframework.data.repository.query.Param("userId") UUID userId,
       @org.springframework.data.repository.query.Param("contentIds") List<Integer> contentIds);
+
+  @Modifying
+  @Transactional
+  @Query("delete from GuideContentLike l where l.user.id = :userId")
+  void deleteByUserId(@Param("userId") UUID userId);
 
   interface CountView {
     Integer getContentId();
