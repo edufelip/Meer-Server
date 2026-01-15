@@ -59,6 +59,7 @@ dependencies {
     runtimeOnly("com.h2database:h2")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+    testImplementation("org.testcontainers:jdbc:1.20.3")
     testImplementation("org.testcontainers:junit-jupiter:1.20.3")
     testImplementation("org.testcontainers:postgresql:1.20.3")
 }
@@ -107,16 +108,25 @@ spotless {
 
 flyway {
     val env = System.getenv()
-    fun requireEnv(key: String, alternate: String? = null): String =
-        env[key] ?: alternate ?: error("Missing required environment variable: $key (needed for Flyway)")
+    fun envOrNull(key: String, alternate: String? = null): String? = env[key] ?: alternate
 
-    val dbHost = requireEnv("DB_HOST")
-    val dbPort = requireEnv("DB_PORT")
-    val dbName = requireEnv("DB_NAME")
+    val dbHost = envOrNull("DB_HOST")
+    val dbPort = envOrNull("DB_PORT")
+    val dbName = envOrNull("DB_NAME")
+    val dbUser = envOrNull("DB_USER")
+    val dbPassword = envOrNull("DB_PASSWORD")
+    val hasFlywayEnv =
+        listOf(dbHost, dbPort, dbName, dbUser, dbPassword).all { !it.isNullOrBlank() }
 
-    url = "jdbc:postgresql://${dbHost}:${dbPort}/${dbName}"
-    user = requireEnv("DB_USER")
-    password = requireEnv("DB_PASSWORD")
+    if (hasFlywayEnv) {
+        url = "jdbc:postgresql://${dbHost}:${dbPort}/${dbName}"
+        user = dbUser
+        password = dbPassword
+    } else {
+        url = "jdbc:postgresql://localhost:5432/placeholder"
+        user = "placeholder"
+        password = "placeholder"
+    }
 
     val includeDev = (env["SPRING_PROFILES_ACTIVE"]?.split(',')?.contains("local-db") == true)
     val prodPath = "filesystem:src/main/resources/db/migration"
@@ -129,6 +139,20 @@ flyway {
     baselineOnMigrate = true
     baselineVersion = "0"
     cleanDisabled = true
+}
+
+tasks.withType<org.flywaydb.gradle.task.AbstractFlywayTask>().configureEach {
+    val env = System.getenv()
+    val hasFlywayEnv =
+        listOf("DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD").all {
+            env[it] != null && env[it]!!.isNotBlank()
+        }
+    onlyIf {
+        if (!hasFlywayEnv) {
+            logger.lifecycle("Skipping Flyway task; DB_* env vars are not set.")
+        }
+        hasFlywayEnv
+    }
 }
 
 // For Flyway 9, adding driver to 'flyway' configuration is sufficient.
