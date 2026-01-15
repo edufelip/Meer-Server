@@ -75,6 +75,7 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -197,12 +198,16 @@ public class AppConfig {
       AuthUserRepository authUserRepository,
       StoreFeedbackRepository storeFeedbackRepository,
       GuideContentRepository guideContentRepository,
+      GuideContentCommentRepository guideContentCommentRepository,
+      GuideContentLikeRepository guideContentLikeRepository,
       AssetDeletionQueuePort assetDeletionQueuePort) {
     return new StoreDeletionService(
         thriftStoreRepository,
         authUserRepository,
         storeFeedbackRepository,
         guideContentRepository,
+        guideContentCommentRepository,
+        guideContentLikeRepository,
         assetDeletionQueuePort);
   }
 
@@ -322,7 +327,8 @@ public class AppConfig {
       GuideContentLikeRepository guideContentLikeRepository,
       GuideContentRepository guideContentRepository,
       PushTokenRepository pushTokenRepository,
-      PasswordResetTokenRepository passwordResetTokenRepository) {
+      PasswordResetTokenRepository passwordResetTokenRepository,
+      JdbcTemplate jdbcTemplate) {
     return new DeleteUserUseCase(
         authUserRepository,
         thriftStoreRepository,
@@ -333,7 +339,8 @@ public class AppConfig {
         guideContentLikeRepository,
         guideContentRepository,
         pushTokenRepository,
-        passwordResetTokenRepository);
+        passwordResetTokenRepository,
+        jdbcTemplate);
   }
 
   @Bean

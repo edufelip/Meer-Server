@@ -73,6 +73,11 @@ public interface GuideContentCommentRepository extends JpaRepository<GuideConten
 
   @Modifying
   @Transactional
+  @Query("delete from GuideContentComment c where c.content.id in :contentIds")
+  void deleteByContentIds(@Param("contentIds") List<Integer> contentIds);
+
+  @Modifying
+  @Transactional
   @Query("update GuideContentComment c set c.editedBy = null where c.editedBy.id = :userId")
   void clearEditedByUserId(@Param("userId") UUID userId);
 

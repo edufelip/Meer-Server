@@ -1,11 +1,15 @@
 package com.edufelip.meer.domain;
 
+import com.edufelip.meer.core.content.GuideContent;
 import com.edufelip.meer.core.store.ThriftStore;
 import com.edufelip.meer.domain.port.AssetDeletionQueuePort;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
+import com.edufelip.meer.domain.repo.GuideContentCommentRepository;
+import com.edufelip.meer.domain.repo.GuideContentLikeRepository;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
 import com.edufelip.meer.domain.repo.StoreFeedbackRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -16,6 +20,8 @@ public class StoreDeletionService {
   private final AuthUserRepository authUserRepository;
   private final StoreFeedbackRepository storeFeedbackRepository;
   private final GuideContentRepository guideContentRepository;
+  private final GuideContentCommentRepository guideContentCommentRepository;
+  private final GuideContentLikeRepository guideContentLikeRepository;
   private final AssetDeletionQueuePort assetDeletionQueuePort;
 
   public StoreDeletionService(
@@ -23,11 +29,15 @@ public class StoreDeletionService {
       AuthUserRepository authUserRepository,
       StoreFeedbackRepository storeFeedbackRepository,
       GuideContentRepository guideContentRepository,
+      GuideContentCommentRepository guideContentCommentRepository,
+      GuideContentLikeRepository guideContentLikeRepository,
       AssetDeletionQueuePort assetDeletionQueuePort) {
     this.thriftStoreRepository = thriftStoreRepository;
     this.authUserRepository = authUserRepository;
     this.storeFeedbackRepository = storeFeedbackRepository;
     this.guideContentRepository = guideContentRepository;
+    this.guideContentCommentRepository = guideContentCommentRepository;
+    this.guideContentLikeRepository = guideContentLikeRepository;
     this.assetDeletionQueuePort = assetDeletionQueuePort;
   }
 
@@ -48,9 +58,20 @@ public class StoreDeletionService {
     storeFeedbackRepository.deleteByThriftStoreId(store.getId());
 
     Set<String> assetUrls = collectStoreAssetUrls(store);
-    guideContentRepository
-        .findByThriftStoreId(store.getId())
-        .forEach(content -> addUrl(assetUrls, content.getImageUrl()));
+    List<Integer> contentIds = new ArrayList<>();
+    List<GuideContent> contents = guideContentRepository.findByThriftStoreId(store.getId());
+    contents.forEach(
+        content -> {
+          addUrl(assetUrls, content.getImageUrl());
+          if (content.getId() != null) {
+            contentIds.add(content.getId());
+          }
+        });
+    if (!contentIds.isEmpty()) {
+      guideContentCommentRepository.deleteByContentIds(contentIds);
+      guideContentLikeRepository.deleteByContentIds(contentIds);
+      guideContentRepository.deleteAll(contents);
+    }
 
     assetDeletionQueuePort.enqueueAll(List.copyOf(assetUrls), sourceType, store.getId().toString());
 

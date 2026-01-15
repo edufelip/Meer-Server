@@ -40,6 +40,11 @@ public interface GuideContentLikeRepository extends JpaRepository<GuideContentLi
   @Query("delete from GuideContentLike l where l.user.id = :userId")
   void deleteByUserId(@Param("userId") UUID userId);
 
+  @Modifying
+  @Transactional
+  @Query("delete from GuideContentLike l where l.content.id in :contentIds")
+  void deleteByContentIds(@Param("contentIds") List<Integer> contentIds);
+
   interface CountView {
     Integer getContentId();
 
