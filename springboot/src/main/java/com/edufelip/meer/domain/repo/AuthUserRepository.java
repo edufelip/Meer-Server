@@ -25,8 +25,6 @@ public interface AuthUserRepository extends JpaRepository<AuthUser, UUID> {
 
   @Modifying
   @Transactional
-  @Query(
-      value = "delete from auth_user_favorites where auth_user_id = :userId",
-      nativeQuery = true)
+  @Query(value = "delete from auth_user_favorites where auth_user_id = :userId", nativeQuery = true)
   void deleteFavoritesByUserId(@Param("userId") UUID userId);
 }

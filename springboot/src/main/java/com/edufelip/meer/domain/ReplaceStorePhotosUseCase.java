@@ -1,10 +1,12 @@
 package com.edufelip.meer.domain;
 
 import com.edufelip.meer.core.auth.AuthUser;
+import com.edufelip.meer.core.moderation.EntityType;
 import com.edufelip.meer.core.store.ThriftStore;
 import com.edufelip.meer.core.store.ThriftStorePhoto;
 import com.edufelip.meer.domain.port.PhotoStoragePort;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
+import com.edufelip.meer.service.moderation.ModerationPolicyService;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -24,14 +26,17 @@ public class ReplaceStorePhotosUseCase {
   private final ThriftStoreRepository thriftStoreRepository;
   private final StoreOwnershipService storeOwnershipService;
   private final PhotoStoragePort photoStoragePort;
+  private final ModerationPolicyService moderationPolicyService;
 
   public ReplaceStorePhotosUseCase(
       ThriftStoreRepository thriftStoreRepository,
       StoreOwnershipService storeOwnershipService,
-      PhotoStoragePort photoStoragePort) {
+      PhotoStoragePort photoStoragePort,
+      ModerationPolicyService moderationPolicyService) {
     this.thriftStoreRepository = thriftStoreRepository;
     this.storeOwnershipService = storeOwnershipService;
     this.photoStoragePort = photoStoragePort;
+    this.moderationPolicyService = moderationPolicyService;
   }
 
   public ThriftStore execute(AuthUser user, UUID storeId, Command command) {
@@ -119,7 +124,9 @@ public class ReplaceStorePhotosUseCase {
       var storedObject = photoStoragePort.fetchRequired(item.fileKey());
       validateStoredObject(storedObject, item.fileKey());
       String viewUrl = photoStoragePort.publicUrl(item.fileKey());
-      finalPhotos.add(new ThriftStorePhoto(store, viewUrl, item.position()));
+      ThriftStorePhoto newPhoto = new ThriftStorePhoto(store, viewUrl, item.position());
+      finalPhotos.add(newPhoto);
+
     }
 
     // Mutate managed collection in place to avoid orphanRemoval issues
@@ -140,6 +147,26 @@ public class ReplaceStorePhotosUseCase {
       store.setCoverImageUrl(null);
     }
     thriftStoreRepository.save(store);
+
+    // Enqueue newly created photos for moderation (now we have IDs)
+    for (ThriftStorePhoto photo : finalPhotos) {
+      if (photo.getId() != null) {
+        // Check if this is a new photo (wasn't in existingById)
+        boolean isNew = existingPhotos.stream().noneMatch(p -> p.getId().equals(photo.getId()));
+        if (isNew) {
+          try {
+            moderationPolicyService.enqueueForModeration(
+                photo.getUrl(), EntityType.STORE_PHOTO, photo.getId().toString());
+          } catch (Exception e) {
+            log.error(
+                "Failed to enqueue photo for moderation: photoId={}, url={}",
+                photo.getId(),
+                photo.getUrl(),
+                e);
+          }
+        }
+      }
+    }
 
     // Clean up any photos not kept nor explicitly deleted (implicit removals)
     if (!existingById.isEmpty()) {

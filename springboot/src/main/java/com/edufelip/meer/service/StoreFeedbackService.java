@@ -48,8 +48,7 @@ public class StoreFeedbackService {
       throw new IllegalArgumentException("score must be between 1 and 5");
     }
     var existing = repository.findByUserIdAndThriftStoreId(user.getId(), store.getId());
-    StoreFeedback fb =
-        existing.orElseGet(() -> new StoreFeedback(user, store, null, null));
+    StoreFeedback fb = existing.orElseGet(() -> new StoreFeedback(user, store, null, null));
     Instant now = Instant.now(clock);
     fb.setScore(score);
     fb.setBody(body);

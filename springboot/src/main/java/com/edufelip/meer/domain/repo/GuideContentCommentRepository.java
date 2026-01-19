@@ -84,7 +84,8 @@ public interface GuideContentCommentRepository extends JpaRepository<GuideConten
   @Modifying
   @Transactional
   @Query(
-      value = "update guide_content_comment set deleted_by_user_id = null where deleted_by_user_id = :userId",
+      value =
+          "update guide_content_comment set deleted_by_user_id = null where deleted_by_user_id = :userId",
       nativeQuery = true)
   void clearDeletedByUserId(@Param("userId") UUID userId);
 

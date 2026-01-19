@@ -33,7 +33,8 @@ public class AccountController {
     String token = authUserResolver.requireBearer(authHeader);
     var user = getProfileUseCase.execute(token);
     if (body == null || body.email() == null || !body.email().equalsIgnoreCase(user.getEmail())) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email confirmation does not match");
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "Email confirmation does not match");
     }
     deleteUserUseCase.execute(user, "ACCOUNT_DELETE");
     return ResponseEntity.noContent().build();

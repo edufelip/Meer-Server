@@ -178,9 +178,10 @@ public class AppConfig {
   public ReplaceStorePhotosUseCase replaceStorePhotosUseCase(
       ThriftStoreRepository thriftStoreRepository,
       StoreOwnershipService storeOwnershipService,
-      PhotoStoragePort photoStoragePort) {
+      PhotoStoragePort photoStoragePort,
+      com.edufelip.meer.service.moderation.ModerationPolicyService moderationPolicyService) {
     return new ReplaceStorePhotosUseCase(
-        thriftStoreRepository, storeOwnershipService, photoStoragePort);
+        thriftStoreRepository, storeOwnershipService, photoStoragePort, moderationPolicyService);
   }
 
   @Bean
@@ -270,9 +271,10 @@ public class AppConfig {
   public UpdateGuideContentUseCase updateGuideContentUseCase(
       GuideContentRepository guideContentRepository,
       StoreOwnershipService storeOwnershipService,
-      PhotoStoragePort photoStoragePort) {
+      PhotoStoragePort photoStoragePort,
+      com.edufelip.meer.service.moderation.ModerationPolicyService moderationPolicyService) {
     return new UpdateGuideContentUseCase(
-        guideContentRepository, storeOwnershipService, photoStoragePort);
+        guideContentRepository, storeOwnershipService, photoStoragePort, moderationPolicyService);
   }
 
   @Bean

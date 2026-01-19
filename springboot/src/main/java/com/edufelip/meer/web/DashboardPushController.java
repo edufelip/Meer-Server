@@ -155,7 +155,9 @@ public class DashboardPushController {
   private ResponseStatusException toResponseStatusException(PushNotificationException ex) {
     PushNotificationFailureReason reason = ex.getFailureReason();
     String message =
-        ex.getMessage() != null && !ex.getMessage().isBlank() ? ex.getMessage() : "Push send failed";
+        ex.getMessage() != null && !ex.getMessage().isBlank()
+            ? ex.getMessage()
+            : "Push send failed";
 
     if (reason == null) {
       return new ResponseStatusException(HttpStatus.BAD_GATEWAY, message);

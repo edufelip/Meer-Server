@@ -80,7 +80,7 @@ public class PasswordResetEmailSender implements PasswordResetNotifier {
         </head>
         <body style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f7fa; margin: 0; padding: 0;">
           <div style="max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-            
+
             <!-- Header with Minimalist Badge -->
             <div style="background-color: #ffffff; padding: 40px 0 20px 0; text-align: center; border-bottom: 1px solid #f0f0f0;">
               <div style="width: 80px; height: 80px; background-color: #e6f0ff; border-radius: 50%%; margin: 0 auto; position: relative;">
@@ -96,15 +96,15 @@ public class PasswordResetEmailSender implements PasswordResetNotifier {
             <div style="padding: 40px; color: #2d3748; line-height: 1.6;">
               <h2 style="margin-top: 0; color: #1a202c; font-size: 22px;">Esqueceu sua senha?</h2>
               <p style="font-size: 16px;">Não se preocupe, isso acontece com todo mundo! Recebemos um pedido para redefinir a senha da sua conta no <strong>Guia Brechó</strong>.</p>
-              
+
               <div style="text-align: center; margin: 40px 0;">
                 <a href="%s" style="background-color: #007bff; color: #ffffff; padding: 18px 36px; text-decoration: none; border-radius: 10px; font-weight: bold; display: inline-block; box-shadow: 0 4px 12px rgba(0,123,255,0.3);">Redefinir Senha</a>
               </div>
-              
+
               <p style="font-size: 14px; color: #718096; background: #f7fafc; padding: 15px; border-radius: 8px; border-left: 4px solid #007bff;">
                 <strong>Atenção:</strong> Por segurança, este link é válido por apenas <span style="color: #e53e3e; font-weight: bold;">%d minutos</span>. Caso não tenha solicitado a redefinição, você pode ignorar este e-mail com segurança.
               </p>
-              
+
               <div style="margin-top: 40px; border-top: 1px solid #edf2f7; padding-top: 25px;">
                 <p style="margin: 0; font-size: 16px; color: #4a5568;">Até logo,<br><strong>Equipe Guia Brechó</strong></p>
               </div>
@@ -117,8 +117,7 @@ public class PasswordResetEmailSender implements PasswordResetNotifier {
           </div>
         </body>
         </html>
-        """.formatted(resetLink, ttlMinutes);
+        """
+        .formatted(resetLink, ttlMinutes);
   }
-
-
 }

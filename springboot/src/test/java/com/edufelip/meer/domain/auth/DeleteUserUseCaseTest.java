@@ -49,8 +49,7 @@ class DeleteUserUseCaseTest {
   @Test
   void deletesUserAndCleansRelatedData() {
     AuthUser user = authUserRepository.save(TestFixtures.user("owner@example.com", "Owner"));
-    AuthUser otherUser =
-        authUserRepository.save(TestFixtures.user("other@example.com", "Other"));
+    AuthUser otherUser = authUserRepository.save(TestFixtures.user("other@example.com", "Other"));
 
     ThriftStore ownedStore = TestFixtures.store("Owned Store");
     ownedStore.setOwner(user);
@@ -75,8 +74,7 @@ class DeleteUserUseCaseTest {
             ownedStore);
     guideContentRepository.save(ownedContent);
     guideContentLikeRepository.save(new GuideContentLike(otherUser, ownedContent));
-    guideContentCommentRepository.save(
-        new GuideContentComment(otherUser, ownedContent, "Nice"));
+    guideContentCommentRepository.save(new GuideContentComment(otherUser, ownedContent, "Nice"));
 
     GuideContent otherContent =
         new GuideContent(

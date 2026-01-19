@@ -38,6 +38,7 @@ dependencies {
     implementation("net.coobird:thumbnailator:0.4.20")
     implementation("com.twelvemonkeys.imageio:imageio-webp:3.12.0")
     implementation("com.google.cloud:google-cloud-storage:2.40.0")
+    implementation("com.microsoft.onnxruntime:onnxruntime:1.21.0")
     implementation("com.fasterxml.uuid:java-uuid-generator:4.3.0")
     implementation("org.springframework.security:spring-security-crypto")
     implementation("io.jsonwebtoken:jjwt-api:0.11.5")

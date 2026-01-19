@@ -1,5 +1,6 @@
 package com.edufelip.meer.web;
 
+import com.edufelip.meer.core.moderation.EntityType;
 import com.edufelip.meer.domain.auth.DeleteUserUseCase;
 import com.edufelip.meer.domain.auth.GetProfileUseCase;
 import com.edufelip.meer.domain.auth.UpdateProfileUseCase;
@@ -12,6 +13,7 @@ import com.edufelip.meer.mapper.Mappers;
 import com.edufelip.meer.security.AuthUserResolver;
 import com.edufelip.meer.security.token.InvalidTokenException;
 import com.edufelip.meer.service.GcsStorageService;
+import com.edufelip.meer.service.moderation.ModerationPolicyService;
 import com.edufelip.meer.util.UrlValidatorUtil;
 import jakarta.validation.Valid;
 import java.nio.file.Files;
@@ -47,6 +49,7 @@ public class ProfileController {
   private final DeleteUserUseCase deleteUserUseCase;
   private final GcsStorageService gcsStorageService;
   private final AuthUserResolver authUserResolver;
+  private final ModerationPolicyService moderationPolicyService;
   private static final Set<String> ALLOWED_AVATAR_CONTENT_TYPES =
       Set.of("image/jpeg", "image/png", "image/webp");
   private static final long MAX_AVATAR_BYTES = 5 * 1024 * 1024;
@@ -56,12 +59,14 @@ public class ProfileController {
       UpdateProfileUseCase updateProfileUseCase,
       DeleteUserUseCase deleteUserUseCase,
       GcsStorageService gcsStorageService,
-      AuthUserResolver authUserResolver) {
+      AuthUserResolver authUserResolver,
+      ModerationPolicyService moderationPolicyService) {
     this.getProfileUseCase = getProfileUseCase;
     this.updateProfileUseCase = updateProfileUseCase;
     this.deleteUserUseCase = deleteUserUseCase;
     this.gcsStorageService = gcsStorageService;
     this.authUserResolver = authUserResolver;
+    this.moderationPolicyService = moderationPolicyService;
   }
 
   @GetMapping
@@ -102,6 +107,7 @@ public class ProfileController {
     if (body == null)
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body required");
     var currentUser = getProfileUseCase.execute(token);
+    String previousAvatar = currentUser.getPhotoUrl();
     String normalizedAvatar = normalizeAvatarUrl(body.avatarUrl(), currentUser.getId());
     var user =
         updateProfileUseCase.execute(
@@ -112,6 +118,23 @@ public class ProfileController {
                 body.bio(),
                 body.notifyNewStores(),
                 body.notifyPromos()));
+
+    // Enqueue new avatar for moderation if it changed
+    if (normalizedAvatar != null && !normalizedAvatar.equals(previousAvatar)) {
+      try {
+        moderationPolicyService.enqueueForModeration(
+            normalizedAvatar, EntityType.USER_AVATAR, user.getId().toString());
+        log.info(
+            "Enqueued avatar for moderation: userId={}, url={}", user.getId(), normalizedAvatar);
+      } catch (Exception e) {
+        log.error(
+            "Failed to enqueue avatar for moderation: userId={}, url={}",
+            user.getId(),
+            normalizedAvatar,
+            e);
+      }
+    }
+
     return Mappers.toProfileDto(user, true);
   }
 
@@ -138,6 +161,23 @@ public class ProfileController {
 
     var user = updateProfileUseCase.execute(token, command);
     deleteOldAvatarIfReplaced(previousAvatar, user.getPhotoUrl());
+
+    // Enqueue new avatar for moderation if it changed
+    if (normalizedAvatar != null && !normalizedAvatar.equals(previousAvatar)) {
+      try {
+        moderationPolicyService.enqueueForModeration(
+            normalizedAvatar, EntityType.USER_AVATAR, user.getId().toString());
+        log.info(
+            "Enqueued avatar for moderation: userId={}, url={}", user.getId(), normalizedAvatar);
+      } catch (Exception e) {
+        log.error(
+            "Failed to enqueue avatar for moderation: userId={}, url={}",
+            user.getId(),
+            normalizedAvatar,
+            e);
+      }
+    }
+
     return Mappers.toProfileDto(user, true);
   }
 

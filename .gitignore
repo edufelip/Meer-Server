@@ -53,3 +53,4 @@ out/
 GEMINI.md
 AGENTS.md
 springboot/firebase-service-account.json
+docs/internal/*

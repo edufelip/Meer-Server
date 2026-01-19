@@ -5,6 +5,7 @@ import com.edufelip.meer.core.auth.Role;
 import com.edufelip.meer.core.category.Category;
 import com.edufelip.meer.core.content.GuideContent;
 import com.edufelip.meer.core.content.GuideContentComment;
+import com.edufelip.meer.core.moderation.ImageModeration;
 import com.edufelip.meer.core.store.ThriftStore;
 import com.edufelip.meer.domain.CreateThriftStoreUseCase;
 import com.edufelip.meer.domain.GuideContentSummary;
@@ -16,6 +17,7 @@ import com.edufelip.meer.dto.CategoryDto;
 import com.edufelip.meer.dto.DashboardCommentDto;
 import com.edufelip.meer.dto.GuideContentCommentDto;
 import com.edufelip.meer.dto.GuideContentDto;
+import com.edufelip.meer.dto.ImageModerationDto;
 import com.edufelip.meer.dto.PhotoRegisterRequest;
 import com.edufelip.meer.dto.PhotoUploadResponse;
 import com.edufelip.meer.dto.PhotoUploadSlot;
@@ -339,5 +341,23 @@ public class Mappers {
   public static Boolean isFavorite(AuthUser user, UUID storeId) {
     if (user == null || storeId == null || user.getFavorites() == null) return false;
     return user.getFavorites().stream().anyMatch(f -> storeId.equals(f.getId()));
+  }
+
+  public static ImageModerationDto toDto(ImageModeration moderation) {
+    if (moderation == null) return null;
+    return new ImageModerationDto(
+        moderation.getId(),
+        moderation.getImageUrl(),
+        moderation.getStatus(),
+        moderation.getEntityType(),
+        moderation.getEntityId(),
+        moderation.getNsfwScore(),
+        moderation.getFailureReason(),
+        moderation.getCreatedAt(),
+        moderation.getProcessedAt(),
+        moderation.getReviewedAt(),
+        moderation.getReviewedBy(),
+        moderation.getReviewNotes(),
+        moderation.getRetryCount());
   }
 }

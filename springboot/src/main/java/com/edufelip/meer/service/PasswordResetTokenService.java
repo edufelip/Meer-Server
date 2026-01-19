@@ -24,7 +24,7 @@ public class PasswordResetTokenService {
   public void createNewToken(AuthUser user, UUID token, long ttlMinutes) {
     // Invalidate all previous tokens
     repository.deleteByUserId(user.getId());
-    
+
     // Create new one
     Instant expiresAt = Instant.now(clock).plus(Duration.ofMinutes(ttlMinutes));
     repository.save(new PasswordResetToken(token, user, expiresAt));

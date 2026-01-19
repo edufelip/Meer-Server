@@ -12,8 +12,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.ServiceAccountCredentials;
-import com.google.firebase.FirebaseApp;
 import com.google.firebase.ErrorCode;
+import com.google.firebase.FirebaseApp;
 import com.google.firebase.IncomingHttpResponse;
 import com.google.firebase.messaging.AndroidConfig;
 import com.google.firebase.messaging.AndroidNotification;
@@ -76,8 +76,7 @@ public class PushNotificationService implements PushNotificationPort {
       PushToken stored = pushTokenRepository.findById(tokenId).orElse(null);
       if (stored == null) {
         throw new PushNotificationException(
-            PushNotificationFailureReason.TOKEN_NOT_FOUND,
-            "Push token not found: " + tokenId);
+            PushNotificationFailureReason.TOKEN_NOT_FOUND, "Push token not found: " + tokenId);
       }
       resolvedToken = stored.getFcmToken();
     } catch (IllegalArgumentException ignored) {
@@ -94,9 +93,7 @@ public class PushNotificationService implements PushNotificationPort {
                         AndroidNotification.builder().setChannelId(ANDROID_CHANNEL_ID).build())
                     .build())
             .setApnsConfig(
-                ApnsConfig.builder()
-                    .setAps(Aps.builder().setSound("default").build())
-                    .build())
+                ApnsConfig.builder().setAps(Aps.builder().setSound("default").build()).build())
             .putData("type", type)
             .putData("id", id)
             .build();
@@ -134,10 +131,7 @@ public class PushNotificationService implements PushNotificationPort {
         pushTokenRepository.deleteById(tokenId);
       }
       throw new PushNotificationException(
-          reason,
-          providerCode,
-          buildFailureMessage("test push", reason, providerCode, ex),
-          ex);
+          reason, providerCode, buildFailureMessage("test push", reason, providerCode, ex), ex);
     }
   }
 
@@ -154,9 +148,7 @@ public class PushNotificationService implements PushNotificationPort {
                         AndroidNotification.builder().setChannelId(ANDROID_CHANNEL_ID).build())
                     .build())
             .setApnsConfig(
-                ApnsConfig.builder()
-                    .setAps(Aps.builder().setSound("default").build())
-                    .build());
+                ApnsConfig.builder().setAps(Aps.builder().setSound("default").build()).build());
     if (data != null) {
       for (Map.Entry<String, String> entry : data.entrySet()) {
         if (entry.getKey() != null && entry.getValue() != null) {
@@ -180,10 +172,7 @@ public class PushNotificationService implements PushNotificationPort {
       PushNotificationFailureReason reason = classifyFailure(ex);
       String providerCode = providerErrorCode(ex);
       throw new PushNotificationException(
-          reason,
-          providerCode,
-          buildFailureMessage("topic push", reason, providerCode, ex),
-          ex);
+          reason, providerCode, buildFailureMessage("topic push", reason, providerCode, ex), ex);
     }
   }
 
@@ -217,9 +206,7 @@ public class PushNotificationService implements PushNotificationPort {
                         AndroidNotification.builder().setChannelId(ANDROID_CHANNEL_ID).build())
                     .build())
             .setApnsConfig(
-                ApnsConfig.builder()
-                    .setAps(Aps.builder().setSound("default").build())
-                    .build());
+                ApnsConfig.builder().setAps(Aps.builder().setSound("default").build()).build());
     if (data != null) {
       for (Map.Entry<String, String> entry : data.entrySet()) {
         if (entry.getKey() != null && entry.getValue() != null) {
@@ -316,8 +303,7 @@ public class PushNotificationService implements PushNotificationPort {
       return true;
     }
     String message = ex.getMessage();
-    return message != null
-        && message.contains("missing required authentication credential");
+    return message != null && message.contains("missing required authentication credential");
   }
 
   private String sendViaHttp(
@@ -331,7 +317,8 @@ public class PushNotificationService implements PushNotificationPort {
     String projectId = resolveProjectId();
     if (firebaseCredentials == null) {
       throw new PushNotificationException(
-          PushNotificationFailureReason.UNAUTHENTICATED, "Firebase credentials missing for HTTP fallback.");
+          PushNotificationFailureReason.UNAUTHENTICATED,
+          "Firebase credentials missing for HTTP fallback.");
     }
     try {
       firebaseCredentials.refreshIfExpired();
@@ -345,7 +332,8 @@ public class PushNotificationService implements PushNotificationPort {
     AccessToken accessToken = firebaseCredentials.getAccessToken();
     if (accessToken == null || accessToken.getTokenValue() == null) {
       throw new PushNotificationException(
-          PushNotificationFailureReason.UNAUTHENTICATED, "Firebase access token missing for HTTP fallback.");
+          PushNotificationFailureReason.UNAUTHENTICATED,
+          "Firebase access token missing for HTTP fallback.");
     }
 
     Map<String, Object> message = new LinkedHashMap<>();
@@ -365,12 +353,8 @@ public class PushNotificationService implements PushNotificationPort {
     if (!notification.isEmpty()) {
       message.put("notification", notification);
     }
-    message.put(
-        "android",
-        Map.of("notification", Map.of("channel_id", ANDROID_CHANNEL_ID)));
-    message.put(
-        "apns",
-        Map.of("payload", Map.of("aps", Map.of("sound", "default"))));
+    message.put("android", Map.of("notification", Map.of("channel_id", ANDROID_CHANNEL_ID)));
+    message.put("apns", Map.of("payload", Map.of("aps", Map.of("sound", "default"))));
     if (data != null && !data.isEmpty()) {
       message.put("data", data);
     }
@@ -447,7 +431,8 @@ public class PushNotificationService implements PushNotificationPort {
       }
     }
     throw new PushNotificationException(
-        PushNotificationFailureReason.UNAUTHENTICATED, "Firebase project ID missing for HTTP fallback.");
+        PushNotificationFailureReason.UNAUTHENTICATED,
+        "Firebase project ID missing for HTTP fallback.");
   }
 
   private String redactProjectId(String endpoint, String projectId) {
