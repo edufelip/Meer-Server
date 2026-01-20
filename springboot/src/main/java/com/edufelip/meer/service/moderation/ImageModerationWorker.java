@@ -124,11 +124,11 @@ public class ImageModerationWorker {
     List<Long> ids =
         transactionTemplate.execute(
         status -> {
-          List<Long> ids = imageModerationRepository.lockPendingIdsForProcessing(BATCH_SIZE);
-          if (!ids.isEmpty()) {
-            imageModerationRepository.updateStatusByIds(ModerationStatus.PROCESSING, ids);
+          List<Long> lockedIds = imageModerationRepository.lockPendingIdsForProcessing(BATCH_SIZE);
+          if (!lockedIds.isEmpty()) {
+            imageModerationRepository.updateStatusByIds(ModerationStatus.PROCESSING, lockedIds);
           }
-          return ids;
+          return lockedIds;
         });
     return ids == null ? List.of() : ids;
   }
@@ -137,12 +137,12 @@ public class ImageModerationWorker {
     List<Long> ids =
         transactionTemplate.execute(
         status -> {
-          List<Long> ids =
+          List<Long> lockedIds =
               imageModerationRepository.lockFailedIdsForRetry(MAX_RETRIES, BATCH_SIZE);
-          if (!ids.isEmpty()) {
-            imageModerationRepository.updateStatusByIds(ModerationStatus.PENDING, ids);
+          if (!lockedIds.isEmpty()) {
+            imageModerationRepository.updateStatusByIds(ModerationStatus.PENDING, lockedIds);
           }
-          return ids;
+          return lockedIds;
         });
     return ids == null ? List.of() : ids;
   }
