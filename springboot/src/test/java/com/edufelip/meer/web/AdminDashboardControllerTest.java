@@ -144,7 +144,7 @@ class AdminDashboardControllerTest {
             null,
             java.time.Instant.parse("2024-01-01T00:00:00Z"));
 
-    when(guideContentRepository.findAllSummaries(org.mockito.ArgumentMatchers.any()))
+    when(guideContentRepository.findAllSummariesActive(org.mockito.ArgumentMatchers.any()))
         .thenReturn(new SliceImpl<>(List.of(summary)));
     when(guideContentEngagementService.getEngagement(eq(List.of(10)), eq(null)))
         .thenReturn(Map.of(10, new GuideContentEngagementService.EngagementSummary(5L, 7L, false)));
@@ -170,7 +170,7 @@ class AdminDashboardControllerTest {
     GuideContent content = new GuideContent();
     content.setId(10);
 
-    when(guideContentRepository.findById(10)).thenReturn(Optional.of(content));
+    when(guideContentRepository.findByIdAndDeletedAtIsNull(10)).thenReturn(Optional.of(content));
     when(guideContentEngagementService.getEngagement(eq(List.of(10)), eq(null)))
         .thenReturn(Map.of(10, new GuideContentEngagementService.EngagementSummary(3L, 4L, false)));
 

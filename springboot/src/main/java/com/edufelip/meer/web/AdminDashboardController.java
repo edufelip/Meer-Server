@@ -113,8 +113,8 @@ public class AdminDashboardController {
     Pageable pageable = PageRequest.of(page, pageSize, s);
     var slice =
         (q != null && !q.isBlank())
-            ? guideContentRepository.searchSummaries(q, pageable)
-            : guideContentRepository.findAllSummaries(pageable);
+            ? guideContentRepository.searchSummariesActive(q, pageable)
+            : guideContentRepository.findAllSummariesActive(pageable);
     var items = slice.getContent().stream().map(Mappers::toDto).toList();
     var ids = items.stream().map(GuideContentDto::id).toList();
     var engagement = guideContentEngagementService.getEngagement(ids, null);
@@ -139,7 +139,7 @@ public class AdminDashboardController {
     requireAdmin(authHeader);
     var content =
         guideContentRepository
-            .findById(id)
+            .findByIdAndDeletedAtIsNull(id)
             .orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found"));
     var engagement = guideContentEngagementService.getEngagement(List.of(content.getId()), null);
