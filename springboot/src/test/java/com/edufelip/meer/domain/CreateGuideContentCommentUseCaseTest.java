@@ -84,4 +84,29 @@ class CreateGuideContentCommentUseCaseTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("comment must be 120 characters or less");
   }
+
+  @Test
+  void preservesNewlinesInCommentBody() {
+    GuideContentCommentRepository commentRepository =
+        Mockito.mock(GuideContentCommentRepository.class);
+    GuideContentRepository contentRepository = Mockito.mock(GuideContentRepository.class);
+    Clock clock = Clock.fixed(TestFixtures.fixedInstant(), ZoneOffset.UTC);
+    CreateGuideContentCommentUseCase useCase =
+        new CreateGuideContentCommentUseCase(commentRepository, contentRepository, clock);
+
+    AuthUser user = new AuthUser();
+    user.setId(UUID.randomUUID());
+
+    GuideContent content = new GuideContent();
+    content.setId(4);
+
+    Mockito.when(commentRepository.save(Mockito.any(GuideContentComment.class)))
+        .thenAnswer(inv -> inv.getArgument(0, GuideContentComment.class));
+
+    GuideContentComment created = useCase.execute(user, content, "Line 1\nLine 2\nLine 3");
+
+    assertThat(created.getBody()).isEqualTo("Line 1\nLine 2\nLine 3");
+    assertThat(created.getBody()).contains("\n");
+    Mockito.verify(contentRepository).incrementCommentCount(4);
+  }
 }
