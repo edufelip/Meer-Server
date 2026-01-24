@@ -7,6 +7,7 @@ import com.edufelip.meer.domain.repo.GuideContentCommentRepository;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
 import java.time.Clock;
 import java.time.Instant;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,7 @@ public class GuideContentModerationService {
   }
 
   @Transactional
+  @CacheEvict(cacheNames = "guideTop10", allEntries = true)
   public GuideContent softDeleteContent(GuideContent content, AuthUser actor, String reason) {
     if (content.getDeletedAt() == null) {
       content.setDeletedAt(Instant.now(clock));
@@ -37,6 +39,7 @@ public class GuideContentModerationService {
   }
 
   @Transactional
+  @CacheEvict(cacheNames = "guideTop10", allEntries = true)
   public GuideContent restoreContent(GuideContent content) {
     if (content.getDeletedAt() != null) {
       content.setDeletedAt(null);
