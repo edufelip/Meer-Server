@@ -2,6 +2,7 @@ package com.edufelip.meer.domain;
 
 import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.core.content.GuideContent;
+import com.edufelip.meer.core.store.ThriftStore;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -34,23 +35,28 @@ public class CreateOwnedGuideContentUseCase {
     if (command.description() == null || command.description().isBlank()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "description is required");
     }
-    if (command.storeId() == null) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "storeId is required");
-    }
 
-    var thriftStore =
-        thriftStoreRepository
-            .findById(command.storeId())
-            .orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
-    try {
-      storeOwnershipService.ensureOwnerOrAdminStrict(user, thriftStore);
-    } catch (ResponseStatusException ex) {
-      if (ex.getStatusCode() == HttpStatus.FORBIDDEN) {
+    ThriftStore thriftStore = null;
+    if (command.storeId() == null) {
+      if (user.getRole() != com.edufelip.meer.core.auth.Role.ADMIN) {
         throw new ResponseStatusException(
-            HttpStatus.FORBIDDEN, "You must own this store to add content");
+            HttpStatus.BAD_REQUEST, "storeId is required for non-admin users");
       }
-      throw ex;
+    } else {
+      thriftStore =
+          thriftStoreRepository
+              .findById(command.storeId())
+              .orElseThrow(
+                  () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
+      try {
+        storeOwnershipService.ensureOwnerOrAdminStrict(user, thriftStore);
+      } catch (ResponseStatusException ex) {
+        if (ex.getStatusCode() == HttpStatus.FORBIDDEN) {
+          throw new ResponseStatusException(
+              HttpStatus.FORBIDDEN, "You must own this store to add content");
+        }
+        throw ex;
+      }
     }
 
     GuideContent content =

@@ -4,12 +4,12 @@ import com.edufelip.meer.core.moderation.EntityType;
 import com.edufelip.meer.core.moderation.ImageModeration;
 import com.edufelip.meer.core.moderation.ModerationStatus;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import java.util.Collection;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -97,7 +97,8 @@ public interface ImageModerationRepository extends JpaRepository<ImageModeration
    */
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query("UPDATE ImageModeration im SET im.status = :status WHERE im.id IN :ids")
-  int updateStatusByIds(@Param("status") ModerationStatus status, @Param("ids") Collection<Long> ids);
+  int updateStatusByIds(
+      @Param("status") ModerationStatus status, @Param("ids") Collection<Long> ids);
 
   /**
    * Count images by status

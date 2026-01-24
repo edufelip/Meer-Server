@@ -10,7 +10,8 @@ The Guide Content module provides a CMS-like experience for stores to share arti
 - Moderation of community contributions (comments)
 
 ## Definitions
-- **GuideContent**: An article or post associated with a store.
+- **GuideContent**: An article or post associated with a store or global moderation (Admin content).
+- **Global Content**: Posts created by Admins not linked to a specific store, appearing as "Guia Brechó".
 - **Engagement**: The aggregate of likes and comments on a piece of content.
 - **Soft Delete**: Marking content as deleted without physically removing the record, preserving audit trails.
 
@@ -23,7 +24,7 @@ The Guide Content module provides a CMS-like experience for stores to share arti
 | type | String | Content type (e.g., "article", "promo") |
 | categoryLabel| String | Category identifier |
 | imageUrl | String | Main content image URL |
-| thriftStore | UUID | Reference to the originating store |
+| thriftStore | UUID | Reference to the originating store (NULL for global content) |
 | likeCount | Long | Denormalized like counter |
 | commentCount | Long | Denormalized comment counter |
 | createdAt | Instant | Creation timestamp |
@@ -34,13 +35,13 @@ The Guide Content module provides a CMS-like experience for stores to share arti
 ### Discovery: `GET /contents`
 - **Query Parameters**:
   - `q`: Search term.
-  - `storeId`: Filter by specific store.
+  - `storeId`: Filter by specific store (can be empty for global content).
   - `page`, `pageSize`: Pagination.
   - `sort`: `newest` or `oldest`.
 - **Behavior**: Returns active (non-deleted) contents enriched with engagement stats (likes, comments, and if the current user liked it).
 
 ### Details: `GET /contents/{id}`
-- **Behavior**: Returns the full content entity with engagement summary.
+- **Behavior**: Returns the full content entity with engagement summary. Content with no store association displays "Guia Brechó" as the origin.
 
 ## Social Engagement
 
@@ -63,7 +64,10 @@ The Guide Content module provides a CMS-like experience for stores to share arti
 
 ### Creation: `POST /contents`
 - **Authentication**: Required. User must be a store owner or admin.
-- **Behavior**: Creates a new content entry linked to the user's store.
+- **Rules**:
+  - Store Owners: Must provide a `storeId` they own.
+  - Admins: May provide a `storeId` or leave it null to create a Global Post ("Guia Brechó").
+- **Behavior**: Creates a new content entry.
 
 ### Media: `POST /contents/{id}/image/upload`
 - **Behavior**: Provides a GCS signed URL for content image upload.
@@ -73,6 +77,6 @@ The Guide Content module provides a CMS-like experience for stores to share arti
 - **Behavior**: Soft-deletes the content and records the actor and reason.
 
 ## Invariants
-- Content must be linked to a valid `ThriftStore`.
+- Content must be linked to a valid `ThriftStore` OR be created by an `ADMIN` (Global Content).
 - Only active content is visible in public listings.
 - Denormalized counts (`like_count`, `comment_count`) should be kept in sync with the actual records.

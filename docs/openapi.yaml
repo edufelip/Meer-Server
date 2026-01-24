@@ -1543,9 +1543,17 @@ components:
         title: { type: string }
         description: { type: string }
         imageUrl: { type: string }
-        thriftStoreId: { type: string, format: uuid }
-        thriftStoreName: { type: string }
-        thriftStoreCoverImageUrl: { type: string }
+        thriftStoreId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Null for global posts (originating from "Guia Brechó").
+        thriftStoreName:
+          type: string
+          description: Displays "Guia Brechó" if thriftStoreId is null.
+        thriftStoreCoverImageUrl:
+          type: string
+          nullable: true
         createdAt: { type: string, format: date-time }
         likeCount: { type: integer, format: int64 }
         commentCount: { type: integer, format: int64 }
@@ -1581,11 +1589,14 @@ components:
         body: { type: string, maxLength: 120 }
     ContentCreateRequest:
       type: object
-      required: [title, description, storeId]
+      required: [title, description]
       properties:
         title: { type: string, maxLength: 160 }
         description: { type: string, maxLength: 2000 }
-        storeId: { type: string, format: uuid }
+        storeId:
+          type: string
+          format: uuid
+          description: Optional for ADMIN users (creates a global post). Mandatory for regular Store Owners.
     GuideContentUpdateRequest:
       type: object
       properties:

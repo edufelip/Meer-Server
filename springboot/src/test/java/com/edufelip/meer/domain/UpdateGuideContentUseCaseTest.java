@@ -24,8 +24,11 @@ class UpdateGuideContentUseCaseTest {
     GuideContentRepository repository = Mockito.mock(GuideContentRepository.class);
     StoreOwnershipService storeOwnershipService = Mockito.mock(StoreOwnershipService.class);
     PhotoStoragePort photoStoragePort = Mockito.mock(PhotoStoragePort.class);
+    com.edufelip.meer.service.moderation.ModerationPolicyService moderationPolicyService =
+        Mockito.mock(com.edufelip.meer.service.moderation.ModerationPolicyService.class);
     UpdateGuideContentUseCase useCase =
-        new UpdateGuideContentUseCase(repository, storeOwnershipService, photoStoragePort);
+        new UpdateGuideContentUseCase(
+            repository, storeOwnershipService, photoStoragePort, moderationPolicyService);
 
     ThriftStore store = new ThriftStore();
     UUID storeId = UUID.randomUUID();
@@ -65,8 +68,11 @@ class UpdateGuideContentUseCaseTest {
     GuideContentRepository repository = Mockito.mock(GuideContentRepository.class);
     StoreOwnershipService storeOwnershipService = Mockito.mock(StoreOwnershipService.class);
     PhotoStoragePort photoStoragePort = Mockito.mock(PhotoStoragePort.class);
+    com.edufelip.meer.service.moderation.ModerationPolicyService moderationPolicyService =
+        Mockito.mock(com.edufelip.meer.service.moderation.ModerationPolicyService.class);
     UpdateGuideContentUseCase useCase =
-        new UpdateGuideContentUseCase(repository, storeOwnershipService, photoStoragePort);
+        new UpdateGuideContentUseCase(
+            repository, storeOwnershipService, photoStoragePort, moderationPolicyService);
 
     ThriftStore store = new ThriftStore();
     store.setId(UUID.randomUUID());
@@ -94,8 +100,11 @@ class UpdateGuideContentUseCaseTest {
     GuideContentRepository repository = Mockito.mock(GuideContentRepository.class);
     StoreOwnershipService storeOwnershipService = Mockito.mock(StoreOwnershipService.class);
     PhotoStoragePort photoStoragePort = Mockito.mock(PhotoStoragePort.class);
+    com.edufelip.meer.service.moderation.ModerationPolicyService moderationPolicyService =
+        Mockito.mock(com.edufelip.meer.service.moderation.ModerationPolicyService.class);
     UpdateGuideContentUseCase useCase =
-        new UpdateGuideContentUseCase(repository, storeOwnershipService, photoStoragePort);
+        new UpdateGuideContentUseCase(
+            repository, storeOwnershipService, photoStoragePort, moderationPolicyService);
 
     ThriftStore store = new ThriftStore();
     store.setId(UUID.randomUUID());

@@ -43,7 +43,9 @@ The Administration module provides a centralized dashboard for managing users, s
   - Image moderation queue status.
 
 ### Content Oversight
-- **Guide Content**: Admins can soft-delete any content and restore previously deleted content.
+- **Guide Content**: 
+  - Admins can soft-delete any content and restore previously deleted content.
+  - **Global Posts**: Admins can create content without a store association. These posts appear as originating from "Guia Brechó".
 - **Stores**: Admins can delete any store registry.
 - **Users**: Admins can delete user accounts (e.g., for policy violations).
 

@@ -355,4 +355,79 @@ class GuideContentControllerTest {
 
     verify(likeGuideContentUseCase).execute(user, 1);
   }
+
+  @Test
+  void createContentAsAdminWithoutStoreId() throws Exception {
+    UUID adminId = UUID.randomUUID();
+
+    AuthUser admin = new AuthUser();
+    admin.setId(adminId);
+    admin.setEmail("admin@example.com");
+    admin.setDisplayName("Admin");
+    admin.setPasswordHash("hash");
+    admin.setRole(Role.ADMIN);
+
+    when(tokenProvider.parseAccessToken("admin-token"))
+        .thenReturn(new TokenPayload(adminId, "admin@example.com", "Admin", Role.ADMIN));
+    when(authUserRepository.findById(adminId)).thenReturn(Optional.of(admin));
+
+    GuideContent saved = new GuideContent();
+    saved.setId(100);
+    saved.setTitle("Global Post");
+    saved.setDescription("Content");
+    saved.setCreatedAt(Instant.now());
+
+    when(createOwnedGuideContentUseCase.execute(
+            org.mockito.ArgumentMatchers.eq(admin), org.mockito.ArgumentMatchers.any()))
+        .thenReturn(saved);
+
+    String body = "{\"title\":\"Global Post\", \"description\":\"Content\"}";
+
+    mockMvc
+        .perform(
+            post("/contents")
+                .header("Authorization", "Bearer admin-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.thriftStoreName").value("Guia Brechó"));
+
+    verify(createOwnedGuideContentUseCase)
+        .execute(org.mockito.ArgumentMatchers.eq(admin), org.mockito.ArgumentMatchers.any());
+  }
+
+  @Test
+  void createContentAsUserWithoutStoreIdFails() throws Exception {
+    UUID userId = UUID.randomUUID();
+
+    AuthUser user = new AuthUser();
+    user.setId(userId);
+    user.setEmail("user@example.com");
+    user.setDisplayName("User");
+    user.setPasswordHash("hash");
+    user.setRole(Role.USER);
+
+    when(tokenProvider.parseAccessToken("user-token"))
+        .thenReturn(new TokenPayload(userId, "user@example.com", "User", Role.USER));
+    when(authUserRepository.findById(userId)).thenReturn(Optional.of(user));
+
+    when(createOwnedGuideContentUseCase.execute(
+            org.mockito.ArgumentMatchers.eq(user), org.mockito.ArgumentMatchers.any()))
+        .thenThrow(
+            new ResponseStatusException(
+                HttpStatus.BAD_REQUEST, "storeId is required for non-admin users"));
+
+    String body = "{\"title\":\"User Post\", \"description\":\"Content\"}";
+
+    mockMvc
+        .perform(
+            post("/contents")
+                .header("Authorization", "Bearer user-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+        .andExpect(status().isBadRequest());
+
+    verify(createOwnedGuideContentUseCase)
+        .execute(org.mockito.ArgumentMatchers.eq(user), org.mockito.ArgumentMatchers.any());
+  }
 }

@@ -1,9 +1,9 @@
 package com.edufelip.meer.service.moderation;
 
+import com.edufelip.meer.config.ModerationProperties;
 import com.edufelip.meer.core.moderation.EntityType;
 import com.edufelip.meer.core.moderation.ImageModeration;
 import com.edufelip.meer.core.moderation.ModerationStatus;
-import com.edufelip.meer.config.ModerationProperties;
 import com.edufelip.meer.core.store.ThriftStorePhoto;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.GuideContentRepository;

@@ -1,8 +1,8 @@
 package com.edufelip.meer.service.moderation;
 
+import com.edufelip.meer.config.ModerationProperties;
 import com.edufelip.meer.core.moderation.ImageModeration;
 import com.edufelip.meer.core.moderation.ModerationStatus;
-import com.edufelip.meer.config.ModerationProperties;
 import com.edufelip.meer.domain.repo.ImageModerationRepository;
 import java.util.List;
 import java.util.Optional;
@@ -123,27 +123,28 @@ public class ImageModerationWorker {
   private List<Long> claimPendingIds() {
     List<Long> ids =
         transactionTemplate.execute(
-        status -> {
-          List<Long> lockedIds = imageModerationRepository.lockPendingIdsForProcessing(BATCH_SIZE);
-          if (!lockedIds.isEmpty()) {
-            imageModerationRepository.updateStatusByIds(ModerationStatus.PROCESSING, lockedIds);
-          }
-          return lockedIds;
-        });
+            status -> {
+              List<Long> lockedIds =
+                  imageModerationRepository.lockPendingIdsForProcessing(BATCH_SIZE);
+              if (!lockedIds.isEmpty()) {
+                imageModerationRepository.updateStatusByIds(ModerationStatus.PROCESSING, lockedIds);
+              }
+              return lockedIds;
+            });
     return ids == null ? List.of() : ids;
   }
 
   private List<Long> claimFailedIdsForRetry() {
     List<Long> ids =
         transactionTemplate.execute(
-        status -> {
-          List<Long> lockedIds =
-              imageModerationRepository.lockFailedIdsForRetry(MAX_RETRIES, BATCH_SIZE);
-          if (!lockedIds.isEmpty()) {
-            imageModerationRepository.updateStatusByIds(ModerationStatus.PENDING, lockedIds);
-          }
-          return lockedIds;
-        });
+            status -> {
+              List<Long> lockedIds =
+                  imageModerationRepository.lockFailedIdsForRetry(MAX_RETRIES, BATCH_SIZE);
+              if (!lockedIds.isEmpty()) {
+                imageModerationRepository.updateStatusByIds(ModerationStatus.PENDING, lockedIds);
+              }
+              return lockedIds;
+            });
     return ids == null ? List.of() : ids;
   }
 }

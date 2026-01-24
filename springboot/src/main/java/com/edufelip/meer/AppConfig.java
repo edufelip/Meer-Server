@@ -5,7 +5,6 @@ import com.edufelip.meer.domain.CreateCategoryUseCase;
 import com.edufelip.meer.domain.CreateGuideContentCommentUseCase;
 import com.edufelip.meer.domain.CreateGuideContentUseCase;
 import com.edufelip.meer.domain.CreateOwnedGuideContentUseCase;
-import com.edufelip.meer.domain.CreateStoreGuideContentUseCase;
 import com.edufelip.meer.domain.CreateThriftStoreUseCase;
 import com.edufelip.meer.domain.DeleteCategoryUseCase;
 import com.edufelip.meer.domain.DeleteGuideContentUseCase;
@@ -182,15 +181,6 @@ public class AppConfig {
       com.edufelip.meer.service.moderation.ModerationPolicyService moderationPolicyService) {
     return new ReplaceStorePhotosUseCase(
         thriftStoreRepository, storeOwnershipService, photoStoragePort, moderationPolicyService);
-  }
-
-  @Bean
-  public CreateStoreGuideContentUseCase createStoreGuideContentUseCase(
-      ThriftStoreRepository thriftStoreRepository,
-      StoreOwnershipService storeOwnershipService,
-      CreateGuideContentUseCase createGuideContentUseCase) {
-    return new CreateStoreGuideContentUseCase(
-        thriftStoreRepository, storeOwnershipService, createGuideContentUseCase);
   }
 
   @Bean

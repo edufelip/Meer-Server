@@ -25,9 +25,11 @@ class ReplaceStorePhotosUseCaseTest {
     StoreOwnershipService ownershipService = Mockito.mock(StoreOwnershipService.class);
     LocalPhotoStorageFake storageFake =
         new LocalPhotoStorageFake(Files.createTempDirectory("photos"));
+    com.edufelip.meer.service.moderation.ModerationPolicyService moderationPolicyService =
+        Mockito.mock(com.edufelip.meer.service.moderation.ModerationPolicyService.class);
 
     ReplaceStorePhotosUseCase useCase =
-        new ReplaceStorePhotosUseCase(repo, ownershipService, storageFake);
+        new ReplaceStorePhotosUseCase(repo, ownershipService, storageFake, moderationPolicyService);
 
     UUID storeId = UUID.randomUUID();
     ThriftStore store = new ThriftStore();

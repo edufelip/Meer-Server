@@ -11,13 +11,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.edufelip.meer.config.TestClockConfig;
 import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.core.auth.Role;
-import com.edufelip.meer.core.content.GuideContent;
 import com.edufelip.meer.core.store.Social;
 import com.edufelip.meer.core.store.ThriftStore;
-import com.edufelip.meer.domain.CreateStoreGuideContentUseCase;
 import com.edufelip.meer.domain.CreateThriftStoreUseCase;
 import com.edufelip.meer.domain.DeleteThriftStoreUseCase;
-import com.edufelip.meer.domain.GetStoreContentsUseCase;
 import com.edufelip.meer.domain.GetStoreDetailsUseCase;
 import com.edufelip.meer.domain.GetStoreListingsUseCase;
 import com.edufelip.meer.domain.ReplaceStorePhotosUseCase;
@@ -50,13 +47,11 @@ class ThriftStoreControllerTest {
 
   @MockitoBean private GetStoreListingsUseCase getStoreListingsUseCase;
   @MockitoBean private GetStoreDetailsUseCase getStoreDetailsUseCase;
-  @MockitoBean private GetStoreContentsUseCase getStoreContentsUseCase;
   @MockitoBean private CreateThriftStoreUseCase createThriftStoreUseCase;
   @MockitoBean private UpdateThriftStoreUseCase updateThriftStoreUseCase;
   @MockitoBean private DeleteThriftStoreUseCase deleteThriftStoreUseCase;
   @MockitoBean private RequestStorePhotoUploadsUseCase requestStorePhotoUploadsUseCase;
   @MockitoBean private ReplaceStorePhotosUseCase replaceStorePhotosUseCase;
-  @MockitoBean private CreateStoreGuideContentUseCase createStoreGuideContentUseCase;
   @MockitoBean private AuthUserRepository authUserRepository;
   @MockitoBean private TokenProvider tokenProvider;
 
@@ -225,62 +220,5 @@ class ThriftStoreControllerTest {
         .andExpect(jsonPath("$.uploads[0].contentType").value("image/jpeg"));
 
     verify(requestStorePhotoUploadsUseCase).execute(owner, storeId, 1, List.of("image/jpeg"));
-  }
-
-  @Test
-  void createGuideContentDelegatesToUseCase() throws Exception {
-    UUID userId = UUID.randomUUID();
-    UUID storeId = UUID.randomUUID();
-
-    AuthUser owner = new AuthUser();
-    owner.setId(userId);
-    owner.setEmail("owner@example.com");
-    owner.setDisplayName("Owner");
-    owner.setPasswordHash("hash");
-    owner.setRole(Role.USER);
-
-    when(tokenProvider.parseAccessToken("token"))
-        .thenReturn(new TokenPayload(userId, "owner@example.com", "Owner", Role.USER));
-    when(authUserRepository.findById(userId)).thenReturn(Optional.of(owner));
-
-    ThriftStore store = new ThriftStore();
-    store.setId(storeId);
-    store.setName("Guide Store");
-    store.setCoverImageUrl("cover");
-
-    GuideContent saved = new GuideContent(1, "Title", "Desc", "cat", "type", "image", store);
-    when(createStoreGuideContentUseCase.execute(
-            ArgumentMatchers.eq(owner),
-            ArgumentMatchers.eq(storeId),
-            ArgumentMatchers.any(GuideContent.class)))
-        .thenReturn(saved);
-
-    String body =
-        """
-        {
-          "title": "Title",
-          "description": "Desc",
-          "categoryLabel": "cat",
-          "type": "type",
-          "imageUrl": "image"
-        }
-        """;
-
-    mockMvc
-        .perform(
-            post("/stores/{storeId}/contents", storeId)
-                .header("Authorization", "Bearer token")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(body))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.id").value(1))
-        .andExpect(jsonPath("$.thriftStoreId").value(storeId.toString()))
-        .andExpect(jsonPath("$.thriftStoreName").value("Guide Store"));
-
-    verify(createStoreGuideContentUseCase)
-        .execute(
-            ArgumentMatchers.eq(owner),
-            ArgumentMatchers.eq(storeId),
-            ArgumentMatchers.any(GuideContent.class));
   }
 }

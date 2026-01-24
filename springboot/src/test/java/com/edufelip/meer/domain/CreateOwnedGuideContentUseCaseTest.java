@@ -56,7 +56,36 @@ class CreateOwnedGuideContentUseCaseTest {
   }
 
   @Test
-  void rejectsMissingStoreId() {
+  void createsGlobalGuideContentWhenAdmin() {
+    ThriftStoreRepository thriftStoreRepository = Mockito.mock(ThriftStoreRepository.class);
+    StoreOwnershipService storeOwnershipService = Mockito.mock(StoreOwnershipService.class);
+    CreateGuideContentUseCase createGuideContentUseCase =
+        Mockito.mock(CreateGuideContentUseCase.class);
+
+    CreateOwnedGuideContentUseCase useCase =
+        new CreateOwnedGuideContentUseCase(
+            thriftStoreRepository, storeOwnershipService, createGuideContentUseCase);
+
+    GuideContent saved = new GuideContent();
+    when(createGuideContentUseCase.execute(Mockito.any(GuideContent.class))).thenReturn(saved);
+
+    AuthUser admin = new AuthUser();
+    admin.setId(UUID.randomUUID());
+    admin.setRole(com.edufelip.meer.core.auth.Role.ADMIN);
+
+    GuideContent result =
+        useCase.execute(admin, new CreateOwnedGuideContentUseCase.Command("Title", "Desc", null));
+
+    assertThat(result).isEqualTo(saved);
+    ArgumentCaptor<GuideContent> captor = ArgumentCaptor.forClass(GuideContent.class);
+    verify(createGuideContentUseCase).execute(captor.capture());
+    GuideContent created = captor.getValue();
+    assertThat(created.getThriftStore()).isNull();
+    assertThat(created.getTitle()).isEqualTo("Title");
+  }
+
+  @Test
+  void rejectsMissingStoreIdForNonAdmin() {
     CreateOwnedGuideContentUseCase useCase =
         new CreateOwnedGuideContentUseCase(
             Mockito.mock(ThriftStoreRepository.class),
@@ -65,6 +94,7 @@ class CreateOwnedGuideContentUseCaseTest {
 
     AuthUser user = new AuthUser();
     user.setId(UUID.randomUUID());
+    user.setRole(com.edufelip.meer.core.auth.Role.USER);
 
     assertThatThrownBy(
             () -> useCase.execute(user, new CreateOwnedGuideContentUseCase.Command("T", "D", null)))

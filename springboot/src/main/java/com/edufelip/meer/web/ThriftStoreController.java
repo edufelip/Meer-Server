@@ -1,16 +1,12 @@
 package com.edufelip.meer.web;
 
-import com.edufelip.meer.core.content.GuideContent;
-import com.edufelip.meer.domain.CreateStoreGuideContentUseCase;
 import com.edufelip.meer.domain.CreateThriftStoreUseCase;
 import com.edufelip.meer.domain.DeleteThriftStoreUseCase;
-import com.edufelip.meer.domain.GetStoreContentsUseCase;
 import com.edufelip.meer.domain.GetStoreDetailsUseCase;
 import com.edufelip.meer.domain.GetStoreListingsUseCase;
 import com.edufelip.meer.domain.ReplaceStorePhotosUseCase;
 import com.edufelip.meer.domain.RequestStorePhotoUploadsUseCase;
 import com.edufelip.meer.domain.UpdateThriftStoreUseCase;
-import com.edufelip.meer.dto.GuideContentDto;
 import com.edufelip.meer.dto.PageResponse;
 import com.edufelip.meer.dto.PhotoRegisterRequest;
 import com.edufelip.meer.dto.PhotoUploadRequest;
@@ -20,7 +16,6 @@ import com.edufelip.meer.dto.ThriftStoreDto;
 import com.edufelip.meer.mapper.Mappers;
 import com.edufelip.meer.security.AuthUserResolver;
 import jakarta.validation.Valid;
-import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -42,35 +37,29 @@ public class ThriftStoreController {
 
   private final GetStoreListingsUseCase getStoreListingsUseCase;
   private final GetStoreDetailsUseCase getStoreDetailsUseCase;
-  private final GetStoreContentsUseCase getStoreContentsUseCase;
   private final CreateThriftStoreUseCase createThriftStoreUseCase;
   private final UpdateThriftStoreUseCase updateThriftStoreUseCase;
   private final DeleteThriftStoreUseCase deleteThriftStoreUseCase;
   private final RequestStorePhotoUploadsUseCase requestStorePhotoUploadsUseCase;
   private final ReplaceStorePhotosUseCase replaceStorePhotosUseCase;
-  private final CreateStoreGuideContentUseCase createStoreGuideContentUseCase;
   private final AuthUserResolver authUserResolver;
 
   public ThriftStoreController(
       GetStoreListingsUseCase getStoreListingsUseCase,
       GetStoreDetailsUseCase getStoreDetailsUseCase,
-      GetStoreContentsUseCase getStoreContentsUseCase,
       CreateThriftStoreUseCase createThriftStoreUseCase,
       UpdateThriftStoreUseCase updateThriftStoreUseCase,
       DeleteThriftStoreUseCase deleteThriftStoreUseCase,
       RequestStorePhotoUploadsUseCase requestStorePhotoUploadsUseCase,
       ReplaceStorePhotosUseCase replaceStorePhotosUseCase,
-      CreateStoreGuideContentUseCase createStoreGuideContentUseCase,
       AuthUserResolver authUserResolver) {
     this.getStoreListingsUseCase = getStoreListingsUseCase;
     this.getStoreDetailsUseCase = getStoreDetailsUseCase;
-    this.getStoreContentsUseCase = getStoreContentsUseCase;
     this.createThriftStoreUseCase = createThriftStoreUseCase;
     this.updateThriftStoreUseCase = updateThriftStoreUseCase;
     this.deleteThriftStoreUseCase = deleteThriftStoreUseCase;
     this.requestStorePhotoUploadsUseCase = requestStorePhotoUploadsUseCase;
     this.replaceStorePhotosUseCase = replaceStorePhotosUseCase;
-    this.createStoreGuideContentUseCase = createStoreGuideContentUseCase;
     this.authUserResolver = authUserResolver;
   }
 
@@ -169,33 +158,6 @@ public class ThriftStoreController {
     var refreshed =
         replaceStorePhotosUseCase.execute(user, storeId, Mappers.toReplacePhotosCommand(request));
     return Mappers.toDtoForUser(refreshed, user, true);
-  }
-
-  @GetMapping("/{storeId}/contents")
-  public List<GuideContentDto> getContentsByThriftStoreId(
-      @PathVariable java.util.UUID storeId,
-      @RequestHeader(name = "Authorization", required = false) String authHeader) {
-    var user = authUserResolver.optionalUser(authHeader);
-    var items = getStoreContentsUseCase.execute(storeId, user != null ? user.getId() : null);
-    return items.stream()
-        .map(
-            item ->
-                Mappers.toDto(
-                    item.content(),
-                    item.engagement().likeCount(),
-                    item.engagement().commentCount(),
-                    item.engagement().likedByMe()))
-        .toList();
-  }
-
-  @PostMapping("/{storeId}/contents")
-  public GuideContentDto createGuideContent(
-      @PathVariable java.util.UUID storeId,
-      @RequestBody GuideContent guideContent,
-      @RequestHeader("Authorization") String authHeader) {
-    var user = authUserResolver.requireUser(authHeader);
-    var saved = createStoreGuideContentUseCase.execute(user, storeId, guideContent);
-    return Mappers.toDto(saved);
   }
 
   @PutMapping("/{id}")

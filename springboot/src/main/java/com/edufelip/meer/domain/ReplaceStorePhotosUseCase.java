@@ -126,7 +126,6 @@ public class ReplaceStorePhotosUseCase {
       String viewUrl = photoStoragePort.publicUrl(item.fileKey());
       ThriftStorePhoto newPhoto = new ThriftStorePhoto(store, viewUrl, item.position());
       finalPhotos.add(newPhoto);
-
     }
 
     // Mutate managed collection in place to avoid orphanRemoval issues
