@@ -24,8 +24,7 @@ All storage operations are performed through this port to decouple the domain fr
 ### Storage Paths
 - **Avatars**: `avatars/{userId}-{uuid}`
 - **Store Photos**: `stores/{storeId}/{uuid}`
-- **Guide Content (with store)**: `stores/{storeId}/{uuid}`
-- **Guide Content (no store)**: `contents/{uuid}`
+- **Guide Content**: `contents/{uuid}` (independent of store association)
 
 ### Cleanup
 The system supports both URL-based and key-based deletion. It includes a fallback to delete local files if URLs start with `/uploads/` (used for development environments).

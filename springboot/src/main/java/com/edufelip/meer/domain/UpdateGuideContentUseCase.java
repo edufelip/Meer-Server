@@ -82,18 +82,10 @@ public class UpdateGuideContentUseCase {
         throw new ResponseStatusException(
             HttpStatus.BAD_REQUEST, "imageUrl must belong to the configured storage bucket");
       }
-      if (content.getThriftStore() != null && content.getThriftStore().getId() != null) {
-        String expectedPrefix = "stores/" + content.getThriftStore().getId();
-        if (!fileKey.startsWith(expectedPrefix)) {
-          throw new ResponseStatusException(
-              HttpStatus.BAD_REQUEST, "imageUrl must belong to this store");
-        }
-      } else {
-        // Global content images must have the 'global/' prefix
-        if (!fileKey.startsWith("global/")) {
-          throw new ResponseStatusException(
-              HttpStatus.BAD_REQUEST, "imageUrl must be a global content image");
-        }
+      // Guide content images must be in the contents/ folder
+      if (!fileKey.startsWith("contents/")) {
+        throw new ResponseStatusException(
+            HttpStatus.BAD_REQUEST, "imageUrl must be a guide content image");
       }
       var stored = photoStoragePort.fetchRequired(fileKey);
       String ctype = stored != null ? stored.contentType() : null;

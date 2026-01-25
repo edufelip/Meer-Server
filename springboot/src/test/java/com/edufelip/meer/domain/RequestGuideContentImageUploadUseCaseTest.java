@@ -44,7 +44,7 @@ class RequestGuideContentImageUploadUseCaseTest {
 
     var slot = useCase.execute(user, 10, "image/jpeg");
 
-    assertThat(slot.fileKey()).startsWith("stores/" + storeId + "/");
+    assertThat(slot.fileKey()).startsWith("contents/");
     assertThat(slot.contentType()).isEqualTo("image/jpeg");
     verify(storeOwnershipService).ensureOwnerOrAdminStrict(user, store);
   }

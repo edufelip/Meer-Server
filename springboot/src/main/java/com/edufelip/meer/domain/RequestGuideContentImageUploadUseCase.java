@@ -33,10 +33,8 @@ public class RequestGuideContentImageUploadUseCase {
             .orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found"));
 
-    java.util.UUID storeId = null;
     if (content.getThriftStore() != null) {
       storeOwnershipService.ensureOwnerOrAdminStrict(user, content.getThriftStore());
-      storeId = content.getThriftStore().getId();
     } else if (!storeOwnershipService.isAdmin(user)) {
       throw new ResponseStatusException(
           HttpStatus.FORBIDDEN, "You must own this store to upload content images");
@@ -44,8 +42,9 @@ public class RequestGuideContentImageUploadUseCase {
 
     String normalized = normalizeContentType(contentType);
     List<String> contentTypes = normalized != null ? List.of(normalized) : null;
+    // Guide content images always go to /contents, regardless of store association
     return photoStoragePort
-        .createUploadSlots(storeId, 1, contentTypes)
+        .createUploadSlots(null, 1, contentTypes)
         .get(0);
   }
 
