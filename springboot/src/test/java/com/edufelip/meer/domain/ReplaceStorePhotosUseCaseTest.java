@@ -40,7 +40,7 @@ class ReplaceStorePhotosUseCaseTest {
 
     when(repo.findById(storeId)).thenReturn(Optional.of(store));
 
-    String newFileKey = "stores/" + storeId + "/photos/new.jpg";
+    String newFileKey = "stores/" + storeId + "/new.jpg";
     storageFake.storeObject(newFileKey, "image/jpeg", new byte[] {1, 2, 3});
 
     List<ReplaceStorePhotosUseCase.PhotoItem> items =

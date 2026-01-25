@@ -43,7 +43,7 @@ class RequestStorePhotoUploadsUseCaseTest {
     var slots = useCase.execute(user, storeId, 2, List.of("image/jpeg", "image/webp"));
 
     assertThat(slots).hasSize(2);
-    assertThat(slots.get(0).fileKey()).startsWith("stores/" + storeId + "/photos/");
+    assertThat(slots.get(0).fileKey()).startsWith("stores/" + storeId + "/");
     verify(ownershipService).ensureOwnerOrAdmin(user, store);
   }
 

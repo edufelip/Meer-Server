@@ -44,12 +44,12 @@ class UpdateGuideContentUseCaseTest {
     AuthUser user = new AuthUser();
     user.setId(UUID.randomUUID());
 
-    String imageUrl = "https://storage.googleapis.com/test-bucket/stores/" + storeId + "/photos/a";
-    when(photoStoragePort.extractFileKey(imageUrl)).thenReturn("stores/" + storeId + "/photos/a");
-    when(photoStoragePort.fetchRequired("stores/" + storeId + "/photos/a"))
+    String imageUrl = "https://storage.googleapis.com/test-bucket/stores/" + storeId + "/a";
+    when(photoStoragePort.extractFileKey(imageUrl)).thenReturn("stores/" + storeId + "/a");
+    when(photoStoragePort.fetchRequired("stores/" + storeId + "/a"))
         .thenReturn(new PhotoStoragePort.StoredObject("image/jpeg", 1024L));
-    when(photoStoragePort.publicUrl("stores/" + storeId + "/photos/a"))
-        .thenReturn("https://cdn.example.com/stores/" + storeId + "/photos/a");
+    when(photoStoragePort.publicUrl("stores/" + storeId + "/a"))
+        .thenReturn("https://cdn.example.com/stores/" + storeId + "/a");
 
     GuideContent updated =
         useCase.execute(user, 10, new UpdateGuideContentUseCase.Command("New", "Desc", imageUrl));
@@ -57,7 +57,7 @@ class UpdateGuideContentUseCaseTest {
     assertThat(updated.getTitle()).isEqualTo("New");
     assertThat(updated.getDescription()).isEqualTo("Desc");
     assertThat(updated.getImageUrl())
-        .isEqualTo("https://cdn.example.com/stores/" + storeId + "/photos/a");
+        .isEqualTo("https://cdn.example.com/stores/" + storeId + "/a");
     assertThat(updated.getCategoryLabel()).isEqualTo("general");
     assertThat(updated.getType()).isEqualTo("article");
     verify(storeOwnershipService).ensureOwnerOrAdminStrict(user, store);

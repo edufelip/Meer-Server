@@ -23,12 +23,13 @@ public class LocalPhotoStorageFake implements PhotoStoragePort {
   public List<PhotoStoragePort.UploadSlot> createUploadSlots(
       UUID storeId, int count, List<String> contentTypes) {
     List<PhotoStoragePort.UploadSlot> slots = new ArrayList<>();
+    String prefix = storeId != null ? "stores/%s".formatted(storeId) : "contents";
     for (int i = 0; i < count; i++) {
       String ctype =
           contentTypes != null && contentTypes.size() > i && contentTypes.get(i) != null
               ? contentTypes.get(i)
               : "image/jpeg";
-      String fileKey = "stores/%s/photos/%s".formatted(storeId, UUID.randomUUID());
+      String fileKey = "%s/%s".formatted(prefix, UUID.randomUUID());
       objects.put(fileKey, new StoredObject(ctype, 0L));
       slots.add(new PhotoStoragePort.UploadSlot("/uploads/" + fileKey, fileKey, ctype));
       try {
