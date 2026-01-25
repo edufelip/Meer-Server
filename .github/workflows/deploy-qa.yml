@@ -37,6 +37,7 @@ jobs:
           FIREBASE_ENABLED=true
           FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
           GOOGLE_APPLICATION_CREDENTIALS=/opt/meer-dev/firebase-service-account.json
+          STORAGE_GCS_CREDENTIALS_PATH=/opt/meer-dev/gcs-service-account.json
           EOF
 
           while IFS= read -r line || [ -n "$line" ]; do
@@ -204,17 +205,26 @@ jobs:
             EOF
             sudo systemctl daemon-reload
 
-            # Write Google credentials (used by Firebase and GCS)
+            # Write Google credentials (used by Firebase)
             google_cred_path="${GOOGLE_APPLICATION_CREDENTIALS:-/opt/meer-dev/firebase-service-account.json}"
             sudo mkdir -p "$(dirname "$google_cred_path")"
             echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON_B64 }}" | tr -d '\r\n\t ' | base64 --decode | sudo tee "$google_cred_path" >/dev/null
             sudo chown meerdev:meerdev "$google_cred_path"
             sudo chmod 600 "$google_cred_path"
 
+            # Write GCS credentials (used by Storage)
+            gcs_cred_path="/opt/meer-dev/gcs-service-account.json"
+            if [ -n "${{ secrets.GCS_SERVICE_ACCOUNT_JSON_B64 }}" ]; then
+              sudo mkdir -p "$(dirname "$gcs_cred_path")"
+              echo "${{ secrets.GCS_SERVICE_ACCOUNT_JSON_B64 }}" | tr -d '\r\n\t ' | base64 --decode | sudo tee "$gcs_cred_path" >/dev/null
+              sudo chown meerdev:meerdev "$gcs_cred_path"
+              sudo chmod 600 "$gcs_cred_path"
+            fi
+
             # --- PRE-WARMING STEP ---
             echo "Starting pre-warming on port 8099..."
             # Run the new JAR in background on a temp port to verify health and prime the cache
-            sudo -u meerdev bash -c "set -a; source /opt/meer-dev/.env; set +a; export SERVER_PORT=8099; export GOOGLE_APPLICATION_CREDENTIALS=$google_cred_path; java -jar ${{ env.REMOTE_JAR }} > /tmp/meer-prewarm.log 2>&1 &"
+            sudo -u meerdev bash -c "set -a; source /opt/meer-dev/.env; set +a; export SERVER_PORT=8099; export GOOGLE_APPLICATION_CREDENTIALS=$google_cred_path; export STORAGE_GCS_CREDENTIALS_PATH=$gcs_cred_path; java -jar ${{ env.REMOTE_JAR }} > /tmp/meer-prewarm.log 2>&1 &"
             
             PREWARM_PID=$!
             
