@@ -33,6 +33,7 @@ public class UpdateThriftStoreUseCase {
       String email,
       String tagline,
       String neighborhood,
+      Boolean isOnlineStore,
       java.util.List<String> categories,
       SocialUpdate social) {}
 
@@ -61,6 +62,7 @@ public class UpdateThriftStoreUseCase {
     if (command.description() != null) store.setDescription(command.description());
     if (command.openingHours() != null) store.setOpeningHours(command.openingHours());
     if (command.addressLine() != null) store.setAddressLine(command.addressLine());
+    if (command.isOnlineStore() != null) store.setIsOnlineStore(command.isOnlineStore());
     if (command.phone() != null) {
       var socialObj = store.getSocial() != null ? store.getSocial() : new Social();
       store.setSocial(socialObj);

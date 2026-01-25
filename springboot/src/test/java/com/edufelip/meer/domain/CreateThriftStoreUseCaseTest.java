@@ -39,6 +39,7 @@ class CreateThriftStoreUseCaseTest {
             "test@example.com",
             "Tagline",
             "Neighborhood",
+            false,
             List.of(" Vintage ", "vintage", "Kids"),
             new CreateThriftStoreUseCase.SocialInput(
                 null, "insta", "https://example.com", "https://wa.me/123"));

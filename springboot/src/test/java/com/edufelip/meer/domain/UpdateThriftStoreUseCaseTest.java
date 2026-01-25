@@ -37,7 +37,7 @@ class UpdateThriftStoreUseCaseTest {
             null, false, null, false, "https://new.com", true, null, false);
     UpdateThriftStoreUseCase.Command command =
         new UpdateThriftStoreUseCase.Command(
-            null, null, null, null, null, null, null, null, null, null, null, socialUpdate);
+            null, null, null, null, null, null, null, null, null, null, null, null, socialUpdate);
 
     AuthUser user = new AuthUser();
     user.setId(UUID.randomUUID());
@@ -68,7 +68,7 @@ class UpdateThriftStoreUseCaseTest {
         new UpdateThriftStoreUseCase.SocialUpdate(null, false, null, true, null, true, null, false);
     UpdateThriftStoreUseCase.Command command =
         new UpdateThriftStoreUseCase.Command(
-            null, null, null, null, null, null, null, null, null, null, null, socialUpdate);
+            null, null, null, null, null, null, null, null, null, null, null, null, socialUpdate);
 
     AuthUser user = new AuthUser();
     user.setId(UUID.randomUUID());
@@ -100,7 +100,7 @@ class UpdateThriftStoreUseCaseTest {
             null, false, null, false, "https://example.org", true, null, false);
     UpdateThriftStoreUseCase.Command command =
         new UpdateThriftStoreUseCase.Command(
-            null, null, null, null, null, null, null, null, null, null, null, socialUpdate);
+            null, null, null, null, null, null, null, null, null, null, null, null, socialUpdate);
 
     AuthUser user = new AuthUser();
     user.setId(UUID.randomUUID());

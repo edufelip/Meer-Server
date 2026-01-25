@@ -26,6 +26,7 @@ public record ThriftStoreDto(
     String neighborhood,
     String badgeLabel,
     Boolean isFavorite,
+    Boolean isOnlineStore,
     String description,
     List<GuideContentDto> contents,
     List<StoreImageDto> images,

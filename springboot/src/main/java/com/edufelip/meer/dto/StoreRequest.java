@@ -36,6 +36,8 @@ public class StoreRequest {
   @Size(max = 10)
   private List<String> categories;
 
+  private Boolean isOnlineStore;
+
   private SocialRequest social;
 
   public String getName() {
@@ -124,6 +126,14 @@ public class StoreRequest {
 
   public void setCategories(List<String> categories) {
     this.categories = categories;
+  }
+
+  public Boolean getIsOnlineStore() {
+    return isOnlineStore;
+  }
+
+  public void setIsOnlineStore(Boolean isOnlineStore) {
+    this.isOnlineStore = isOnlineStore;
   }
 
   public SocialRequest getSocial() {

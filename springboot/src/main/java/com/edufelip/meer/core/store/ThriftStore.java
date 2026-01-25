@@ -49,6 +49,7 @@ public class ThriftStore {
 
   private String neighborhood;
   private String badgeLabel;
+  private Boolean isOnlineStore;
 
   @Column(length = 1000)
   private String description;
@@ -90,6 +91,7 @@ public class ThriftStore {
       List<String> categories,
       String neighborhood,
       String badgeLabel,
+      Boolean isOnlineStore,
       String description,
       List<GuideContent> contents) {
     this.id = id;
@@ -105,6 +107,7 @@ public class ThriftStore {
     this.categories = categories;
     this.neighborhood = neighborhood;
     this.badgeLabel = badgeLabel;
+    this.isOnlineStore = isOnlineStore;
     this.description = description;
     this.contents = contents;
   }
@@ -167,6 +170,10 @@ public class ThriftStore {
 
   public String getBadgeLabel() {
     return badgeLabel;
+  }
+
+  public Boolean getIsOnlineStore() {
+    return isOnlineStore;
   }
 
   public String getDescription() {
@@ -247,6 +254,10 @@ public class ThriftStore {
 
   public void setBadgeLabel(String badgeLabel) {
     this.badgeLabel = badgeLabel;
+  }
+
+  public void setIsOnlineStore(Boolean isOnlineStore) {
+    this.isOnlineStore = isOnlineStore;
   }
 
   public void setDescription(String description) {

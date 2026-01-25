@@ -1412,6 +1412,7 @@ components:
         neighborhood: { type: string }
         badgeLabel: { type: string }
         isFavorite: { type: boolean }
+        isOnlineStore: { type: boolean }
         description: { type: string }
         createdAt: { type: string, format: date-time }
         images:
@@ -1451,6 +1452,7 @@ components:
         tagline: { type: string, maxLength: 280 }
         latitude: { type: number, format: double }
         longitude: { type: number, format: double }
+        isOnlineStore: { type: boolean }
         categories:
           type: array
           maxItems: 10
@@ -1471,6 +1473,7 @@ components:
         tagline: { type: string, maxLength: 280 }
         latitude: { type: number, format: double }
         longitude: { type: number, format: double }
+        isOnlineStore: { type: boolean }
         categories:
           type: array
           maxItems: 10

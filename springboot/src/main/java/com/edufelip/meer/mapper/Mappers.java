@@ -214,12 +214,26 @@ public class Mappers {
             ? (int) Math.round(distanceMeters / 80.0)
             : null; // 80 m/min ≈ 4.8 km/h
 
+    String addressToDisplay = store.getAddressLine();
+    if (Boolean.TRUE.equals(store.getIsOnlineStore())) {
+      // Requirement: "Cidade, Bairro"
+      // Since we don't have structured city, we use neighborhood.
+      // Ideally we would extract city from addressLine or have a city field.
+      // For now, we return neighborhood if available, or a fallback.
+      String neighborhood = store.getNeighborhood();
+      if (neighborhood != null && !neighborhood.isBlank()) {
+        addressToDisplay = neighborhood; // + ", City?";
+      } else {
+        addressToDisplay = "Loja Online";
+      }
+    }
+
     return new ThriftStoreDto(
         store.getId(),
         store.getName(),
         store.getTagline(),
         images.isEmpty() ? store.getCoverImageUrl() : images.get(0).url(),
-        store.getAddressLine(),
+        addressToDisplay,
         store.getLatitude(),
         store.getLongitude(),
         store.getOpeningHours(),
@@ -237,6 +251,7 @@ public class Mappers {
         store.getNeighborhood(),
         store.getBadgeLabel(),
         isFavoriteOverride,
+        store.getIsOnlineStore(),
         store.getDescription(),
         contentsDto,
         images,
@@ -274,6 +289,7 @@ public class Mappers {
         body.getEmail(),
         body.getTagline(),
         body.getNeighborhood(),
+        body.getIsOnlineStore(),
         body.getCategories(),
         body.getSocial() != null
             ? new CreateThriftStoreUseCase.SocialInput(
@@ -297,6 +313,7 @@ public class Mappers {
         body.getEmail(),
         body.getTagline(),
         body.getNeighborhood(),
+        body.getIsOnlineStore(),
         body.getCategories(),
         body.getSocial() != null
             ? new UpdateThriftStoreUseCase.SocialUpdate(

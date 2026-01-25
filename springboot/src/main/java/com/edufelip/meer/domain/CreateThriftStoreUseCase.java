@@ -26,6 +26,7 @@ public class CreateThriftStoreUseCase {
       String email,
       String tagline,
       String neighborhood,
+      Boolean isOnlineStore,
       java.util.List<String> categories,
       SocialInput social) {}
 
@@ -60,6 +61,7 @@ public class CreateThriftStoreUseCase {
     store.setEmail(command.email());
     store.setTagline(command.tagline());
     store.setNeighborhood(command.neighborhood());
+    store.setIsOnlineStore(command.isOnlineStore() != null ? command.isOnlineStore() : false);
     store.setCategories(StoreCategoryNormalizer.normalize(command.categories()));
 
     var saved = thriftStoreRepository.save(store);
