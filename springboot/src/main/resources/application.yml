@@ -56,6 +56,7 @@ storage:
     public-base-url: ${GCS_PUBLIC_BASE_URL:}
     signed-url-ttl-minutes: ${GCS_SIGNED_URL_TTL_MINUTES:120}
     avatars-prefix: ${GCS_AVATARS_PREFIX:avatars}
+    credentials-path: ${STORAGE_GCS_CREDENTIALS_PATH:}
 
 moderation:
   nsfw:
