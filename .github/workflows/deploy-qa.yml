@@ -36,7 +36,7 @@ jobs:
           cat >> .env <<'EOF'
           FIREBASE_ENABLED=true
           FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
-          FIREBASE_CREDENTIALS_PATH=/opt/meer-dev/firebase-service-account.json
+          GOOGLE_APPLICATION_CREDENTIALS=/opt/meer-dev/firebase-service-account.json
           EOF
 
           while IFS= read -r line || [ -n "$line" ]; do
@@ -72,7 +72,7 @@ jobs:
             SPRING_PROFILES_ACTIVE
             SECURITY_JWT_SECRET SECURITY_JWT_ACCESS_TTL_MINUTES SECURITY_JWT_REFRESH_TTL_DAYS
             GOOGLE_ANDROID_CLIENT_ID GOOGLE_IOS_CLIENT_ID GOOGLE_WEB_CLIENT_ID
-            FIREBASE_ENABLED FIREBASE_PROJECT_ID FIREBASE_CREDENTIALS_PATH
+            FIREBASE_ENABLED FIREBASE_PROJECT_ID GOOGLE_APPLICATION_CREDENTIALS
             GCS_BUCKET GCS_PUBLIC_BASE_URL GCS_SIGNED_URL_TTL_MINUTES GCS_AVATARS_PREFIX
             MEER_CORS_ALLOWED_ORIGINS
             SERVICE REMOTE_JAR HEALTH_URL
@@ -186,49 +186,63 @@ jobs:
             sudo mv "/tmp/meer-${{ env.SHA_SHORT }}.jar" "${{ env.REMOTE_JAR }}"
             sudo chown meerdev:meerdev "${{ env.REMOTE_JAR }}"
 
-            # Source env locally for this script (needed for FIREBASE_CREDENTIALS_PATH, etc.)
+            # Source env locally for this script
             if sudo test -f /opt/meer-dev/.env; then
               set -a
-              # shellcheck disable=SC1091
               source <(sudo cat /opt/meer-dev/.env)
               set +a
             fi
 
-            # Ensure systemd loads env vars from /opt/meer-dev/.env on restart
+            # Update systemd env
             sudo mkdir -p /etc/systemd/system/"${{ env.SERVICE }}".service.d
             sudo tee /etc/systemd/system/"${{ env.SERVICE }}".service.d/env.conf >/dev/null <<'EOF'
             [Service]
             EnvironmentFile=/opt/meer-dev/.env
             Environment=FIREBASE_ENABLED=true
             Environment=FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
-            Environment=FIREBASE_CREDENTIALS_PATH=/opt/meer-dev/firebase-service-account.json
+            Environment=GOOGLE_APPLICATION_CREDENTIALS=/opt/meer-dev/firebase-service-account.json
             EOF
             sudo systemctl daemon-reload
 
-            firebase_cred_path="${FIREBASE_CREDENTIALS_PATH:-}"
-            if [ -z "$firebase_cred_path" ]; then
-              echo "FIREBASE_CREDENTIALS_PATH not set (checked /opt/meer-dev/.env and env var)" >&2
+            # Write Google credentials (used by Firebase and GCS)
+            google_cred_path="${GOOGLE_APPLICATION_CREDENTIALS:-/opt/meer-dev/firebase-service-account.json}"
+            sudo mkdir -p "$(dirname "$google_cred_path")"
+            echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON_B64 }}" | tr -d '\r\n\t ' | base64 --decode | sudo tee "$google_cred_path" >/dev/null
+            sudo chown meerdev:meerdev "$google_cred_path"
+            sudo chmod 600 "$google_cred_path"
+
+            # --- PRE-WARMING STEP ---
+            echo "Starting pre-warming on port 8099..."
+            # Run the new JAR in background on a temp port to verify health and prime the cache
+            sudo -u meerdev bash -c "set -a; source /opt/meer-dev/.env; set +a; export SERVER_PORT=8099; export GOOGLE_APPLICATION_CREDENTIALS=$google_cred_path; java -jar ${{ env.REMOTE_JAR }} > /tmp/meer-prewarm.log 2>&1 &"
+            
+            PREWARM_PID=$!
+            
+            # Wait for health check on pre-warm port
+            echo "Waiting for pre-warm instance to be healthy..."
+            SUCCESS=0
+            for i in {1..30}; do
+              if curl -s http://localhost:8099/actuator/health | grep -q '"status":"UP"'; then
+                echo "Pre-warm instance is healthy!"
+                SUCCESS=1
+                break
+              fi
+              echo "Waiting... ($i/30)"
+              sleep 5
+            done
+
+            # Kill the pre-warm instance
+            sudo kill $PREWARM_PID || true
+            sleep 2
+
+            if [ $SUCCESS -eq 1 ]; then
+              echo "Performing fast swap..."
+              sudo systemctl restart "${{ env.SERVICE }}"
+            else
+              echo "Pre-warming failed! Check /tmp/meer-prewarm.log"
+              sudo tail -n 50 /tmp/meer-prewarm.log
               exit 1
             fi
-            if [ "${firebase_cred_path#/}" = "$firebase_cred_path" ]; then
-              firebase_cred_path="/opt/meer-dev/$firebase_cred_path"
-            fi
-            if [ "${firebase_cred_path%/}" != "$firebase_cred_path" ]; then
-              firebase_cred_path="${firebase_cred_path}firebase-service-account.json"
-            fi
-
-            if [ -z "${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON_B64 }}" ]; then
-              echo "Missing secret FIREBASE_SERVICE_ACCOUNT_JSON_B64" >&2
-              exit 1
-            fi
-
-            sudo mkdir -p "$(dirname "$firebase_cred_path")"
-            echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON_B64 }}" | tr -d '\r\n\t ' | base64 --decode | sudo tee "$firebase_cred_path" >/dev/null
-            sudo chown meerdev:meerdev "$firebase_cred_path"
-            sudo chmod 600 "$firebase_cred_path"
-            sudo test -s "$firebase_cred_path" || { echo "Failed to write Firebase credentials to $firebase_cred_path" >&2; exit 1; }
-
-            sudo systemctl restart "${{ env.SERVICE }}"
 
       - name: Cleanup temp artifacts on dev host
         uses: appleboy/ssh-action@v1.0.0
