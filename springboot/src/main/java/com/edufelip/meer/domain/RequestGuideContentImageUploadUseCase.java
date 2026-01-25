@@ -32,16 +32,20 @@ public class RequestGuideContentImageUploadUseCase {
             .findByIdAndDeletedAtIsNull(contentId)
             .orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found"));
-    if (content.getThriftStore() == null || content.getThriftStore().getId() == null) {
+
+    java.util.UUID storeId = null;
+    if (content.getThriftStore() != null) {
+      storeOwnershipService.ensureOwnerOrAdminStrict(user, content.getThriftStore());
+      storeId = content.getThriftStore().getId();
+    } else if (!storeOwnershipService.isAdmin(user)) {
       throw new ResponseStatusException(
           HttpStatus.FORBIDDEN, "You must own this store to upload content images");
     }
-    storeOwnershipService.ensureOwnerOrAdminStrict(user, content.getThriftStore());
 
     String normalized = normalizeContentType(contentType);
     List<String> contentTypes = normalized != null ? List.of(normalized) : null;
     return photoStoragePort
-        .createUploadSlots(content.getThriftStore().getId(), 1, contentTypes)
+        .createUploadSlots(storeId, 1, contentTypes)
         .get(0);
   }
 

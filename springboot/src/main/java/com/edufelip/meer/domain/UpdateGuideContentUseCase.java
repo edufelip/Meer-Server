@@ -88,6 +88,12 @@ public class UpdateGuideContentUseCase {
           throw new ResponseStatusException(
               HttpStatus.BAD_REQUEST, "imageUrl must belong to this store");
         }
+      } else {
+        // Global content images must have the 'global/' prefix
+        if (!fileKey.startsWith("global/")) {
+          throw new ResponseStatusException(
+              HttpStatus.BAD_REQUEST, "imageUrl must be a global content image");
+        }
       }
       var stored = photoStoragePort.fetchRequired(fileKey);
       String ctype = stored != null ? stored.contentType() : null;

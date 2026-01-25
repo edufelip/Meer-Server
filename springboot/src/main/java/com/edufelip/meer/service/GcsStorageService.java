@@ -55,12 +55,13 @@ public class GcsStorageService implements PhotoStoragePort {
   public List<PhotoStoragePort.UploadSlot> createUploadSlots(
       UUID storeId, int count, List<String> contentTypes) {
     List<PhotoStoragePort.UploadSlot> slots = new ArrayList<>();
+    String prefix = storeId != null ? "stores/%s/photos".formatted(storeId) : "global/photos";
     for (int i = 0; i < count; i++) {
       String ctype =
           contentTypes != null && contentTypes.size() > i && contentTypes.get(i) != null
               ? contentTypes.get(i)
               : "image/jpeg";
-      String objectName = "stores/%s/photos/%s".formatted(storeId, UUID.randomUUID());
+      String objectName = "%s/%s".formatted(prefix, UUID.randomUUID());
       BlobInfo blobInfo = BlobInfo.newBuilder(bucket, objectName).setContentType(ctype).build();
       URL url =
           storage.signUrl(
