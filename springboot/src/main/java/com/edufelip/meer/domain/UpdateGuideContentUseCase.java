@@ -46,18 +46,20 @@ public class UpdateGuideContentUseCase {
             .findByIdAndDeletedAtIsNull(contentId)
             .orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found"));
-    if (content.getThriftStore() == null) {
+    
+    if (content.getThriftStore() != null) {
+      try {
+        storeOwnershipService.ensureOwnerOrAdminStrict(user, content.getThriftStore());
+      } catch (ResponseStatusException ex) {
+        if (ex.getStatusCode() == HttpStatus.FORBIDDEN) {
+          throw new ResponseStatusException(
+              HttpStatus.FORBIDDEN, "You must own this store to update content");
+        }
+        throw ex;
+      }
+    } else if (!storeOwnershipService.isAdmin(user)) {
       throw new ResponseStatusException(
           HttpStatus.FORBIDDEN, "You must own this store to update content");
-    }
-    try {
-      storeOwnershipService.ensureOwnerOrAdminStrict(user, content.getThriftStore());
-    } catch (ResponseStatusException ex) {
-      if (ex.getStatusCode() == HttpStatus.FORBIDDEN) {
-        throw new ResponseStatusException(
-            HttpStatus.FORBIDDEN, "You must own this store to update content");
-      }
-      throw ex;
     }
 
     if (command.title() != null) {
