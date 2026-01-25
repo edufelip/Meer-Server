@@ -110,6 +110,8 @@ jobs:
             set -e
             sudo apt-get clean || true
             sudo rm -rf /root/.gradle/caches /root/.gradle/wrapper || true
+            sudo rm -rf ~/.gradle || true
+            sudo rm -f /tmp/meer-*.jar || true
             sudo find /tmp -mindepth 1 -mtime +1 -exec rm -rf {} + || true
             sudo journalctl --vacuum-time=7d --vacuum-size=100M || true
             sudo logrotate -f /etc/logrotate.conf || true
