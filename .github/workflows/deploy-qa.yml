@@ -202,6 +202,7 @@ jobs:
             Environment=FIREBASE_ENABLED=true
             Environment=FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
             Environment=GOOGLE_APPLICATION_CREDENTIALS=/opt/meer-dev/firebase-service-account.json
+            Environment=STORAGE_GCS_CREDENTIALS_PATH=/opt/meer-dev/gcs-service-account.json
             EOF
             sudo systemctl daemon-reload
 

@@ -15,11 +15,14 @@ public class GcsConfig {
   @Bean
   public Storage storage(@Value("${storage.gcs.credentials-path:}") String credentialsPath)
       throws IOException {
+    StorageOptions.Builder optionsBuilder = StorageOptions.newBuilder();
+
     if (credentialsPath != null && !credentialsPath.isBlank()) {
       GoogleCredentials credentials =
           GoogleCredentials.fromStream(new FileInputStream(credentialsPath));
-      return StorageOptions.newBuilder().setCredentials(credentials).build().getService();
+      optionsBuilder.setCredentials(credentials);
     }
-    return StorageOptions.getDefaultInstance().getService();
+
+    return optionsBuilder.build().getService();
   }
 }

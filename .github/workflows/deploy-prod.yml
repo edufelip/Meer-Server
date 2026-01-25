@@ -37,6 +37,7 @@ jobs:
           FIREBASE_ENABLED=true
           FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
           FIREBASE_CREDENTIALS_PATH=/opt/meer-prod/firebase-service-account.json
+          STORAGE_GCS_CREDENTIALS_PATH=/opt/meer-prod/gcs-service-account.json
           EOF
 
           while IFS= read -r line || [ -n "$line" ]; do
@@ -202,6 +203,7 @@ jobs:
             Environment=FIREBASE_ENABLED=true
             Environment=FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
             Environment=FIREBASE_CREDENTIALS_PATH=/opt/meer-prod/firebase-service-account.json
+            Environment=STORAGE_GCS_CREDENTIALS_PATH=/opt/meer-prod/gcs-service-account.json
             EOF
             sudo systemctl daemon-reload
 
@@ -228,7 +230,47 @@ jobs:
             sudo chmod 600 "$firebase_cred_path"
             sudo test -s "$firebase_cred_path" || { echo "Failed to write Firebase credentials to $firebase_cred_path" >&2; exit 1; }
 
-            sudo systemctl restart "${{ env.SERVICE }}"
+            # Write GCS credentials (used by Storage)
+            gcs_cred_path="/opt/meer-prod/gcs-service-account.json"
+            if [ -n "${{ secrets.GCS_SERVICE_ACCOUNT_JSON_B64 }}" ]; then
+              sudo mkdir -p "$(dirname "$gcs_cred_path")"
+              echo "${{ secrets.GCS_SERVICE_ACCOUNT_JSON_B64 }}" | tr -d '\r\n\t ' | base64 --decode | sudo tee "$gcs_cred_path" >/dev/null
+              sudo chown meerprod:meerprod "$gcs_cred_path"
+              sudo chmod 600 "$gcs_cred_path"
+            fi
+
+            # --- PRE-WARMING STEP ---
+            echo "Starting pre-warming on port 8099..."
+            # Run the new JAR in background on a temp port to verify health and prime the cache
+            sudo -u meerprod bash -c "set -a; source /opt/meer-prod/.env; set +a; export SERVER_PORT=8099; export FIREBASE_CREDENTIALS_PATH=$firebase_cred_path; export STORAGE_GCS_CREDENTIALS_PATH=$gcs_cred_path; java -jar ${{ env.REMOTE_JAR }} > /tmp/meer-prewarm.log 2>&1 &"
+            
+            PREWARM_PID=$!
+            
+            # Wait for health check on pre-warm port
+            echo "Waiting for pre-warm instance to be healthy..."
+            SUCCESS=0
+            for i in {1..30}; do
+              if curl -s http://localhost:8099/actuator/health | grep -q '"status":"UP"'; then
+                echo "Pre-warm instance is healthy!"
+                SUCCESS=1
+                break
+              fi
+              echo "Waiting... ($i/30)"
+              sleep 5
+            done
+
+            # Kill the pre-warm instance
+            sudo kill $PREWARM_PID || true
+            sleep 2
+
+            if [ $SUCCESS -eq 1 ]; then
+              echo "Performing fast swap..."
+              sudo systemctl restart "${{ env.SERVICE }}"
+            else
+              echo "Pre-warming failed! Check /tmp/meer-prewarm.log"
+              sudo tail -n 50 /tmp/meer-prewarm.log
+              exit 1
+            fi
 
       - name: Cleanup temp artifacts on prod host
         uses: appleboy/ssh-action@v1.0.0
