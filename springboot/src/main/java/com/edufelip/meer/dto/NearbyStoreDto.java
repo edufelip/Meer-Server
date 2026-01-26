@@ -79,7 +79,7 @@ public record NearbyStoreDto(
         store.getName(),
         store.getDescription(),
         StoreDtoCalculations.firstPhotoOrCover(store),
-        store.getAddressLine(),
+        StoreDtoCalculations.maskedAddressLine(store),
         store.getLatitude(),
         store.getLongitude(),
         store.getNeighborhood(),

@@ -2,10 +2,10 @@ package com.edufelip.meer.dto;
 
 import com.edufelip.meer.core.store.ThriftStore;
 
-final class StoreDtoCalculations {
+public final class StoreDtoCalculations {
   private StoreDtoCalculations() {}
 
-  static String firstPhotoOrCover(ThriftStore store) {
+  public static String firstPhotoOrCover(ThriftStore store) {
     if (store == null) return null;
     if (store.getPhotos() != null && !store.getPhotos().isEmpty()) {
       return store.getPhotos().get(0).getUrl();
@@ -13,7 +13,22 @@ final class StoreDtoCalculations {
     return store.getCoverImageUrl();
   }
 
-  static Double distanceMeters(Double lat1, Double lon1, Double lat2, Double lon2) {
+  public static String maskedAddressLine(ThriftStore store) {
+    if (store == null) return null;
+    if (Boolean.TRUE.equals(store.getIsOnlineStore())) {
+      // Requirement: "Cidade, Bairro"
+      // Since we don't have structured city, we use neighborhood.
+      String neighborhood = store.getNeighborhood();
+      if (neighborhood != null && !neighborhood.isBlank()) {
+        return neighborhood;
+      } else {
+        return "Loja Online";
+      }
+    }
+    return store.getAddressLine();
+  }
+
+  public static Double distanceMeters(Double lat1, Double lon1, Double lat2, Double lon2) {
     if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return null;
     double R = 6371.0;
     double dLat = Math.toRadians(lat2 - lat1);

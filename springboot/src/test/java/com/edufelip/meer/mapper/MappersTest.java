@@ -3,11 +3,28 @@ package com.edufelip.meer.mapper;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.edufelip.meer.core.store.ThriftStore;
+import com.edufelip.meer.dto.NearbyStoreDto;
 import com.edufelip.meer.dto.ThriftStoreDto;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class MappersTest {
+
+  @Test
+  void nearbyStoreDtoMasksAddressForOnlineStore() {
+    ThriftStore store = new ThriftStore();
+    store.setId(UUID.randomUUID());
+    store.setName("Online Boutique");
+    store.setAddressLine("Rua Secret, 123");
+    store.setNeighborhood("Centro");
+    store.setIsOnlineStore(true);
+    store.setLatitude(1.0);
+    store.setLongitude(1.0);
+
+    NearbyStoreDto dto = new NearbyStoreDto(store, 0.0, 0.0, false, null, null);
+
+    assertThat(dto.addressLine()).isEqualTo("Centro");
+  }
 
   @Test
   void toDtoMasksAddressForOnlineStore() {

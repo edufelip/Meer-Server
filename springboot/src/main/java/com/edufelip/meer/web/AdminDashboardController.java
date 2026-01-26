@@ -91,7 +91,11 @@ public class AdminDashboardController {
             .map(
                 ts ->
                     new DashboardStoreSummaryDto(
-                        ts.getId(), ts.getName(), ts.getAddressLine(), ts.getCreatedAt()))
+                        ts.getId(),
+                        ts.getName(),
+                        ts.getAddressLine(),
+                        ts.getIsOnlineStore(),
+                        ts.getCreatedAt()))
             .toList();
     return new PageResponse<>(items, page, pageRes.hasNext());
   }

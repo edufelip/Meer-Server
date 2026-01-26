@@ -1655,6 +1655,7 @@ components:
         id: { type: string, format: uuid }
         name: { type: string }
         addressLine: { type: string }
+        isOnlineStore: { type: boolean }
         createdAt: { type: string, format: date-time }
     PageResponseDashboardStoreSummary:
       type: object
