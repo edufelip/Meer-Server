@@ -15,17 +15,20 @@ import com.edufelip.meer.domain.auth.RefreshTokenUseCase;
 import com.edufelip.meer.domain.auth.ResetPasswordUseCase;
 import com.edufelip.meer.domain.auth.SignupUseCase;
 import com.edufelip.meer.dto.ProfileDto;
+import com.edufelip.meer.config.TestClockConfig;
 import com.edufelip.meer.support.TestFixtures;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@Import(TestClockConfig.class)
 class AuthControllerTest {
 
   @Autowired private MockMvc mockMvc;
