@@ -49,6 +49,7 @@ import com.edufelip.meer.web.AuthController;
 import com.edufelip.meer.web.DashboardAuthController;
 import com.edufelip.meer.web.GuideContentController;
 import com.edufelip.meer.web.SupportController;
+import com.edufelip.meer.web.ProfileAssembler;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -85,6 +86,7 @@ class PublicApiSnapshotTest {
   @MockitoBean private ResetPasswordUseCase resetPasswordUseCase;
   @MockitoBean private AuthUserRepository authUserRepository;
   @MockitoBean private TokenProvider tokenProvider;
+  @MockitoBean private ProfileAssembler profileAssembler;
 
   @MockitoBean private DashboardLoginUseCase dashboardLoginUseCase;
 
