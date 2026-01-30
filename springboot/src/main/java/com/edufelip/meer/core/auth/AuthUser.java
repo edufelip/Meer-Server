@@ -36,6 +36,12 @@ public class AuthUser {
   @Column(nullable = false)
   private boolean notifyPromos = true;
 
+  @Column(name = "terms_version")
+  private String termsVersion;
+
+  @Column(name = "terms_accepted_at")
+  private Instant termsAcceptedAt;
+
   @OneToOne
   @JoinColumn(name = "owned_thrift_store_id", columnDefinition = "uuid")
   private ThriftStore ownedThriftStore;
@@ -107,6 +113,14 @@ public class AuthUser {
     return notifyPromos;
   }
 
+  public String getTermsVersion() {
+    return termsVersion;
+  }
+
+  public Instant getTermsAcceptedAt() {
+    return termsAcceptedAt;
+  }
+
   public ThriftStore getOwnedThriftStore() {
     return ownedThriftStore;
   }
@@ -153,6 +167,14 @@ public class AuthUser {
 
   public void setNotifyPromos(boolean notifyPromos) {
     this.notifyPromos = notifyPromos;
+  }
+
+  public void setTermsVersion(String termsVersion) {
+    this.termsVersion = termsVersion;
+  }
+
+  public void setTermsAcceptedAt(Instant termsAcceptedAt) {
+    this.termsAcceptedAt = termsAcceptedAt;
   }
 
   public void setOwnedThriftStore(ThriftStore ownedThriftStore) {

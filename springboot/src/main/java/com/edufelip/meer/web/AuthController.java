@@ -4,7 +4,6 @@ import com.edufelip.meer.domain.auth.*;
 import com.edufelip.meer.dto.AuthDtos;
 import com.edufelip.meer.dto.ProfileDto;
 import com.edufelip.meer.mapper.AuthMappers;
-import com.edufelip.meer.mapper.Mappers;
 import com.edufelip.meer.security.AuthUserResolver;
 import com.edufelip.meer.security.token.InvalidRefreshTokenException;
 import com.edufelip.meer.security.token.InvalidTokenException;
@@ -25,6 +24,7 @@ public class AuthController {
   private final ForgotPasswordUseCase forgotPasswordUseCase;
   private final ResetPasswordUseCase resetPasswordUseCase;
   private final AuthUserResolver authUserResolver;
+  private final ProfileAssembler profileAssembler;
 
   public AuthController(
       LoginUseCase loginUseCase,
@@ -34,7 +34,8 @@ public class AuthController {
       RefreshTokenUseCase refreshTokenUseCase,
       ForgotPasswordUseCase forgotPasswordUseCase,
       ResetPasswordUseCase resetPasswordUseCase,
-      AuthUserResolver authUserResolver) {
+      AuthUserResolver authUserResolver,
+      ProfileAssembler profileAssembler) {
     this.loginUseCase = loginUseCase;
     this.signupUseCase = signupUseCase;
     this.googleLoginUseCase = googleLoginUseCase;
@@ -43,6 +44,7 @@ public class AuthController {
     this.forgotPasswordUseCase = forgotPasswordUseCase;
     this.resetPasswordUseCase = resetPasswordUseCase;
     this.authUserResolver = authUserResolver;
+    this.profileAssembler = profileAssembler;
   }
 
   @PostMapping("/login")
@@ -113,7 +115,7 @@ public class AuthController {
   @GetMapping("/me")
   public ResponseEntity<Map<String, Object>> me(@RequestHeader("Authorization") String authHeader) {
     var user = authUserResolver.requireUser(authHeader);
-    ProfileDto profile = Mappers.toProfileDto(user, true);
+    ProfileDto profile = profileAssembler.toProfileDto(user, true);
     return ResponseEntity.ok(Map.of("user", profile));
   }
 

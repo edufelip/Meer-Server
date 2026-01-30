@@ -1,7 +1,6 @@
 package com.edufelip.meer.mapper;
 
 import com.edufelip.meer.core.auth.AuthUser;
-import com.edufelip.meer.core.auth.Role;
 import com.edufelip.meer.core.category.Category;
 import com.edufelip.meer.core.content.GuideContent;
 import com.edufelip.meer.core.content.GuideContentComment;
@@ -21,7 +20,6 @@ import com.edufelip.meer.dto.ImageModerationDto;
 import com.edufelip.meer.dto.PhotoRegisterRequest;
 import com.edufelip.meer.dto.PhotoUploadResponse;
 import com.edufelip.meer.dto.PhotoUploadSlot;
-import com.edufelip.meer.dto.ProfileDto;
 import com.edufelip.meer.dto.StoreDtoCalculations;
 import com.edufelip.meer.dto.StoreImageDto;
 import com.edufelip.meer.dto.StoreRatingDto;
@@ -245,24 +243,6 @@ public class Mappers {
         contentsDto,
         images,
         store.getCreatedAt());
-  }
-
-  public static ProfileDto toProfileDto(AuthUser user, boolean includeOwnedStore) {
-    ThriftStoreDto owned = null;
-    if (includeOwnedStore && user.getOwnedThriftStore() != null) {
-      owned = toDto(user.getOwnedThriftStore(), false);
-    }
-    return new ProfileDto(
-        user.getId(),
-        user.getDisplayName(),
-        user.getEmail(),
-        user.getPhotoUrl(),
-        user.getBio(),
-        (user.getRole() != null ? user.getRole() : Role.USER).name(),
-        user.isNotifyNewStores(),
-        user.isNotifyPromos(),
-        owned,
-        user.getCreatedAt());
   }
 
   public static CreateThriftStoreUseCase.Command toCreateCommand(StoreRequest body) {

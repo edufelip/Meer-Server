@@ -1,6 +1,7 @@
 package com.edufelip.meer;
 
 import com.edufelip.meer.config.FirebaseProperties;
+import com.edufelip.meer.config.TermsProperties;
 import com.edufelip.meer.domain.CreateCategoryUseCase;
 import com.edufelip.meer.domain.CreateGuideContentCommentUseCase;
 import com.edufelip.meer.domain.CreateGuideContentUseCase;
@@ -31,6 +32,7 @@ import com.edufelip.meer.domain.UpdateGuideContentUseCase;
 import com.edufelip.meer.domain.UpdateThriftStoreUseCase;
 import com.edufelip.meer.domain.UpsertPushTokenUseCase;
 import com.edufelip.meer.domain.auth.AppleLoginUseCase;
+import com.edufelip.meer.domain.auth.AcceptTermsUseCase;
 import com.edufelip.meer.domain.auth.DashboardLoginUseCase;
 import com.edufelip.meer.domain.auth.DeleteUserUseCase;
 import com.edufelip.meer.domain.auth.ForgotPasswordUseCase;
@@ -87,7 +89,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
   JwtProperties.class,
   GoogleClientProperties.class,
   PasswordResetProperties.class,
-  FirebaseProperties.class
+  FirebaseProperties.class,
+  TermsProperties.class
 })
 public class AppConfig {
 
@@ -409,6 +412,11 @@ public class AppConfig {
   public UpdateProfileUseCase updateProfileUseCase(
       TokenProvider tokenProvider, AuthUserRepository repo) {
     return new UpdateProfileUseCase(tokenProvider, repo);
+  }
+
+  @Bean
+  public AcceptTermsUseCase acceptTermsUseCase(AuthUserRepository repo, Clock clock) {
+    return new AcceptTermsUseCase(repo, clock);
   }
 
   @Bean

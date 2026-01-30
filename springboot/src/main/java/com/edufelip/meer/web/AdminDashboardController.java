@@ -11,6 +11,7 @@ import com.edufelip.meer.domain.repo.PushTokenRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
 import com.edufelip.meer.dto.*;
 import com.edufelip.meer.mapper.Mappers;
+import com.edufelip.meer.mapper.ProfileMapper;
 import com.edufelip.meer.security.token.TokenProvider;
 import com.edufelip.meer.service.GuideContentEngagementService;
 import com.edufelip.meer.service.GuideContentModerationService;
@@ -311,14 +312,14 @@ public class AdminDashboardController {
   }
 
   @GetMapping("/users/{id}")
-  public ProfileDto getUser(
+  public AdminProfileDto getUser(
       @RequestHeader("Authorization") String authHeader, @PathVariable java.util.UUID id) {
     requireAdmin(authHeader);
     var user =
         authUserRepository
             .findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-    return Mappers.toProfileDto(user, true);
+    return ProfileMapper.toAdminProfileDto(user, true);
   }
 
   @DeleteMapping("/users/{id}")

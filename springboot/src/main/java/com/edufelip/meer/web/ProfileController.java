@@ -9,7 +9,6 @@ import com.edufelip.meer.dto.DeleteAccountRequest;
 import com.edufelip.meer.dto.ErrorDto;
 import com.edufelip.meer.dto.ProfileDto;
 import com.edufelip.meer.dto.UpdateProfileRequest;
-import com.edufelip.meer.mapper.Mappers;
 import com.edufelip.meer.security.AuthUserResolver;
 import com.edufelip.meer.security.token.InvalidTokenException;
 import com.edufelip.meer.service.GcsStorageService;
@@ -50,6 +49,7 @@ public class ProfileController {
   private final GcsStorageService gcsStorageService;
   private final AuthUserResolver authUserResolver;
   private final ModerationPolicyService moderationPolicyService;
+  private final ProfileAssembler profileAssembler;
   private static final Set<String> ALLOWED_AVATAR_CONTENT_TYPES =
       Set.of("image/jpeg", "image/png", "image/webp");
   private static final long MAX_AVATAR_BYTES = 5 * 1024 * 1024;
@@ -60,20 +60,22 @@ public class ProfileController {
       DeleteUserUseCase deleteUserUseCase,
       GcsStorageService gcsStorageService,
       AuthUserResolver authUserResolver,
-      ModerationPolicyService moderationPolicyService) {
+      ModerationPolicyService moderationPolicyService,
+      ProfileAssembler profileAssembler) {
     this.getProfileUseCase = getProfileUseCase;
     this.updateProfileUseCase = updateProfileUseCase;
     this.deleteUserUseCase = deleteUserUseCase;
     this.gcsStorageService = gcsStorageService;
     this.authUserResolver = authUserResolver;
     this.moderationPolicyService = moderationPolicyService;
+    this.profileAssembler = profileAssembler;
   }
 
   @GetMapping
   public ProfileDto getProfile(@RequestHeader("Authorization") String authHeader) {
     String token = authUserResolver.requireBearer(authHeader);
     var user = getProfileUseCase.execute(token);
-    return Mappers.toProfileDto(user, true);
+    return profileAssembler.toProfileDto(user, true);
   }
 
   @PostMapping(value = "/avatar/upload", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -135,7 +137,7 @@ public class ProfileController {
       }
     }
 
-    return Mappers.toProfileDto(user, true);
+    return profileAssembler.toProfileDto(user, true);
   }
 
   @PatchMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -178,7 +180,7 @@ public class ProfileController {
       }
     }
 
-    return Mappers.toProfileDto(user, true);
+    return profileAssembler.toProfileDto(user, true);
   }
 
   @DeleteMapping("/account")
