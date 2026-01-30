@@ -46,6 +46,10 @@ security:
     from: ${SECURITY_PASSWORD_RESET_FROM:contato@guiabrecho.com.br}
     subject: ${SECURITY_PASSWORD_RESET_SUBJECT:Reset your password}
 
+terms:
+  required-version: "2026-01"
+  url: "https://www.guiabrecho.com.br/terms-eula"
+
 meer:
   cors:
     allowed-origins: ${MEER_CORS_ALLOWED_ORIGINS:}
