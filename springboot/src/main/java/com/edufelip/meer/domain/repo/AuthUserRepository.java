@@ -1,6 +1,7 @@
 package com.edufelip.meer.domain.repo;
 
 import com.edufelip.meer.core.auth.AuthUser;
+import com.edufelip.meer.core.auth.Role;
 import jakarta.transaction.Transactional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -13,8 +14,15 @@ import org.springframework.data.repository.query.Param;
 public interface AuthUserRepository extends JpaRepository<AuthUser, UUID> {
   AuthUser findByEmail(String email);
 
-  Page<AuthUser> findByEmailContainingIgnoreCaseOrDisplayNameContainingIgnoreCase(
-      String email, String name, Pageable pageable);
+  @Query("select u from AuthUser u where (u.role <> :admin or u.role is null)")
+  Page<AuthUser> findNonAdminUsers(@Param("admin") Role admin, Pageable pageable);
+
+  @Query(
+      "select u from AuthUser u where (u.role <> :admin or u.role is null) and "
+          + "(lower(u.email) like lower(concat('%', :term, '%')) escape '!' "
+          + "or lower(u.displayName) like lower(concat('%', :term, '%')) escape '!')")
+  Page<AuthUser> searchNonAdminUsers(
+      @Param("term") String term, @Param("admin") Role admin, Pageable pageable);
 
   @Modifying
   @Transactional

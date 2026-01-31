@@ -1,67 +1,52 @@
 package com.edufelip.meer.web;
 
 import com.edufelip.meer.core.auth.AuthUser;
-import com.edufelip.meer.core.auth.Role;
-import com.edufelip.meer.core.push.PushToken;
-import com.edufelip.meer.domain.auth.DeleteUserUseCase;
-import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.GuideContentCommentRepository;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
-import com.edufelip.meer.domain.repo.PushTokenRepository;
 import com.edufelip.meer.domain.repo.ThriftStoreRepository;
-import com.edufelip.meer.dto.*;
+import com.edufelip.meer.dto.DashboardCommentDto;
+import com.edufelip.meer.dto.DashboardStoreSummaryDto;
+import com.edufelip.meer.dto.GuideContentCommentDto;
+import com.edufelip.meer.dto.GuideContentDto;
+import com.edufelip.meer.dto.PageResponse;
 import com.edufelip.meer.mapper.Mappers;
-import com.edufelip.meer.mapper.ProfileMapper;
-import com.edufelip.meer.security.token.TokenProvider;
+import com.edufelip.meer.security.DashboardAdminAuthorizer;
 import com.edufelip.meer.service.GuideContentEngagementService;
 import com.edufelip.meer.service.GuideContentModerationService;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.context.request.RequestAttributes;
-import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/dashboard")
 public class AdminDashboardController {
 
-  private final TokenProvider tokenProvider;
-  private final AuthUserRepository authUserRepository;
+  private final DashboardAdminAuthorizer adminAuthorizer;
   private final ThriftStoreRepository thriftStoreRepository;
   private final GuideContentRepository guideContentRepository;
   private final GuideContentCommentRepository guideContentCommentRepository;
-  private final PushTokenRepository pushTokenRepository;
-  private final DeleteUserUseCase deleteUserUseCase;
   private final GuideContentEngagementService guideContentEngagementService;
   private final GuideContentModerationService guideContentModerationService;
 
   public AdminDashboardController(
-      TokenProvider tokenProvider,
-      AuthUserRepository authUserRepository,
+      DashboardAdminAuthorizer adminAuthorizer,
       ThriftStoreRepository thriftStoreRepository,
       GuideContentRepository guideContentRepository,
       GuideContentCommentRepository guideContentCommentRepository,
-      PushTokenRepository pushTokenRepository,
-      DeleteUserUseCase deleteUserUseCase,
       GuideContentEngagementService guideContentEngagementService,
       GuideContentModerationService guideContentModerationService) {
-    this.tokenProvider = tokenProvider;
-    this.authUserRepository = authUserRepository;
+    this.adminAuthorizer = adminAuthorizer;
     this.thriftStoreRepository = thriftStoreRepository;
     this.guideContentRepository = guideContentRepository;
     this.guideContentCommentRepository = guideContentCommentRepository;
-    this.pushTokenRepository = pushTokenRepository;
-    this.deleteUserUseCase = deleteUserUseCase;
     this.guideContentEngagementService = guideContentEngagementService;
     this.guideContentModerationService = guideContentModerationService;
   }
@@ -73,7 +58,7 @@ public class AdminDashboardController {
       @RequestParam(defaultValue = "20") int pageSize,
       @RequestParam(name = "search", required = false) String search,
       @RequestParam(defaultValue = "newest") String sort) {
-    requireAdmin(authHeader);
+    adminAuthorizer.requireAdmin(authHeader);
     if (page < 0 || pageSize < 1 || pageSize > 100) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination params");
     }
@@ -108,7 +93,7 @@ public class AdminDashboardController {
       @RequestParam(defaultValue = "20") int pageSize,
       @RequestParam(required = false) String q,
       @RequestParam(defaultValue = "newest") String sort) {
-    requireAdmin(authHeader);
+    adminAuthorizer.requireAdmin(authHeader);
     if (page < 0 || pageSize < 1 || pageSize > 100) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination params");
     }
@@ -141,7 +126,7 @@ public class AdminDashboardController {
   @GetMapping("/contents/{id}")
   public GuideContentDto getContent(
       @RequestHeader("Authorization") String authHeader, @PathVariable Integer id) {
-    requireAdmin(authHeader);
+    adminAuthorizer.requireAdmin(authHeader);
     var content =
         guideContentRepository
             .findByIdAndDeletedAtIsNull(id)
@@ -157,7 +142,7 @@ public class AdminDashboardController {
   @DeleteMapping("/contents/{id}")
   public org.springframework.http.ResponseEntity<Void> deleteContent(
       @RequestHeader("Authorization") String authHeader, @PathVariable Integer id) {
-    AuthUser admin = requireAdmin(authHeader);
+    AuthUser admin = adminAuthorizer.requireAdmin(authHeader);
     var content =
         guideContentRepository
             .findById(id)
@@ -170,7 +155,7 @@ public class AdminDashboardController {
   @PostMapping("/contents/{id}/restore")
   public GuideContentDto restoreContent(
       @RequestHeader("Authorization") String authHeader, @PathVariable Integer id) {
-    requireAdmin(authHeader);
+    adminAuthorizer.requireAdmin(authHeader);
     var content =
         guideContentRepository
             .findById(id)
@@ -191,7 +176,7 @@ public class AdminDashboardController {
       @PathVariable Integer id,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int pageSize) {
-    requireAdmin(authHeader);
+    adminAuthorizer.requireAdmin(authHeader);
     if (page < 0 || pageSize < 1 || pageSize > 100) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination params");
     }
@@ -210,7 +195,7 @@ public class AdminDashboardController {
       @RequestHeader("Authorization") String authHeader,
       @PathVariable Integer id,
       @PathVariable Integer commentId) {
-    requireAdmin(authHeader);
+    adminAuthorizer.requireAdmin(authHeader);
     var comment =
         guideContentCommentRepository
             .findById(commentId)
@@ -234,7 +219,7 @@ public class AdminDashboardController {
       @RequestParam(required = false) UUID storeId,
       @RequestParam(required = false) LocalDate from,
       @RequestParam(required = false) LocalDate to) {
-    requireAdmin(authHeader);
+    adminAuthorizer.requireAdmin(authHeader);
     if (page < 0 || pageSize < 1 || pageSize > 100) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination params");
     }
@@ -252,119 +237,4 @@ public class AdminDashboardController {
     return new PageResponse<>(items, page, pageRes.hasNext());
   }
 
-  @GetMapping("/users")
-  public PageResponse<AdminUserDto> listUsers(
-      @RequestHeader("Authorization") String authHeader,
-      @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "20") int pageSize,
-      @RequestParam(required = false) String q,
-      @RequestParam(defaultValue = "newest") String sort) {
-    requireAdmin(authHeader);
-    if (page < 0 || pageSize < 1 || pageSize > 100) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination params");
-    }
-    Sort s =
-        "oldest".equalsIgnoreCase(sort)
-            ? Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "createdAt")
-            : Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt");
-    Pageable pageable = PageRequest.of(page, pageSize, s);
-    var pageRes =
-        (q != null && !q.isBlank())
-            ? authUserRepository.findByEmailContainingIgnoreCaseOrDisplayNameContainingIgnoreCase(
-                q, q, pageable)
-            : authUserRepository.findAll(pageable);
-
-    List<UUID> userIds = pageRes.getContent().stream().map(AuthUser::getId).toList();
-    Map<UUID, List<PushToken>> tokensByUser =
-        userIds.isEmpty()
-            ? Map.of()
-            : pushTokenRepository.findByUserIdIn(userIds).stream()
-                .collect(Collectors.groupingBy(PushToken::getUserId));
-
-    List<AdminUserDto> items =
-        pageRes.getContent().stream()
-            .map(
-                u -> {
-                  List<PushTokenDto> tokens =
-                      tokensByUser.getOrDefault(u.getId(), List.of()).stream()
-                          .map(
-                              t ->
-                                  new PushTokenDto(
-                                      t.getId().toString(),
-                                      t.getDeviceId(),
-                                      t.getPlatform() != null ? t.getPlatform().name() : null,
-                                      t.getEnvironment() != null ? t.getEnvironment().name() : null,
-                                      t.getAppVersion(),
-                                      t.getLastSeenAt(),
-                                      t.getCreatedAt()))
-                          .toList();
-                  return new AdminUserDto(
-                      u.getId().toString(),
-                      u.getDisplayName(),
-                      u.getEmail(),
-                      (u.getRole() != null ? u.getRole() : Role.USER).name(),
-                      u.getCreatedAt(),
-                      u.getPhotoUrl(),
-                      tokens);
-                })
-            .toList();
-    return new PageResponse<>(items, page, pageRes.hasNext());
-  }
-
-  @GetMapping("/users/{id}")
-  public AdminProfileDto getUser(
-      @RequestHeader("Authorization") String authHeader, @PathVariable java.util.UUID id) {
-    requireAdmin(authHeader);
-    var user =
-        authUserRepository
-            .findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-    return ProfileMapper.toAdminProfileDto(user, true);
-  }
-
-  @DeleteMapping("/users/{id}")
-  public org.springframework.http.ResponseEntity<Void> deleteUser(
-      @RequestHeader("Authorization") String authHeader, @PathVariable UUID id) {
-    AuthUser admin = requireAdmin(authHeader);
-    var target =
-        authUserRepository
-            .findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-
-    // Clear owned thrift store links before deleting stores to satisfy FK constraints
-    if (target.getOwnedThriftStore() != null) {
-      target.setOwnedThriftStore(null);
-      authUserRepository.save(target);
-    }
-
-    deleteUserUseCase.execute(target, "ADMIN_DELETE");
-    return org.springframework.http.ResponseEntity.noContent().build();
-  }
-
-  private AuthUser requireAdmin(String authHeader) {
-    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing bearer token");
-    }
-    // Reuse admin user loaded by DashboardAdminGuardFilter when present
-    AuthUser user = resolveAdminFromRequest();
-
-    Role effectiveRole = user.getRole() != null ? user.getRole() : Role.USER;
-    if (effectiveRole != Role.ADMIN) {
-      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin only");
-    }
-    return user;
-  }
-
-  private AuthUser resolveAdminFromRequest() {
-    try {
-      Object cached =
-          RequestContextHolder.currentRequestAttributes()
-              .getAttribute("adminUser", RequestAttributes.SCOPE_REQUEST);
-      if (cached instanceof AuthUser cachedUser) {
-        return cachedUser;
-      }
-    } catch (IllegalStateException ignored) {
-    }
-    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing admin context");
-  }
 }
