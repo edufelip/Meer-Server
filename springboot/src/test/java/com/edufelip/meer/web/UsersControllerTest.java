@@ -77,8 +77,7 @@ class UsersControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.user.terms_version").value("2025-01"))
         .andExpect(jsonPath("$.user.terms_required_version").value("2025-01"))
-        .andExpect(
-            jsonPath("$.user.terms_url").value("https://www.guiabrecho.com.br/terms-eula"))
+        .andExpect(jsonPath("$.user.terms_url").value("https://www.guiabrecho.com.br/terms-eula"))
         .andExpect(jsonPath("$.user.terms_accepted_at").value("2024-01-02T00:00:00Z"))
         .andExpect(jsonPath("$.user.email").value("jane@example.com"));
 

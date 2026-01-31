@@ -8,8 +8,8 @@ public final class StringSanitizer {
   private StringSanitizer() {}
 
   /**
-   * Sanitizes input by removing HTML tags and script content while preserving line breaks.
-   * Protects against XSS attacks while maintaining text formatting.
+   * Sanitizes input by removing HTML tags and script content while preserving line breaks. Protects
+   * against XSS attacks while maintaining text formatting.
    *
    * @param value the input string to sanitize
    * @return sanitized string with preserved newlines, or null if input is null
@@ -37,7 +37,8 @@ public final class StringSanitizer {
     normalized = normalized.replaceAll("[\\p{Cntrl}&&[^\\r\\n\\t]]", "");
 
     // Limit excessive consecutive newlines (max 3 in a row)
-    normalized = normalized.replaceAll("(\\r?\\n){" + (MAX_CONSECUTIVE_NEWLINES + 1) + ",}", "\n\n\n");
+    normalized =
+        normalized.replaceAll("(\\r?\\n){" + (MAX_CONSECUTIVE_NEWLINES + 1) + ",}", "\n\n\n");
 
     // Trim leading/trailing whitespace but preserve internal newlines
     return normalized.trim();

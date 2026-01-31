@@ -38,7 +38,7 @@ public class GuideContentModerationService {
       content.setDeletedAt(Instant.now(clock));
       content.setDeletedBy(actor);
       content.setDeletedReason(reason);
-      
+
       // Enqueue image for deletion from GCS
       if (content.getImageUrl() != null && !content.getImageUrl().isBlank()) {
         assetDeletionQueuePort.enqueueAll(
@@ -46,7 +46,7 @@ public class GuideContentModerationService {
             "GUIDE_CONTENT_DELETE",
             content.getId() != null ? content.getId().toString() : "unknown");
       }
-      
+
       return guideContentRepository.save(content);
     }
     return content;

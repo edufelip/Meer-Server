@@ -43,9 +43,7 @@ public class RequestGuideContentImageUploadUseCase {
     String normalized = normalizeContentType(contentType);
     List<String> contentTypes = normalized != null ? List.of(normalized) : null;
     // Guide content images always go to /contents, regardless of store association
-    return photoStoragePort
-        .createUploadSlots(null, 1, contentTypes)
-        .get(0);
+    return photoStoragePort.createUploadSlots(null, 1, contentTypes).get(0);
   }
 
   private String normalizeContentType(String contentType) {

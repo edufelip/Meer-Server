@@ -46,7 +46,7 @@ public class UpdateGuideContentUseCase {
             .findByIdAndDeletedAtIsNull(contentId)
             .orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found"));
-    
+
     if (content.getThriftStore() != null) {
       try {
         storeOwnershipService.ensureOwnerOrAdminStrict(user, content.getThriftStore());

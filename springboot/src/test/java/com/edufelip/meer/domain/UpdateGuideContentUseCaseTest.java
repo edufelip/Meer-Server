@@ -48,16 +48,14 @@ class UpdateGuideContentUseCaseTest {
     when(photoStoragePort.extractFileKey(imageUrl)).thenReturn("contents/a");
     when(photoStoragePort.fetchRequired("contents/a"))
         .thenReturn(new PhotoStoragePort.StoredObject("image/jpeg", 1024L));
-    when(photoStoragePort.publicUrl("contents/a"))
-        .thenReturn("https://cdn.example.com/contents/a");
+    when(photoStoragePort.publicUrl("contents/a")).thenReturn("https://cdn.example.com/contents/a");
 
     GuideContent updated =
         useCase.execute(user, 10, new UpdateGuideContentUseCase.Command("New", "Desc", imageUrl));
 
     assertThat(updated.getTitle()).isEqualTo("New");
     assertThat(updated.getDescription()).isEqualTo("Desc");
-    assertThat(updated.getImageUrl())
-        .isEqualTo("https://cdn.example.com/contents/a");
+    assertThat(updated.getImageUrl()).isEqualTo("https://cdn.example.com/contents/a");
     assertThat(updated.getCategoryLabel()).isEqualTo("general");
     assertThat(updated.getType()).isEqualTo("article");
     verify(storeOwnershipService).ensureOwnerOrAdminStrict(user, store);

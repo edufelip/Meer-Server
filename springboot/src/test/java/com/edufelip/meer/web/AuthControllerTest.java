@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.edufelip.meer.config.TestClockConfig;
 import com.edufelip.meer.core.auth.AuthUser;
 import com.edufelip.meer.domain.auth.AppleLoginUseCase;
 import com.edufelip.meer.domain.auth.ForgotPasswordUseCase;
@@ -15,7 +16,6 @@ import com.edufelip.meer.domain.auth.RefreshTokenUseCase;
 import com.edufelip.meer.domain.auth.ResetPasswordUseCase;
 import com.edufelip.meer.domain.auth.SignupUseCase;
 import com.edufelip.meer.dto.ProfileDto;
-import com.edufelip.meer.config.TestClockConfig;
 import com.edufelip.meer.support.TestFixtures;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
@@ -72,7 +72,6 @@ class AuthControllerTest {
         .andExpect(jsonPath("$.user.terms_version").value("2025-01"))
         .andExpect(jsonPath("$.user.terms_accepted_at").value("2025-01-12T14:55:00Z"))
         .andExpect(jsonPath("$.user.terms_required_version").value("2026-01"))
-        .andExpect(
-            jsonPath("$.user.terms_url").value("https://www.guiabrecho.com.br/terms-eula"));
+        .andExpect(jsonPath("$.user.terms_url").value("https://www.guiabrecho.com.br/terms-eula"));
   }
 }

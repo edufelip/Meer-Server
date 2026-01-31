@@ -26,7 +26,8 @@ class GuideContentModerationServiceTest {
     AssetDeletionQueuePort assetDeletionQueuePort = Mockito.mock(AssetDeletionQueuePort.class);
     Clock clock = Clock.fixed(TestFixtures.fixedInstant(), ZoneOffset.UTC);
     GuideContentModerationService service =
-        new GuideContentModerationService(contentRepository, commentRepository, assetDeletionQueuePort, clock);
+        new GuideContentModerationService(
+            contentRepository, commentRepository, assetDeletionQueuePort, clock);
 
     AuthUser actor = new AuthUser();
     actor.setId(UUID.randomUUID());
@@ -51,7 +52,8 @@ class GuideContentModerationServiceTest {
     AssetDeletionQueuePort assetDeletionQueuePort = Mockito.mock(AssetDeletionQueuePort.class);
     Clock clock = Clock.fixed(TestFixtures.fixedInstant(), ZoneOffset.UTC);
     GuideContentModerationService service =
-        new GuideContentModerationService(contentRepository, commentRepository, assetDeletionQueuePort, clock);
+        new GuideContentModerationService(
+            contentRepository, commentRepository, assetDeletionQueuePort, clock);
 
     AuthUser actor = new AuthUser();
     actor.setId(UUID.randomUUID());
@@ -81,7 +83,8 @@ class GuideContentModerationServiceTest {
     AssetDeletionQueuePort assetDeletionQueuePort = Mockito.mock(AssetDeletionQueuePort.class);
     Clock clock = Clock.fixed(TestFixtures.fixedInstant(), ZoneOffset.UTC);
     GuideContentModerationService service =
-        new GuideContentModerationService(contentRepository, commentRepository, assetDeletionQueuePort, clock);
+        new GuideContentModerationService(
+            contentRepository, commentRepository, assetDeletionQueuePort, clock);
 
     AuthUser actor = new AuthUser();
     actor.setId(UUID.randomUUID());
@@ -95,10 +98,11 @@ class GuideContentModerationServiceTest {
 
     service.softDeleteContent(content, actor, "inappropriate");
 
-    Mockito.verify(assetDeletionQueuePort).enqueueAll(
-        List.of("https://storage.googleapis.com/bucket/contents/abc-123"),
-        "GUIDE_CONTENT_DELETE",
-        "10");
+    Mockito.verify(assetDeletionQueuePort)
+        .enqueueAll(
+            List.of("https://storage.googleapis.com/bucket/contents/abc-123"),
+            "GUIDE_CONTENT_DELETE",
+            "10");
   }
 
   @Test
@@ -109,7 +113,8 @@ class GuideContentModerationServiceTest {
     AssetDeletionQueuePort assetDeletionQueuePort = Mockito.mock(AssetDeletionQueuePort.class);
     Clock clock = Clock.fixed(TestFixtures.fixedInstant(), ZoneOffset.UTC);
     GuideContentModerationService service =
-        new GuideContentModerationService(contentRepository, commentRepository, assetDeletionQueuePort, clock);
+        new GuideContentModerationService(
+            contentRepository, commentRepository, assetDeletionQueuePort, clock);
 
     AuthUser actor = new AuthUser();
     actor.setId(UUID.randomUUID());
@@ -123,7 +128,7 @@ class GuideContentModerationServiceTest {
 
     service.softDeleteContent(content, actor, "spam");
 
-    Mockito.verify(assetDeletionQueuePort, Mockito.never()).enqueueAll(
-        Mockito.anyList(), Mockito.anyString(), Mockito.anyString());
+    Mockito.verify(assetDeletionQueuePort, Mockito.never())
+        .enqueueAll(Mockito.anyList(), Mockito.anyString(), Mockito.anyString());
   }
 }

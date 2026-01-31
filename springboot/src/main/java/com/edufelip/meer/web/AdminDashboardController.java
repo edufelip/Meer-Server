@@ -236,5 +236,4 @@ public class AdminDashboardController {
     var items = pageRes.getContent().stream().map(Mappers::toDashboardCommentDto).toList();
     return new PageResponse<>(items, page, pageRes.hasNext());
   }
-
 }
