@@ -139,11 +139,35 @@ jobs:
           script: |
             set -e
             sudo rm -rf /opt/meer-prod/meer.jar.bak.* /tmp/meer-*.jar /tmp/.env /tmp/.env/.env || true
+            sudo apt-get autoremove -y || true
+            sudo apt-get autoclean || true
             sudo apt-get clean || true
+            sudo rm -rf /var/cache/apt/archives/* || true
             sudo journalctl --vacuum-time=7d --vacuum-size=100M || true
+            sudo journalctl --vacuum-size=50M || true
             sudo logrotate -f /etc/logrotate.conf || true
             sudo gzip -f /var/log/syslog.1 2>/dev/null || true
+            sudo find /var/log -type f -name "*.gz" -mtime +7 -delete || true
+            sudo find /var/log -type f -name "*.1" -mtime +7 -delete || true
+            if command -v docker >/dev/null 2>&1; then
+              sudo docker system prune -af --volumes || true
+            fi
             df -h / /tmp /var || true
+
+      - name: Verify disk space on prod host
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            df -h / /tmp /var || true
+            usage="$(df --output=pcent / | tail -1 | tr -dc '0-9')"
+            if [ -n "$usage" ] && [ "$usage" -ge 95 ]; then
+              echo "Disk usage is ${usage}% on /. Aborting before scp." >&2
+              exit 1
+            fi
 
       - name: Copy jar to prod host
         uses: appleboy/scp-action@v0.1.7
