@@ -91,9 +91,6 @@ public class CreateThriftStoreUseCase {
     if (command.description() == null || command.description().isBlank()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "description is required");
     }
-    if (command.phone() == null || command.phone().isBlank()) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "phone is required");
-    }
     if (command.latitude() == null || command.longitude() == null) {
       throw new ResponseStatusException(
           HttpStatus.BAD_REQUEST, "latitude/longitude required or geocoding failed");
