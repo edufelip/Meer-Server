@@ -1419,7 +1419,7 @@ components:
           items: { $ref: '#/components/schemas/StoreImage' }
     StoreCreateRequest:
       type: object
-      required: [name, description, addressLine, phone, latitude, longitude]
+      required: [name, description, addressLine, latitude, longitude]
       properties:
         name: { type: string, maxLength: 120 }
         description: { type: string, maxLength: 2000 }

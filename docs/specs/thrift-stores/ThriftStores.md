@@ -68,6 +68,7 @@ The Thrift Stores module manages the registry of stores, their locations, contac
 ### Creation: `POST /stores`
 - **Authentication**: Required.
 - **Behavior**: Creates a new store record. The requesting user becomes the owner.
+- **Notes**: Contact fields (phone, email, social links) are optional.
 
 ### Updates: `PUT /stores/{id}`
 - **Authentication**: Required. Must be owner or admin.
