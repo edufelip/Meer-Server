@@ -16,20 +16,14 @@ import com.edufelip.meer.core.content.GuideContent;
 import com.edufelip.meer.core.content.GuideContentComment;
 import com.edufelip.meer.core.store.ThriftStore;
 import com.edufelip.meer.domain.GuideContentSummary;
-import com.edufelip.meer.domain.auth.DeleteUserUseCase;
-import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.GuideContentCommentRepository;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
-import com.edufelip.meer.domain.repo.PushTokenRepository;
-import com.edufelip.meer.domain.repo.ThriftStoreRepository;
-import com.edufelip.meer.security.token.TokenProvider;
+import com.edufelip.meer.security.DashboardAdminAuthorizer;
 import com.edufelip.meer.service.GuideContentEngagementService;
 import com.edufelip.meer.service.GuideContentModerationService;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -45,85 +39,15 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(AdminDashboardController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(TestClockConfig.class)
+@Import({TestClockConfig.class, DashboardAdminAuthorizer.class})
 class AdminDashboardControllerTest {
 
   @Autowired private MockMvc mockMvc;
 
-  @MockitoBean private TokenProvider tokenProvider;
-  @MockitoBean private AuthUserRepository authUserRepository;
-  @MockitoBean private ThriftStoreRepository thriftStoreRepository;
   @MockitoBean private GuideContentRepository guideContentRepository;
   @MockitoBean private GuideContentCommentRepository guideContentCommentRepository;
-  @MockitoBean private PushTokenRepository pushTokenRepository;
-  @MockitoBean private DeleteUserUseCase deleteUserUseCase;
   @MockitoBean private GuideContentEngagementService guideContentEngagementService;
   @MockitoBean private GuideContentModerationService guideContentModerationService;
-
-  @Test
-  void deleteUserInvokesUseCase() throws Exception {
-    UUID adminId = UUID.randomUUID();
-    UUID targetId = UUID.randomUUID();
-    UUID storeId = UUID.randomUUID();
-
-    AuthUser admin = new AuthUser();
-    admin.setId(adminId);
-    admin.setRole(Role.ADMIN);
-    admin.setEmail("admin@example.com");
-
-    AuthUser target = new AuthUser();
-    target.setId(targetId);
-    target.setEmail("user@example.com");
-    target.setDisplayName("Target User");
-    target.setPasswordHash("hash");
-    target.setPhotoUrl("https://storage.googleapis.com/bucket/avatar.png");
-
-    ThriftStore store = new ThriftStore();
-    store.setId(storeId);
-    store.setOwner(target);
-    target.setOwnedThriftStore(store);
-
-    Set<ThriftStore> favorites = new HashSet<>();
-    favorites.add(store);
-    target.setFavorites(favorites);
-
-    when(authUserRepository.findById(targetId)).thenReturn(Optional.of(target));
-    mockMvc
-        .perform(
-            delete("/dashboard/users/{id}", targetId)
-                .header("Authorization", "Bearer admin-token")
-                .requestAttr("adminUser", admin)
-                .contentType(MediaType.APPLICATION_JSON))
-        .andExpect(status().isNoContent());
-
-    verify(authUserRepository, times(1)).save(target);
-    verify(deleteUserUseCase, times(1)).execute(target, "ADMIN_DELETE");
-  }
-
-  @Test
-  void adminCanDeleteSelf() throws Exception {
-    UUID adminId = UUID.randomUUID();
-
-    AuthUser admin = new AuthUser();
-    admin.setId(adminId);
-    admin.setRole(Role.ADMIN);
-    admin.setEmail("admin@example.com");
-    admin.setDisplayName("Admin");
-    admin.setPasswordHash("hash");
-
-    when(authUserRepository.findById(adminId)).thenReturn(Optional.of(admin));
-    when(thriftStoreRepository.findByOwnerId(adminId)).thenReturn(List.of());
-
-    mockMvc
-        .perform(
-            delete("/dashboard/users/{id}", adminId)
-                .header("Authorization", "Bearer admin-token")
-                .requestAttr("adminUser", admin)
-                .contentType(MediaType.APPLICATION_JSON))
-        .andExpect(status().isNoContent());
-
-    verify(deleteUserUseCase, times(1)).execute(admin, "ADMIN_DELETE");
-  }
 
   @Test
   void listContentsIncludesCounts() throws Exception {
