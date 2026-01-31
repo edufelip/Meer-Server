@@ -245,7 +245,7 @@ paths:
           description: Not found
     put:
       summary: Update store (owner or admin)
-      description: Social fields accept explicit nulls to clear existing values.
+      description: facebook/instagram/website/whatsapp accept explicit nulls to clear existing values.
       security:
         - bearerAuth: []
       parameters:
@@ -803,7 +803,7 @@ paths:
         - in: query
           name: search
           schema: { type: string }
-          description: Case-insensitive search across store name, tagline, description, neighborhood
+          description: Case-insensitive search across store name, description, neighborhood
         - in: query
           name: sort
           schema:
@@ -1391,7 +1391,6 @@ components:
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
-        tagline: { type: string }
         coverImageUrl: { type: string }
         addressLine: { type: string }
         latitude: { type: number, format: double }
@@ -1418,26 +1417,6 @@ components:
         images:
           type: array
           items: { $ref: '#/components/schemas/StoreImage' }
-    StoreSocialRequest:
-      type: object
-      description: Include explicit nulls to clear stored social links on update.
-      properties:
-        facebook:
-          type: string
-          nullable: true
-          description: Send null to clear.
-        instagram:
-          type: string
-          nullable: true
-          description: Send null to clear.
-        website:
-          type: string
-          nullable: true
-          description: Send null to clear.
-        whatsapp:
-          type: string
-          nullable: true
-          description: Send null to clear.
     StoreCreateRequest:
       type: object
       required: [name, description, addressLine, phone, latitude, longitude]
@@ -1449,7 +1428,10 @@ components:
         phone: { type: string, maxLength: 32 }
         email: { type: string, format: email, maxLength: 320 }
         neighborhood: { type: string, maxLength: 120 }
-        tagline: { type: string, maxLength: 280 }
+        facebook: { type: string, nullable: true }
+        instagram: { type: string, nullable: true }
+        website: { type: string, nullable: true }
+        whatsapp: { type: string, nullable: true }
         latitude: { type: number, format: double }
         longitude: { type: number, format: double }
         isOnlineStore: { type: boolean }
@@ -1457,8 +1439,6 @@ components:
           type: array
           maxItems: 10
           items: { type: string }
-        social:
-          $ref: '#/components/schemas/StoreSocialRequest'
     StoreUpdateRequest:
       type: object
       description: Social fields accept explicit nulls to clear existing values.
@@ -1470,7 +1450,10 @@ components:
         phone: { type: string, maxLength: 32 }
         email: { type: string, format: email, maxLength: 320 }
         neighborhood: { type: string, maxLength: 120 }
-        tagline: { type: string, maxLength: 280 }
+        facebook: { type: string, nullable: true }
+        instagram: { type: string, nullable: true }
+        website: { type: string, nullable: true }
+        whatsapp: { type: string, nullable: true }
         latitude: { type: number, format: double }
         longitude: { type: number, format: double }
         isOnlineStore: { type: boolean }
@@ -1478,8 +1461,6 @@ components:
           type: array
           maxItems: 10
           items: { type: string }
-        social:
-          $ref: '#/components/schemas/StoreSocialRequest'
     FeaturedStore:
       type: object
       properties:

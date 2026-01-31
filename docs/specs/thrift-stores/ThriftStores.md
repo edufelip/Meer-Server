@@ -20,7 +20,6 @@ The Thrift Stores module manages the registry of stores, their locations, contac
 |-------|------|-------------|
 | id | UUID (v7) | Unique identifier |
 | name | String | Store name |
-| tagline | String | Short promotional text |
 | description | String | Detailed description (Max 1000 chars) |
 | addressLine | String | Physical address |
 | neighborhood | String | Area or district |
@@ -28,10 +27,10 @@ The Thrift Stores module manages the registry of stores, their locations, contac
 | longitude | Double | Geographic coordinate |
 | phone | String | Contact phone |
 | email | String | Contact email |
-| website | String (Social)| Website URL |
-| instagram | String (Social)| Instagram handle/URL |
-| facebook | String (Social)| Facebook handle/URL |
-| whatsapp | String (Social)| WhatsApp contact |
+| website | String | Website URL |
+| instagram | String | Instagram handle/URL |
+| facebook | String | Facebook handle/URL |
+| whatsapp | String | WhatsApp contact |
 | coverImageUrl | String | Main banner image URL |
 | categories | List<String> | Taxonomy labels |
 | badgeLabel | String | Special status label (e.g., "Verified") |
