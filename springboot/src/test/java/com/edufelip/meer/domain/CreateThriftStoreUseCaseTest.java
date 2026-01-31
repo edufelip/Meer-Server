@@ -51,4 +51,37 @@ class CreateThriftStoreUseCaseTest {
     assertThat(user.getOwnedThriftStore()).isEqualTo(saved);
     verify(authUserRepository).save(user);
   }
+
+  @Test
+  void createsStoreWithoutPhone() {
+    ThriftStoreRepository repo = Mockito.mock(ThriftStoreRepository.class);
+    AuthUserRepository authUserRepository = Mockito.mock(AuthUserRepository.class);
+    CreateThriftStoreUseCase useCase = new CreateThriftStoreUseCase(repo, authUserRepository);
+
+    when(repo.save(Mockito.any(ThriftStore.class)))
+        .thenAnswer(inv -> inv.getArgument(0, ThriftStore.class));
+
+    AuthUser user = new AuthUser();
+    user.setId(UUID.randomUUID());
+
+    CreateThriftStoreUseCase.Command command =
+        new CreateThriftStoreUseCase.Command(
+            "Name",
+            "Desc",
+            null,
+            "123 Road",
+            10.0,
+            20.0,
+            null,
+            null,
+            "Neighborhood",
+            false,
+            List.of("vintage"),
+            null);
+
+    ThriftStore saved = useCase.execute(user, command);
+
+    assertThat(saved.getPhone()).isNull();
+    verify(authUserRepository).save(user);
+  }
 }
