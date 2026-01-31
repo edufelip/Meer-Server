@@ -1,15 +1,16 @@
 spring:
   datasource:
-    url: ${TEST_DB_URL:jdbc:tc:postgresql:15:///meer_test}
-    username: ${TEST_DB_USERNAME:test}
-    password: ${TEST_DB_PASSWORD:test}
-    driver-class-name: ${TEST_DB_DRIVER:org.testcontainers.jdbc.ContainerDatabaseDriver}
+    url: ${TEST_DB_URL:jdbc:h2:mem:meer_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
+    username: ${TEST_DB_USERNAME:sa}
+    password: ${TEST_DB_PASSWORD:}
+    driver-class-name: ${TEST_DB_DRIVER:org.h2.Driver}
   jpa:
+    database-platform: ${TEST_JPA_DIALECT:org.hibernate.dialect.H2Dialect}
     hibernate:
-      ddl-auto: ${TEST_HIBERNATE_DDL_AUTO:none}
+      ddl-auto: ${TEST_HIBERNATE_DDL_AUTO:create-drop}
     show-sql: false
   flyway:
-    enabled: ${TEST_FLYWAY_ENABLED:true}
+    enabled: ${TEST_FLYWAY_ENABLED:false}
     locations: ${TEST_FLYWAY_LOCATIONS:classpath:db/migration}
     baseline-on-migrate: ${TEST_FLYWAY_BASELINE:true}
     clean-disabled: true
@@ -27,3 +28,7 @@ security:
   requireAppHeader: false
   jwt:
     secret: test-secret-please-change-test-secret-1234567890
+
+storage:
+  gcs:
+    use-adc: false

@@ -1,11 +1,13 @@
 package com.edufelip.meer.config;
 
+import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Date;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,7 +23,9 @@ public class GcsConfig {
       List.of("https://www.googleapis.com/auth/devstorage.read_write");
 
   @Bean
-  public Storage storage(@Value("${storage.gcs.credentials-path:}") String credentialsPath)
+  public Storage storage(
+      @Value("${storage.gcs.credentials-path:}") String credentialsPath,
+      @Value("${storage.gcs.use-adc:true}") boolean useAdc)
       throws IOException {
     StorageOptions.Builder optionsBuilder = StorageOptions.newBuilder();
 
@@ -32,12 +36,18 @@ public class GcsConfig {
       credentials = applyScopes(credentials);
       logCredentialDetails(credentials);
       optionsBuilder.setCredentials(credentials);
-    } else {
+    } else if (useAdc) {
       log.warn(
           "STORAGE_GCS_CREDENTIALS_PATH not set - falling back to Application Default Credentials (ADC)");
       GoogleCredentials credentials = GoogleCredentials.getApplicationDefault();
       credentials = applyScopes(credentials);
       logCredentialDetails(credentials);
+      optionsBuilder.setCredentials(credentials);
+    } else {
+      log.warn("GCS ADC disabled - using placeholder credentials for local/test contexts");
+      GoogleCredentials credentials =
+          GoogleCredentials.create(
+              new AccessToken("test-token", new Date(System.currentTimeMillis() + 3_600_000)));
       optionsBuilder.setCredentials(credentials);
     }
 

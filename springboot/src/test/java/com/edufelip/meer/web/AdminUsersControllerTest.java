@@ -17,6 +17,7 @@ import com.edufelip.meer.core.store.ThriftStore;
 import com.edufelip.meer.domain.auth.DeleteUserUseCase;
 import com.edufelip.meer.domain.repo.AuthUserRepository;
 import com.edufelip.meer.domain.repo.PushTokenRepository;
+import com.edufelip.meer.config.TestClockConfig;
 import com.edufelip.meer.security.DashboardAdminAuthorizer;
 import java.util.List;
 import java.util.Optional;
@@ -35,7 +36,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(AdminUsersController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(DashboardAdminAuthorizer.class)
+@Import({DashboardAdminAuthorizer.class, TestClockConfig.class})
 class AdminUsersControllerTest {
 
   @Autowired private MockMvc mockMvc;

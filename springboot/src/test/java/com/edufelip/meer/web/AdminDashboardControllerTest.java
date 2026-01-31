@@ -18,6 +18,7 @@ import com.edufelip.meer.core.store.ThriftStore;
 import com.edufelip.meer.domain.GuideContentSummary;
 import com.edufelip.meer.domain.repo.GuideContentCommentRepository;
 import com.edufelip.meer.domain.repo.GuideContentRepository;
+import com.edufelip.meer.domain.repo.ThriftStoreRepository;
 import com.edufelip.meer.security.DashboardAdminAuthorizer;
 import com.edufelip.meer.service.GuideContentEngagementService;
 import com.edufelip.meer.service.GuideContentModerationService;
@@ -46,6 +47,7 @@ class AdminDashboardControllerTest {
 
   @MockitoBean private GuideContentRepository guideContentRepository;
   @MockitoBean private GuideContentCommentRepository guideContentCommentRepository;
+  @MockitoBean private ThriftStoreRepository thriftStoreRepository;
   @MockitoBean private GuideContentEngagementService guideContentEngagementService;
   @MockitoBean private GuideContentModerationService guideContentModerationService;
 
