@@ -31,7 +31,6 @@ public class UpdateThriftStoreUseCase {
       Double longitude,
       String phone,
       String email,
-      String tagline,
       String neighborhood,
       Boolean isOnlineStore,
       java.util.List<String> categories,
@@ -69,7 +68,6 @@ public class UpdateThriftStoreUseCase {
       store.setPhone(command.phone());
     }
     if (command.email() != null) store.setEmail(command.email());
-    if (command.tagline() != null) store.setTagline(command.tagline());
     if (command.neighborhood() != null) store.setNeighborhood(command.neighborhood());
     if (command.categories() != null) {
       store.setCategories(StoreCategoryNormalizer.normalize(command.categories()));

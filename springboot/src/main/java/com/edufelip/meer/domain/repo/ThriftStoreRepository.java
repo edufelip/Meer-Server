@@ -83,7 +83,6 @@ public interface ThriftStoreRepository extends JpaRepository<ThriftStore, UUID> 
       """
         select t from ThriftStore t
         where lower(t.name) like lower(concat('%', :q, '%'))
-           or lower(t.tagline) like lower(concat('%', :q, '%'))
            or lower(t.description) like lower(concat('%', :q, '%'))
            or lower(t.neighborhood) like lower(concat('%', :q, '%'))
         """)
@@ -93,7 +92,6 @@ public interface ThriftStoreRepository extends JpaRepository<ThriftStore, UUID> 
       """
         select t from ThriftStore t
         where lower(t.name) like lower(concat('%', :q, '%'))
-           or lower(t.tagline) like lower(concat('%', :q, '%'))
            or lower(t.description) like lower(concat('%', :q, '%'))
            or lower(t.neighborhood) like lower(concat('%', :q, '%'))
         order by
@@ -101,10 +99,9 @@ public interface ThriftStoreRepository extends JpaRepository<ThriftStore, UUID> 
                 when lower(t.name) = lower(:q) then 0
                 when lower(t.name) like lower(concat(:q, '%')) then 1
                 when locate(lower(:q), lower(t.name)) > 0 then 2
-                when lower(t.tagline) like lower(concat('%', :q, '%')) then 3
-                when lower(t.description) like lower(concat('%', :q, '%')) then 4
-                when lower(t.neighborhood) like lower(concat('%', :q, '%')) then 5
-                else 6
+                when lower(t.description) like lower(concat('%', :q, '%')) then 3
+                when lower(t.neighborhood) like lower(concat('%', :q, '%')) then 4
+                else 5
             end,
             locate(lower(:q), lower(t.name)),
             length(t.name),

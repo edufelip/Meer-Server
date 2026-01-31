@@ -1,5 +1,6 @@
 package com.edufelip.meer.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
 import java.util.List;
@@ -27,9 +28,6 @@ public class StoreRequest {
   @Size(max = 120)
   private String neighborhood;
 
-  @Size(max = 280)
-  private String tagline;
-
   private Double latitude;
   private Double longitude;
 
@@ -38,7 +36,14 @@ public class StoreRequest {
 
   private Boolean isOnlineStore;
 
-  private SocialRequest social;
+  private String facebook;
+  private String instagram;
+  private String website;
+  private String whatsapp;
+  private boolean facebookPresent;
+  private boolean instagramPresent;
+  private boolean websitePresent;
+  private boolean whatsappPresent;
 
   public String getName() {
     return name;
@@ -96,14 +101,6 @@ public class StoreRequest {
     this.neighborhood = neighborhood;
   }
 
-  public String getTagline() {
-    return tagline;
-  }
-
-  public void setTagline(String tagline) {
-    this.tagline = tagline;
-  }
-
   public Double getLatitude() {
     return latitude;
   }
@@ -136,11 +133,59 @@ public class StoreRequest {
     this.isOnlineStore = isOnlineStore;
   }
 
-  public SocialRequest getSocial() {
-    return social;
+  public String getFacebook() {
+    return facebook;
   }
 
-  public void setSocial(SocialRequest social) {
-    this.social = social;
+  public String getInstagram() {
+    return instagram;
+  }
+
+  public String getWebsite() {
+    return website;
+  }
+
+  public String getWhatsapp() {
+    return whatsapp;
+  }
+
+  public boolean isFacebookPresent() {
+    return facebookPresent;
+  }
+
+  public boolean isInstagramPresent() {
+    return instagramPresent;
+  }
+
+  public boolean isWebsitePresent() {
+    return websitePresent;
+  }
+
+  public boolean isWhatsappPresent() {
+    return whatsappPresent;
+  }
+
+  @JsonProperty("facebook")
+  public void setFacebook(String facebook) {
+    this.facebook = facebook;
+    this.facebookPresent = true;
+  }
+
+  @JsonProperty("instagram")
+  public void setInstagram(String instagram) {
+    this.instagram = instagram;
+    this.instagramPresent = true;
+  }
+
+  @JsonProperty("website")
+  public void setWebsite(String website) {
+    this.website = website;
+    this.websitePresent = true;
+  }
+
+  @JsonProperty("whatsapp")
+  public void setWhatsapp(String whatsapp) {
+    this.whatsapp = whatsapp;
+    this.whatsappPresent = true;
   }
 }

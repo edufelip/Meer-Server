@@ -22,9 +22,6 @@ public class ThriftStore {
   private String name;
 
   @Column(length = 2048)
-  private String tagline;
-
-  @Column(length = 2048)
   private String coverImageUrl;
 
   @ElementCollection
@@ -80,7 +77,6 @@ public class ThriftStore {
   public ThriftStore(
       UUID id,
       String name,
-      String tagline,
       String coverImageUrl,
       List<String> galleryUrls,
       String addressLine,
@@ -96,7 +92,6 @@ public class ThriftStore {
       List<GuideContent> contents) {
     this.id = id;
     this.name = name;
-    this.tagline = tagline;
     this.coverImageUrl = coverImageUrl;
     this.galleryUrls = galleryUrls;
     this.addressLine = addressLine;
@@ -118,10 +113,6 @@ public class ThriftStore {
 
   public String getName() {
     return name;
-  }
-
-  public String getTagline() {
-    return tagline;
   }
 
   public String getCoverImageUrl() {
@@ -202,10 +193,6 @@ public class ThriftStore {
 
   public void setName(String name) {
     this.name = name;
-  }
-
-  public void setTagline(String tagline) {
-    this.tagline = tagline;
   }
 
   public void setCoverImageUrl(String coverImageUrl) {

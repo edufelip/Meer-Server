@@ -218,7 +218,6 @@ public class Mappers {
     return new ThriftStoreDto(
         store.getId(),
         store.getName(),
-        store.getTagline(),
         images.isEmpty() ? store.getCoverImageUrl() : images.get(0).url(),
         addressToDisplay,
         store.getLatitude(),
@@ -247,6 +246,15 @@ public class Mappers {
 
   public static CreateThriftStoreUseCase.Command toCreateCommand(StoreRequest body) {
     if (body == null) return null;
+    CreateThriftStoreUseCase.SocialInput socialInput = null;
+    if (body.getFacebook() != null
+        || body.getInstagram() != null
+        || body.getWebsite() != null
+        || body.getWhatsapp() != null) {
+      socialInput =
+          new CreateThriftStoreUseCase.SocialInput(
+              body.getFacebook(), body.getInstagram(), body.getWebsite(), body.getWhatsapp());
+    }
     return new CreateThriftStoreUseCase.Command(
         body.getName(),
         body.getDescription(),
@@ -256,21 +264,30 @@ public class Mappers {
         body.getLongitude(),
         body.getPhone(),
         body.getEmail(),
-        body.getTagline(),
         body.getNeighborhood(),
         body.getIsOnlineStore(),
         body.getCategories(),
-        body.getSocial() != null
-            ? new CreateThriftStoreUseCase.SocialInput(
-                body.getSocial().getFacebook(),
-                body.getSocial().getInstagram(),
-                body.getSocial().getWebsite(),
-                body.getSocial().getWhatsapp())
-            : null);
+        socialInput);
   }
 
   public static UpdateThriftStoreUseCase.Command toUpdateCommand(StoreRequest body) {
     if (body == null) return null;
+    UpdateThriftStoreUseCase.SocialUpdate socialUpdate = null;
+    if (body.isFacebookPresent()
+        || body.isInstagramPresent()
+        || body.isWebsitePresent()
+        || body.isWhatsappPresent()) {
+      socialUpdate =
+          new UpdateThriftStoreUseCase.SocialUpdate(
+              body.getFacebook(),
+              body.isFacebookPresent(),
+              body.getInstagram(),
+              body.isInstagramPresent(),
+              body.getWebsite(),
+              body.isWebsitePresent(),
+              body.getWhatsapp(),
+              body.isWhatsappPresent());
+    }
     return new UpdateThriftStoreUseCase.Command(
         body.getName(),
         body.getDescription(),
@@ -280,21 +297,10 @@ public class Mappers {
         body.getLongitude(),
         body.getPhone(),
         body.getEmail(),
-        body.getTagline(),
         body.getNeighborhood(),
         body.getIsOnlineStore(),
         body.getCategories(),
-        body.getSocial() != null
-            ? new UpdateThriftStoreUseCase.SocialUpdate(
-                body.getSocial().getFacebook(),
-                body.getSocial().isFacebookPresent(),
-                body.getSocial().getInstagram(),
-                body.getSocial().isInstagramPresent(),
-                body.getSocial().getWebsite(),
-                body.getSocial().isWebsitePresent(),
-                body.getSocial().getWhatsapp(),
-                body.getSocial().isWhatsappPresent())
-            : null);
+        socialUpdate);
   }
 
   public static ReplaceStorePhotosUseCase.Command toReplacePhotosCommand(

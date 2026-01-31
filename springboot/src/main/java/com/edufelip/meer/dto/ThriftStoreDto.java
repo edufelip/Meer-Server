@@ -6,7 +6,6 @@ import java.util.List;
 public record ThriftStoreDto(
     java.util.UUID id,
     String name,
-    String tagline,
     String coverImageUrl,
     String addressLine,
     Double latitude,

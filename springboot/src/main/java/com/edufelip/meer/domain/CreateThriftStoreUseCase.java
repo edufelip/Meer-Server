@@ -24,7 +24,6 @@ public class CreateThriftStoreUseCase {
       Double longitude,
       String phone,
       String email,
-      String tagline,
       String neighborhood,
       Boolean isOnlineStore,
       java.util.List<String> categories,
@@ -59,7 +58,6 @@ public class CreateThriftStoreUseCase {
     store.setSocial(toSocial(command.social()));
     store.setPhone(command.phone());
     store.setEmail(command.email());
-    store.setTagline(command.tagline());
     store.setNeighborhood(command.neighborhood());
     store.setIsOnlineStore(command.isOnlineStore() != null ? command.isOnlineStore() : false);
     store.setCategories(StoreCategoryNormalizer.normalize(command.categories()));
