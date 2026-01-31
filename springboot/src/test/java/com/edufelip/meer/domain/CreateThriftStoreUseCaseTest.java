@@ -37,7 +37,6 @@ class CreateThriftStoreUseCaseTest {
             20.0,
             "555-1111",
             "test@example.com",
-            "Tagline",
             "Neighborhood",
             false,
             List.of(" Vintage ", "vintage", "Kids"),

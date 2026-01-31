@@ -111,10 +111,8 @@ class ThriftStoreControllerTest {
           "phone": "555-1111",
           "latitude": -23.0,
           "longitude": -46.0,
-          "social": {
-            "website": "https://example.com",
-            "whatsapp": "https://wa.me/5511999999999"
-          }
+          "website": "https://example.com",
+          "whatsapp": "https://wa.me/5511999999999"
         }
         """;
 
@@ -156,9 +154,7 @@ class ThriftStoreControllerTest {
     String body =
         """
         {
-          "social": {
-            "website": "https://new.com"
-          }
+          "website": "https://new.com"
         }
         """;
 
